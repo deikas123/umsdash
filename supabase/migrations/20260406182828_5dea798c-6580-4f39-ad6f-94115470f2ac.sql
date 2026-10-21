@@ -1,0 +1,1 @@
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS expiry_date timestamp with time zone DEFAULT NULL;

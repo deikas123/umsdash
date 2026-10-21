@@ -1,0 +1,33 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Scaffold the workspace from ums-docs-vault as the base project. Copy all source files, create merged package.json and vite.config.ts, create .env with new Supabase credentials, update Supabase client and config.toml, and install dependencies. After this feature the workspace has a buildable (though route-incomplete) ums-docs-vault project pointed at the new Supabase project.",
+  "status": "pending",
+  "steps": [
+    "1. Copy these files/dirs from .agents/temp/ums-docs-vault/ to workspace root (exclude .git, node_modules, dist, .env): index.html, tsconfig.json, tsconfig.app.json, tsconfig.node.json, postcss.config.js, tailwind.config.ts, eslint.config.js, vitest.config.ts, components.json, DOCUMENTATION.md, MIGRATION.md, src/ (full tree), public/ (full tree), supabase/ (full tree).",
+    "2. Create package.json at workspace root: name='ums-hub', description='UMS Hub — Unified Management Platform', merge all deps from ums-docs-vault + add framer-motion:^12.38.0 (new dep from uptime-hub) + upgrade @supabase/supabase-js to ^2.99.2 + add drizzle-kit:0.x and drizzle-orm:0.x and postgres:^3.4.9 as devDependencies. Full package.json content is specified in plan.md step 2.",
+    "3. Create vite.config.ts: keep ums-docs-vault's PWA config but update manifest name/short_name/description to 'UMS Hub'. Add the build block from uptime-hub (chunkSizeWarningLimit: 1000, external: core-js). Full content in plan.md step 3.",
+    "4. Create .env at workspace root with: VITE_SUPABASE_URL=https://mmnpopwzfjyfasvzzatg.supabase.co, VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tbnBvcHd6Zmp5ZmFzdnp6YXRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1NjAyMjQsImV4cCI6MjEwODEzNjIyNH0.xvXPco3sx-FXhu0gfPSiuv39H53O-hdnlGluohDUxbs, VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_UQ_XmKLjD9AvY7xX_aTwkQ_pPnNSvQH, VITE_SUPABASE_PROJECT_ID=mmnpopwzfjyfasvzzatg. Also create .env.example with same keys but empty values.",
+    "5. Update src/integrations/supabase/client.ts: add fallback so it reads VITE_SUPABASE_ANON_KEY if VITE_SUPABASE_PUBLISHABLE_KEY is absent. Remove brokeredPreviewStorage reference if present (ums-docs-vault base already uses localStorage). Full content in plan.md step 5.",
+    "6. Update supabase/config.toml: change project_id to mmnpopwzfjyfasvzzatg. Keep all 3 ums-docs-vault function JWT overrides. Full updated content in plan.md step 5.",
+    "7. Replace all occurrences of old project ID 'ixdhpeuzpxqlcqctofsd' in src/ and supabase/ with 'mmnpopwzfjyfasvzzatg'. Check: src/integrations/supabase/types.ts (has __InternalSupabase field), any .md files.",
+    "8. Update public/manifest.json: set name, short_name, description all to 'UMS Hub'.",
+    "9. Run npm install from workspace root.",
+    "10. Run npm run build — fix any immediate configuration errors (missing plugins, wrong import). Do NOT fix TypeScript type errors here — those are addressed in later FEATs."
+  ],
+  "acceptance_criteria": [
+    "Workspace root contains src/, public/, supabase/, package.json, vite.config.ts, .env, index.html, tsconfig*.json",
+    "npm install exits with code 0",
+    "npm run build exits with code 0 (TypeScript type errors are acceptable at this stage; vite build failure is not)",
+    ".env contains all 4 keys pointing to mmnpopwzfjyfasvzzatg project",
+    "supabase/config.toml project_id = 'mmnpopwzfjyfasvzzatg'",
+    "No occurrence of 'ixdhpeuzpxqlcqctofsd' in src/ or supabase/"
+  ],
+  "verification": [
+    "npm install (from workspace root 'c:\\Users\\Administrator\\Desktop\\Deikasgroup\\amstern tech hub\\umsdash')",
+    "npm run build — exits 0",
+    "powershell: Select-String -Path 'src\\integrations\\supabase\\types.ts' -Pattern 'ixdhpeuzpxqlcqctofsd' — should return no matches"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

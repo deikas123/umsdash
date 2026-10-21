@@ -1,0 +1,38 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Wire up all routing, auth, and navigation. This is the most interconnected feature: rewrite App.tsx with /docs/* and /ops/* route trees, create AppLauncher, rewrite AppSidebar with collapsible sections, update AuthContext with role mapping, create unified useUserRole hook, update ProtectedRoute redirects, and update all internal navigation links in docs pages to use /docs/ prefix. Depends on FEAT-001 (base codebase) and FEAT-002 (ops pages exist to import).",
+  "status": "pending",
+  "steps": [
+    "1. Create src/hooks/useUserRole.ts (the canonical unified hook): export function useUserRole() { const { role, isAdmin, isStaff, isCustomer } = useAuth(); return { role: role ?? 'customer', isAdmin, isStaff, isCustomer, isManager: isAdmin || isStaff, loading: false }; }. Full content in plan.md step 13.",
+    "2. Update src/contexts/AuthContext.tsx: in the fetchUserData function, after reading roleData.role from user_roles table, add role mapping logic: if rawRole === 'manager' || rawRole === 'user', map to 'staff'. This ensures uptime-hub legacy role rows are handled. The AppRole type stays as 'admin' | 'staff' | 'customer'. Full diff in plan.md step 14.",
+    "3. Update src/components/ProtectedRoute.tsx: change the redirect for unauthorized customers from Navigate to='/my-documents' to Navigate to='/docs/my-documents'. Change the redirect for non-matching roles from Navigate to='/dashboard' to Navigate to='/docs'. These are the only two changes needed.",
+    "4. Create src/pages/AppLauncher.tsx: full content as specified in plan.md step 17. Key: two app cards (Document Vault → /docs, Operations Hub → /ops), Operations Hub hidden for isCustomer, recent activity from in_app_notifications table, user avatar and signOut in header, ThemeToggle.",
+    "5. Rewrite src/components/layout/AppSidebar.tsx with the unified navigation as specified in plan.md step 16. Three collapsible SidebarGroup sections: 'Document Vault' (doc items with /docs/ prefix), 'Operations Hub' (ops items with /ops/ prefix, hidden for customers), 'Administration' (admin-only doc admin items with /docs/ prefix). Add a 'Home' link at the top pointing to '/'. Keep existing SidebarProvider/SidebarContent/SidebarFooter structure from ums-docs-vault. Keep useNotificationCounts for badge counts. Wrap each section with Collapsible from @/components/ui/collapsible — defaultOpen={true} for all.",
+    "6. Rewrite src/App.tsx: full rewrite as specified in plan.md step 18. Import all 28 docs pages from existing paths (unchanged), import all 11 ops pages from src/pages/operations/. Change AuthenticatedRedirect to navigate to '/' for all roles. Change AuthPageWrapper to redirect to '/' after login. Root route '/' → AppLauncher (protected, no role constraint, no AppLayout wrapper). '/docs' and '/ops' subtrees each use AppLayout as their layout shell. All docs routes prefixed /docs/. All ops routes prefixed /ops/. Ops routes use allowedRoles={['admin','staff']} on the outer ProtectedRoute. Full route table in plan.md step 18.",
+    "7. Update all internal navigate() and <Link to> calls in ums-docs-vault docs pages and components to use /docs/ prefix. Apply the full find-and-replace map from plan.md step 19. Files to update: src/pages/*.tsx (excluding operations/), src/components/layout/*.tsx, src/components/customers/*.tsx, src/components/documents/*.tsx, src/components/folders/*.tsx, src/components/tasks/*.tsx, src/components/upload/*.tsx, src/components/users/*.tsx, src/components/dashboard/*.tsx, src/components/settings/*.tsx, src/components/NotificationBell.tsx, src/components/CommandPalette.tsx, src/components/KeyboardShortcutsDialog.tsx, src/components/PasswordExpiryBanner.tsx, src/components/PasswordExpiryGate.tsx, src/hooks/*.ts.",
+    "8. In the PasswordExpiryGate.tsx and any component that checks role === 'customer' to redirect, update redirect paths: /my-documents → /docs/my-documents.",
+    "9. In the InactivityWrapper or useInactivityTimeout, if there's a navigate('/auth') call, ensure it stays as navigate('/auth') — the auth page path does not change.",
+    "10. Verify there are no duplicate route definitions (e.g., /documents appearing under both /docs and at root) by reviewing the final App.tsx route tree."
+  ],
+  "acceptance_criteria": [
+    "src/pages/AppLauncher.tsx exists and renders without TypeScript errors",
+    "src/hooks/useUserRole.ts exports useUserRole with { role, isAdmin, isStaff, isCustomer, isManager, loading }",
+    "src/App.tsx defines routes at /docs/* and /ops/* (not at /dashboard, /documents etc)",
+    "src/components/layout/AppSidebar.tsx has three SidebarGroup sections: Document Vault, Operations Hub, Administration",
+    "ProtectedRoute redirects to /docs and /docs/my-documents (not /dashboard or /my-documents)",
+    "npm run build exits with code 0",
+    "npm run dev: opening http://localhost:8080/ shows AppLauncher (after login)",
+    "npm run dev: navigating to /docs shows the Document Vault dashboard inside AppLayout",
+    "npm run dev: navigating to /ops shows OpDashboard inside AppLayout"
+  ],
+  "verification": [
+    "npm run build -- exits 0",
+    "npm run test -- all tests pass",
+    "Manual: npm run dev, login, confirm / shows AppLauncher with two app cards",
+    "Manual: click Document Vault card, confirm /docs loads ums-docs-vault Dashboard",
+    "Manual: click Operations Hub card, confirm /ops loads uptime-hub OpDashboard"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

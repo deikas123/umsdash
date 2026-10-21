@@ -1,0 +1,25 @@
+project_id = "mmnpopwzfjyfasvzzatg"
+
+[functions.seed-admin]
+verify_jwt = false
+
+[functions.send-sms]
+verify_jwt = false
+
+[functions.reset-user-password]
+verify_jwt = false
+
+[functions.ops-send-sms]
+verify_jwt = false
+
+[functions.password-reminders]
+verify_jwt = false
+
+[functions.admin-create-user]
+verify_jwt = false
+
+[functions.notify-sms]
+verify_jwt = false
+
+[functions.admin-update-email]
+verify_jwt = false

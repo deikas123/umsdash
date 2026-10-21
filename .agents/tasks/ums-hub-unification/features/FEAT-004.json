@@ -1,0 +1,30 @@
+{
+  "id": "FEAT-004",
+  "type": "feat",
+  "description": "Finalize TypeScript types, fix any remaining build errors, and do a clean production build. Extend src/integrations/supabase/types.ts with all ops tables added in the migration. Ensure zero TypeScript errors and clean lint. This feature is purely a cleanup/types pass and depends on FEAT-001, FEAT-002, FEAT-003 all being complete.",
+  "status": "pending",
+  "steps": [
+    "1. Extend src/integrations/supabase/types.ts: add the following table type definitions to the public.Tables block (copy from .agents/temp/uptime-hub/src/integrations/supabase/types.ts). Tables to add: incidents (full Row/Insert/Update with all columns from the migration), vendor_issues (with uptime_percentage/uptime_start/uptime_end columns), passwords (with owner_user_id/backup_user_id/rotation_days/last_renewed_at/phone_number), password_renewals, escalation_levels, escalations, escalation_events. Add ops_notifications (copy from uptime-hub 'notifications' table type, rename to ops_notifications).",
+    "2. Extend the Enums block in types.ts: change app_role from '\"admin\" | \"staff\" | \"customer\"' to '\"admin\" | \"staff\" | \"customer\" | \"manager\" | \"user\"'. This allows the DB to contain legacy uptime-hub role values without TypeScript errors.",
+    "3. Run npm run build. Address every TypeScript error: 'Property X does not exist on type' → add the column to types.ts. 'Cannot find module' → fix the import path. 'Type X is not assignable to AppRole' → ensure the role mapping in AuthContext covers the case. Do not suppress errors with @ts-ignore — fix them properly.",
+    "4. Run npm run lint. Fix any ESLint errors (not warnings). Common issues: unused imports in new files, missing React imports (not needed in React 17+ JSX transform but sometimes flagged), any 'react-hooks/exhaustive-deps' violations in new hooks.",
+    "5. Run npm run test. Confirm all existing tests pass. The ums-docs-vault tests test utility functions like cn() and export-utils — these are unchanged and should pass. If any test fails due to import path changes (e.g., a test importing from a moved path), fix the test import.",
+    "6. Do a final npm run build and confirm dist/ is produced with no errors.",
+    "7. Create a brief CHANGELOG.md at workspace root documenting: what the project is (UMS Hub), the two source apps, the Supabase project URL, and the route structure (/docs/* and /ops/*)."
+  ],
+  "acceptance_criteria": [
+    "src/integrations/supabase/types.ts contains type definitions for incidents, vendor_issues, passwords, password_renewals, escalation_levels, escalations, escalation_events, ops_notifications tables",
+    "npm run build exits with code 0 AND zero TypeScript type errors",
+    "npm run lint exits with code 0",
+    "npm run test exits with code 0",
+    "dist/ directory exists after build"
+  ],
+  "verification": [
+    "npm run build -- must exit 0 with output containing 'built in'",
+    "npm run lint -- must exit 0",
+    "npm run test -- must exit 0",
+    "powershell: Test-Path dist/index.html | Should Be True"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
