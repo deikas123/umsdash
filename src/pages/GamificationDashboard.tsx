@@ -81,7 +81,7 @@ export default function GamificationDashboard() {
           <DailyChallenge />
         </div>
 
-        {/* Achievements */}
+        {/* Achievements — grouped by category */}
         <div className="mb-4">
           <Card>
             <CardHeader className="pb-2">
@@ -97,22 +97,38 @@ export default function GamificationDashboard() {
               ) : allAchievements.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No achievements defined yet.</p>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {allAchievements.map((ach) => {
-                    const ua = userAchievements.find(
-                      (u) => u.achievement_key === ach.key,
-                    );
-                    return (
-                      <AchievementBadge
-                        key={ach.key}
-                        icon={ach.icon ?? '🏅'}
-                        name={ach.name}
-                        description={ach.description ?? ''}
-                        earned={!!ua}
-                        earned_at={ua?.earned_at}
-                      />
-                    );
-                  })}
+                <div className="space-y-6">
+                  {Array.from(
+                    allAchievements.reduce((map, ach) => {
+                      const cat = ach.category ?? 'general';
+                      if (!map.has(cat)) map.set(cat, []);
+                      map.get(cat)!.push(ach);
+                      return map;
+                    }, new Map<string, Achievement[]>()),
+                  ).map(([category, items]) => (
+                    <div key={category}>
+                      <h3 className="mb-2 text-sm font-semibold capitalize text-muted-foreground tracking-wide">
+                        {category}
+                      </h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-3">
+                        {items.map((ach) => {
+                          const ua = userAchievements.find(
+                            (u) => u.achievement_key === ach.key,
+                          );
+                          return (
+                            <AchievementBadge
+                              key={ach.key}
+                              icon={ach.icon ?? '🏅'}
+                              name={ach.name}
+                              description={ach.description ?? ''}
+                              earned={!!ua}
+                              earned_at={ua?.earned_at}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>
