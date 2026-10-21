@@ -45,10 +45,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('user_id', userId)
         .single();
 
+      let mappedRole: AppRole | null = null;
       if (roleData) {
         // Map uptime-hub legacy roles to ums-docs-vault roles
         const rawRole = roleData.role as string;
-        const mappedRole: AppRole = (rawRole === 'manager' || rawRole === 'user') ? 'staff' : rawRole as AppRole;
+        mappedRole = (rawRole === 'manager' || rawRole === 'user') ? 'staff' : rawRole as AppRole;
         setRole(mappedRole);
       }
 
@@ -63,8 +64,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(profileData);
       }
 
-      // If customer, fetch customer ID
-      if (roleData?.role === 'customer') {
+      // If customer (use mapped role, not raw DB value), fetch customer ID
+      if (mappedRole === 'customer') {
         const { data: customerData } = await supabase
           .from('customers')
           .select('id')

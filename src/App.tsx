@@ -55,6 +55,7 @@ import OpAnalytics from "./pages/operations/OpAnalytics";
 import OpSmsLogs from "./pages/operations/OpSmsLogs";
 import OpEscalations from "./pages/operations/OpEscalations";
 import OpUserManagement from "./pages/operations/OpUserManagement";
+import OpForcePasswordChange from "./pages/operations/OpForcePasswordChange";
 
 const queryClient = new QueryClient();
 
@@ -63,14 +64,6 @@ function InactivityWrapper({ children }: { children: React.ReactNode }) {
   useInactivityTimeout();
   useNotifications();
   return <PasswordExpiryGate>{children}</PasswordExpiryGate>;
-}
-
-// Route handler for root: redirect authenticated users to launcher
-function AuthenticatedRedirect() {
-  const { user, loading } = useAuth();
-  if (loading) return null;
-  if (user) return <Navigate to="/" replace />;
-  return <Navigate to="/auth" replace />;
 }
 
 // Auth page wrapper to redirect if already logged in
@@ -166,15 +159,16 @@ const AppRoutes = () => (
           </ProtectedRoute>
         }
       >
-        <Route index element={<OpDashboard />} />
-        <Route path="vendor-issues" element={<OpVendorIssues />} />
-        <Route path="vendor-uptime" element={<OpVendorUptime />} />
-        <Route path="incidents" element={<OpIncidents />} />
-        <Route path="passwords" element={<OpPasswords />} />
-        <Route path="documents" element={<OpDocuments />} />
-        <Route path="analytics" element={<OpAnalytics />} />
-        <Route path="sms-logs" element={<OpSmsLogs />} />
-        <Route path="escalations" element={<OpEscalations />} />
+        <Route index element={<ProtectedRoute allowedRoles={['admin', 'staff']}><OpDashboard /></ProtectedRoute>} />
+        <Route path="vendor-issues" element={<ProtectedRoute allowedRoles={['admin', 'staff']}><OpVendorIssues /></ProtectedRoute>} />
+        <Route path="vendor-uptime" element={<ProtectedRoute allowedRoles={['admin', 'staff']}><OpVendorUptime /></ProtectedRoute>} />
+        <Route path="incidents" element={<ProtectedRoute allowedRoles={['admin', 'staff']}><OpIncidents /></ProtectedRoute>} />
+        <Route path="passwords" element={<ProtectedRoute allowedRoles={['admin', 'staff']}><OpPasswords /></ProtectedRoute>} />
+        <Route path="documents" element={<ProtectedRoute allowedRoles={['admin', 'staff']}><OpDocuments /></ProtectedRoute>} />
+        <Route path="analytics" element={<ProtectedRoute allowedRoles={['admin', 'staff']}><OpAnalytics /></ProtectedRoute>} />
+        <Route path="escalations" element={<ProtectedRoute allowedRoles={['admin', 'staff']}><OpEscalations /></ProtectedRoute>} />
+        <Route path="force-password-change" element={<ProtectedRoute allowedRoles={['admin', 'staff']}><OpForcePasswordChange /></ProtectedRoute>} />
+        <Route path="sms-logs" element={<ProtectedRoute allowedRoles={['admin']}><OpSmsLogs /></ProtectedRoute>} />
         <Route path="users" element={<ProtectedRoute allowedRoles={['admin']}><OpUserManagement /></ProtectedRoute>} />
       </Route>
 
