@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Upload, FileText, Search, Users, ClipboardList, Settings,
   FolderOpen, FolderLock, LogOut, Bell, ListTodo, Trash2, MessageSquare,
   Activity, BarChart3, CalendarClock, HardDrive, Flame, DatabaseBackup,
-  AlertTriangle, FileWarning, KeyRound, Siren, Home,
+  AlertTriangle, FileWarning, KeyRound, Siren, Home, Trophy,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import {
@@ -31,6 +31,7 @@ const docNavItems = [
   { title: 'Tasks', url: '/docs/tasks', icon: ListTodo, badge: 'tasks' },
   { title: 'Reminders', url: '/docs/reminders', icon: Bell, badge: 'reminders' },
   { title: 'Team Chat', url: '/docs/chat', icon: MessageSquare },
+  { title: 'My Progress', url: '/docs/gamification', icon: Trophy },
   { title: 'Search', url: '/docs/search', icon: Search },
   { title: 'Customers', url: '/docs/customers', icon: Users },
 ];
@@ -42,6 +43,7 @@ const docCustomerItems = [
   { title: 'Tasks', url: '/docs/tasks', icon: ListTodo, badge: 'tasks' },
   { title: 'Reminders', url: '/docs/reminders', icon: Bell, badge: 'reminders' },
   { title: 'Team Chat', url: '/docs/chat', icon: MessageSquare },
+  { title: 'My Progress', url: '/docs/gamification', icon: Trophy },
 ];
 
 // Operations Hub nav items (admin/staff only)

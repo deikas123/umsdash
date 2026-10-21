@@ -8,6 +8,7 @@ import { useDocuments } from '@/hooks/useDocuments';
 import { useReminders } from '@/hooks/useReminders';
 import { useTasks } from '@/hooks/useTasks';
 import { useAuth } from '@/contexts/AuthContext';
+import { useStreakWidget } from '@/hooks/useStreakWidget';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -36,6 +37,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   Sparkles,
+  Flame,
+  Trophy,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -64,6 +67,7 @@ export default function Dashboard() {
 
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
+  const { currentStreak, todayXp } = useStreakWidget();
 
   useEffect(() => {
     const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
@@ -264,7 +268,7 @@ export default function Dashboard() {
       )}
 
       {/* Upcoming Reminders & Active Tasks - Compact */}
-      <div className="grid gap-3 grid-cols-1 lg:grid-cols-2 mb-4">
+      <div className="grid gap-3 grid-cols-1 lg:grid-cols-3 mb-4">
         {/* Upcoming Reminders */}
         <Card className="py-0">
           <CardHeader className="py-3 flex flex-row items-center justify-between">
@@ -347,6 +351,34 @@ export default function Dashboard() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Gamification Summary */}
+        <Card className="py-0">
+          <CardHeader className="py-3 flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-amber-500" />
+              My Progress
+            </CardTitle>
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" asChild>
+              <Link to="/docs/gamification">View Progress →</Link>
+            </Button>
+          </CardHeader>
+          <CardContent className="py-2 space-y-2">
+            <div className="flex items-center gap-2 p-2 rounded bg-muted/50">
+              <Flame className="h-5 w-5 text-orange-500 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold">{currentStreak} day streak</p>
+                <p className="text-xs text-muted-foreground">Keep uploading daily!</p>
+              </div>
+            </div>
+            {todayXp > 0 && (
+              <div className="flex items-center gap-2 p-2 rounded bg-amber-50 dark:bg-amber-950/20">
+                <Sparkles className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                <p className="text-xs font-medium text-amber-700 dark:text-amber-400">+{todayXp} XP earned today</p>
               </div>
             )}
           </CardContent>

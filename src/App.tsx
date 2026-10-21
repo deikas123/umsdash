@@ -44,6 +44,7 @@ import StorageAnalytics from "./pages/StorageAnalytics";
 import ActivityHeatmap from "./pages/ActivityHeatmap";
 import UserActivityLog from "./pages/UserActivityLog";
 import DatabaseExport from "./pages/DatabaseExport";
+import GamificationDashboard from "./pages/GamificationDashboard";
 
 // Operations Hub pages
 import OpDashboard from "./pages/operations/OpDashboard";
@@ -131,6 +132,7 @@ const AppRoutes = () => (
         <Route path="chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
         <Route path="in-app-notifications" element={<ProtectedRoute><InAppNotifications /></ProtectedRoute>} />
         <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route path="gamification" element={<ProtectedRoute><GamificationDashboard /></ProtectedRoute>} />
 
         {/* Customer only */}
         <Route path="my-documents" element={<ProtectedRoute allowedRoles={['customer']}><MyDocuments /></ProtectedRoute>} />
