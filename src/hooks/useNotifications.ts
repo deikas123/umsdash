@@ -35,7 +35,7 @@ export function useNotifications() {
           icon: '/pwa-192x192.png',
           badge: '/pwa-192x192.png',
         });
-      } catch { }
+      } catch (_e) { /* push notification unavailable */ }
     }
 
     // SMS notification

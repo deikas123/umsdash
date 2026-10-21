@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Plus, AlertCircle, CheckCircle2, Activity, Search, CalendarIcon } from "lucide-react";
+import { Plus, AlertCircle, CheckCircle2, Activity, Search, CalendarIcon, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,15 @@ export default function OpVendorUptime() {
   const [vendorFilter, setVendorFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [form, setForm] = useState({ vendor: "", system_name: "", downtime_hours: "", total_hours: "24", uptime_start: "", uptime_end: "" });
+
+  const [slaDismissed, setSlaDismissed] = useState<boolean>(() => {
+    try { return localStorage.getItem('umshub_sla_breach_dismissed') === 'true'; } catch { return false; }
+  });
+
+  const handleDismissSla = () => {
+    setSlaDismissed(true);
+    try { localStorage.setItem('umshub_sla_breach_dismissed', 'true'); } catch (_e) { /* storage unavailable */ }
+  };
 
   // Date range state
   const [datePreset, setDatePreset] = useState<DatePreset>("all");
@@ -238,8 +248,24 @@ export default function OpVendorUptime() {
         }
       />
 
-      {/* Date Range + SLA Target + Filters */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      {/* SLA Breach Alert Banner */}
+      {!slaDismissed && alerts.length > 0 && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>SLA Breach Alert</AlertTitle>
+          <AlertDescription className="flex items-start justify-between gap-2">
+            <span>
+              {alerts.length} vendor{alerts.length > 1 ? 's are' : ' is'} in SLA breach:{' '}
+              {alerts.map((v) => v.vendor).join(', ')}
+            </span>
+            <Button variant="ghost" size="sm" className="h-6 px-2 flex-shrink-0" onClick={handleDismissSla}>
+              Dismiss
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Date Range + SLA Target + Filters */}      <div className="mb-4 flex flex-wrap items-center gap-3">
         <Label className="text-xs font-semibold text-muted-foreground">Period:</Label>
         <Select value={datePreset} onValueChange={(v) => setDatePreset(v as DatePreset)}>
           <SelectTrigger className="h-9 w-40 rounded-[4px]"><SelectValue /></SelectTrigger>

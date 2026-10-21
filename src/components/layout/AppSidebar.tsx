@@ -122,15 +122,15 @@ export function AppSidebar() {
 
   const handleDocsToggle = (open: boolean) => {
     setDocsOpen(open);
-    try { localStorage.setItem('umshub_sidebar_docs_open', String(open)); } catch {}
+    try { localStorage.setItem('umshub_sidebar_docs_open', String(open)); } catch (_e) { /* storage unavailable */ }
   };
   const handleOpsToggle = (open: boolean) => {
     setOpsOpen(open);
-    try { localStorage.setItem('umshub_sidebar_ops_open', String(open)); } catch {}
+    try { localStorage.setItem('umshub_sidebar_ops_open', String(open)); } catch (_e) { /* storage unavailable */ }
   };
   const handleAdminToggle = (open: boolean) => {
     setAdminOpen(open);
-    try { localStorage.setItem('umshub_sidebar_admin_open', String(open)); } catch {}
+    try { localStorage.setItem('umshub_sidebar_admin_open', String(open)); } catch (_e) { /* storage unavailable */ }
   };
 
   const isActive = (path: string) => location.pathname === path || (path !== '/' && location.pathname.startsWith(path + '/'));
