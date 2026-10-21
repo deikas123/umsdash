@@ -1244,6 +1244,208 @@ export type Database = {
         }
         Relationships: []
       }
+      achievements: {
+        Row: {
+          category: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          key: string
+          name: string
+          xp_reward: number
+        }
+        Insert: {
+          category?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          key: string
+          name: string
+          xp_reward?: number
+        }
+        Update: {
+          category?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          key?: string
+          name?: string
+          xp_reward?: number
+        }
+        Relationships: []
+      }
+      daily_challenges: {
+        Row: {
+          date: string
+          icon: string
+          id: string
+          label: string
+          target_count: number
+          type: string
+          xp_reward: number
+        }
+        Insert: {
+          date: string
+          icon?: string
+          id?: string
+          label: string
+          target_count?: number
+          type: string
+          xp_reward?: number
+        }
+        Update: {
+          date?: string
+          icon?: string
+          id?: string
+          label?: string
+          target_count?: number
+          type?: string
+          xp_reward?: number
+        }
+        Relationships: []
+      }
+      upload_streaks: {
+        Row: {
+          current_streak: number
+          id: string
+          last_upload_date: string | null
+          longest_streak: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          current_streak?: number
+          id?: string
+          last_upload_date?: string | null
+          longest_streak?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          current_streak?: number
+          id?: string
+          last_upload_date?: string | null
+          longest_streak?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_achievements: {
+        Row: {
+          achievement_key: string
+          earned_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          achievement_key: string
+          earned_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          achievement_key?: string
+          earned_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievements_achievement_key_fkey"
+            columns: ["achievement_key"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      user_daily_progress: {
+        Row: {
+          challenge_date: string
+          completed: boolean
+          completed_at: string | null
+          id: string
+          progress: number
+          user_id: string
+        }
+        Insert: {
+          challenge_date: string
+          completed?: boolean
+          completed_at?: string | null
+          id?: string
+          progress?: number
+          user_id: string
+        }
+        Update: {
+          challenge_date?: string
+          completed?: boolean
+          completed_at?: string | null
+          id?: string
+          progress?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_daily_progress_challenge_date_fkey"
+            columns: ["challenge_date"]
+            isOneToOne: false
+            referencedRelation: "daily_challenges"
+            referencedColumns: ["date"]
+          },
+        ]
+      }
+      user_xp: {
+        Row: {
+          id: string
+          level: number
+          total_xp: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          level?: number
+          total_xp?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          level?: number
+          total_xp?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      xp_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          reason: string
+          ref_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          reason: string
+          ref_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          reason?: string
+          ref_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
