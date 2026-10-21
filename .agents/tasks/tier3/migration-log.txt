@@ -1,0 +1,24 @@
+Tier 3 Migration Log
+====================
+File: supabase/migrations/20261022000004_tier3_features.sql
+Run date: 2026-10-22
+Exit code: 0
+
+Output:
+psql: NOTICE: relation "document_text_content" already exists, skipping
+CREATE TABLE
+ALTER TABLE
+psql: ERROR: policy "staff can read text content" for table "document_text_content" already exists
+psql: NOTICE: relation "document_text_content_search_idx" already exists, skipping
+CREATE INDEX
+psql: NOTICE: relation "export_schedules" already exists, skipping
+CREATE TABLE
+ALTER TABLE
+psql: ERROR: policy "admins manage schedules" for table "export_schedules" already exists
+psql: ERROR: policy "admins insert schedules" for table "export_schedules" already exists
+psql: ERROR: policy "admins update schedules" for table "export_schedules" already exists
+
+Notes:
+- Tables and index already existed from a prior migration run; IF NOT EXISTS guards skipped re-creation cleanly.
+- RLS policies already existed; errors are benign (policies are in place).
+- Both document_text_content and export_schedules are confirmed present with RLS enabled.

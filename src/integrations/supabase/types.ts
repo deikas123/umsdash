@@ -1446,6 +1446,81 @@ export type Database = {
         }
         Relationships: []
       }
+      document_text_content: {
+        Row: {
+          id: string
+          document_id: string
+          extracted_text: string | null
+          extraction_status: string
+          extracted_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          document_id: string
+          extracted_text?: string | null
+          extraction_status?: string
+          extracted_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          document_id?: string
+          extracted_text?: string | null
+          extraction_status?: string
+          extracted_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      export_schedules: {
+        Row: {
+          id: string
+          name: string
+          schedule_type: string
+          day_of_week: number | null
+          day_of_month: number | null
+          export_type: string
+          format: string
+          email_to: string[] | null
+          last_run_at: string | null
+          next_run_at: string | null
+          active: boolean
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          schedule_type: string
+          day_of_week?: number | null
+          day_of_month?: number | null
+          export_type: string
+          format?: string
+          email_to?: string[] | null
+          last_run_at?: string | null
+          next_run_at?: string | null
+          active?: boolean
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          schedule_type?: string
+          day_of_week?: number | null
+          day_of_month?: number | null
+          export_type?: string
+          format?: string
+          email_to?: string[] | null
+          last_run_at?: string | null
+          next_run_at?: string | null
+          active?: boolean
+          created_by?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
