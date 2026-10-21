@@ -52,7 +52,7 @@ export default function Auth() {
       }
 
       // Redirect will be handled by the auth context
-      navigate('/dashboard');
+      navigate('/docs');
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
     } finally {

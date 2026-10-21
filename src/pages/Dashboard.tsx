@@ -132,13 +132,13 @@ export default function Dashboard() {
       {/* Quick Actions */}
       <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row gap-2 sm:gap-3">
         <Button asChild className="w-full sm:w-auto">
-          <Link to="/upload">
+          <Link to="/docs/upload">
             <Plus className="mr-2 h-4 w-4" />
             Upload Document
           </Link>
         </Button>
         <Button variant="outline" asChild className="w-full sm:w-auto">
-          <Link to="/search">
+          <Link to="/docs/search">
             <Search className="mr-2 h-4 w-4" />
             Search Documents
           </Link>
@@ -273,7 +273,7 @@ export default function Dashboard() {
               Upcoming Reminders
             </CardTitle>
             <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" asChild>
-              <Link to="/reminders">View All</Link>
+              <Link to="/docs/reminders">View All</Link>
             </Button>
           </CardHeader>
           <CardContent className="py-2">
@@ -315,7 +315,7 @@ export default function Dashboard() {
               Active Tasks
             </CardTitle>
             <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" asChild>
-              <Link to="/tasks">View All</Link>
+              <Link to="/docs/tasks">View All</Link>
             </Button>
           </CardHeader>
           <CardContent className="py-2">
@@ -359,7 +359,7 @@ export default function Dashboard() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Recent Documents</CardTitle>
             <Button variant="ghost" size="sm" asChild>
-              <Link to="/documents">View All</Link>
+              <Link to="/docs/documents">View All</Link>
             </Button>
           </CardHeader>
           <CardContent>
@@ -374,7 +374,7 @@ export default function Dashboard() {
                 <FileText className="mx-auto h-12 w-12 mb-4 opacity-50" />
                 <p>No documents yet</p>
                 <Button variant="link" asChild className="mt-2">
-                  <Link to="/upload">Upload your first document</Link>
+                  <Link to="/docs/upload">Upload your first document</Link>
                 </Button>
               </div>
             ) : (

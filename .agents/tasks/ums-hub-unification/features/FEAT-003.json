@@ -2,7 +2,7 @@
   "id": "FEAT-003",
   "type": "feat",
   "description": "Wire up all routing, auth, and navigation. This is the most interconnected feature: rewrite App.tsx with /docs/* and /ops/* route trees, create AppLauncher, rewrite AppSidebar with collapsible sections, update AuthContext with role mapping, create unified useUserRole hook, update ProtectedRoute redirects, and update all internal navigation links in docs pages to use /docs/ prefix. Depends on FEAT-001 (base codebase) and FEAT-002 (ops pages exist to import).",
-  "status": "pending",
+  "status": "completed",
   "steps": [
     "1. Create src/hooks/useUserRole.ts (the canonical unified hook): export function useUserRole() { const { role, isAdmin, isStaff, isCustomer } = useAuth(); return { role: role ?? 'customer', isAdmin, isStaff, isCustomer, isManager: isAdmin || isStaff, loading: false }; }. Full content in plan.md step 13.",
     "2. Update src/contexts/AuthContext.tsx: in the fetchUserData function, after reading roleData.role from user_roles table, add role mapping logic: if rawRole === 'manager' || rawRole === 'user', map to 'staff'. This ensures uptime-hub legacy role rows are handled. The AppRole type stays as 'admin' | 'staff' | 'customer'. Full diff in plan.md step 14.",
@@ -34,5 +34,5 @@
     "Manual: click Operations Hub card, confirm /ops loads uptime-hub OpDashboard"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "Build exits 0 (3984 modules, ~84s). AppLauncher created at /. App.tsx fully rewritten with nested /docs/* and /ops/* route trees using Outlet-based layout shells. AppSidebar rewritten with three collapsible sections (Document Vault, Operations Hub, Administration), Home link at top. AuthContext updated with manager→staff and user→staff role mapping. ProtectedRoute redirects updated to /docs and /docs/my-documents. All internal navigation links updated to /docs/ prefix across Dashboard.tsx, UserActivityLog.tsx, NotificationBell.tsx, PasswordExpiryBanner.tsx, SmsBanner.tsx, CommandPalette.tsx. useUserRole.ts canonical hook at src/hooks/useUserRole.ts created in FEAT-002 and confirmed correct."
 }

@@ -142,7 +142,7 @@ export default function UserActivityLog() {
     <AppLayout title="User Activity" description="Detailed audit trail for this user">
       <div className="mb-4">
         <Button asChild variant="ghost" size="sm">
-          <Link to="/users">
+          <Link to="/docs/users">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to users
           </Link>

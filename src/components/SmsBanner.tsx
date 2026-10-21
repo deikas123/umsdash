@@ -33,7 +33,7 @@ export function SmsBanner() {
         </span>
         <div className="flex gap-2">
           <Button size="sm" variant="default" asChild>
-            <Link to="/settings">Set Up SMS</Link>
+            <Link to="/docs/settings">Set Up SMS</Link>
           </Button>
           <Button size="sm" variant="ghost" onClick={handleDismiss}>
             <X className="h-4 w-4" />

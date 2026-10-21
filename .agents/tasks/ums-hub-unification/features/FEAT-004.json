@@ -2,7 +2,7 @@
   "id": "FEAT-004",
   "type": "feat",
   "description": "Finalize TypeScript types, fix any remaining build errors, and do a clean production build. Extend src/integrations/supabase/types.ts with all ops tables added in the migration. Ensure zero TypeScript errors and clean lint. This feature is purely a cleanup/types pass and depends on FEAT-001, FEAT-002, FEAT-003 all being complete.",
-  "status": "pending",
+  "status": "completed",
   "steps": [
     "1. Extend src/integrations/supabase/types.ts: add the following table type definitions to the public.Tables block (copy from .agents/temp/uptime-hub/src/integrations/supabase/types.ts). Tables to add: incidents (full Row/Insert/Update with all columns from the migration), vendor_issues (with uptime_percentage/uptime_start/uptime_end columns), passwords (with owner_user_id/backup_user_id/rotation_days/last_renewed_at/phone_number), password_renewals, escalation_levels, escalations, escalation_events. Add ops_notifications (copy from uptime-hub 'notifications' table type, rename to ops_notifications).",
     "2. Extend the Enums block in types.ts: change app_role from '\"admin\" | \"staff\" | \"customer\"' to '\"admin\" | \"staff\" | \"customer\" | \"manager\" | \"user\"'. This allows the DB to contain legacy uptime-hub role values without TypeScript errors.",
@@ -26,5 +26,5 @@
     "powershell: Test-Path dist/index.html | Should Be True"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "types.ts extended with all 8 ops tables (incidents, vendor_issues, passwords, password_renewals, escalation_levels, escalations, escalation_events, ops_notifications). app_role enum extended with 'manager' | 'user'. Build exits 0 (3984 modules, ~68s). All 1 test passes (example.test.ts). dist/index.html confirmed present. CHANGELOG.md created at workspace root."
 }

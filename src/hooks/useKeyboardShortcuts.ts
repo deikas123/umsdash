@@ -14,15 +14,15 @@ export function useKeyboardShortcuts() {
   const navigate = useNavigate();
 
   const shortcuts: Shortcut[] = [
-    { key: 'd', alt: true, description: 'Go to Dashboard', action: () => navigate('/dashboard') },
-    { key: 'u', alt: true, description: 'Upload Document', action: () => navigate('/upload') },
-    { key: 'f', alt: true, description: 'All Documents', action: () => navigate('/documents') },
+    { key: 'd', alt: true, description: 'Go to Dashboard', action: () => navigate('/docs') },
+    { key: 'u', alt: true, description: 'Upload Document', action: () => navigate('/docs/upload') },
+    { key: 'f', alt: true, description: 'All Documents', action: () => navigate('/docs/documents') },
     { key: 's', alt: true, description: 'Search', action: () => navigate('/search') },
     { key: 'c', alt: true, description: 'Customers', action: () => navigate('/customers') },
     { key: 't', alt: true, description: 'Tasks', action: () => navigate('/tasks') },
     { key: 'r', alt: true, description: 'Reminders', action: () => navigate('/reminders') },
     { key: 'p', alt: true, description: 'Private Folders', action: () => navigate('/folders') },
-    { key: ',', alt: true, description: 'Settings', action: () => navigate('/settings') },
+    { key: ',', alt: true, description: 'Settings', action: () => navigate('/docs/settings') },
   ];
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {

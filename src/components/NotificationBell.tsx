@@ -79,7 +79,7 @@ export function NotificationBell() {
           )}
         </ScrollArea>
         <div className="border-t p-2">
-          <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => navigate('/in-app-notifications')}>
+          <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => navigate('/docs/in-app-notifications')}>
             View all notifications
           </Button>
         </div>

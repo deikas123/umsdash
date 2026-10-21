@@ -28,7 +28,7 @@ export function PasswordExpiryBanner() {
         <Button
           size="sm"
           variant={isExpired ? 'destructive' : 'outline'}
-          onClick={() => navigate('/settings')}
+          onClick={() => navigate('/docs/settings')}
         >
           Change Password
         </Button>

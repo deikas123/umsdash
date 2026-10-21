@@ -845,6 +845,405 @@ export type Database = {
         }
         Relationships: []
       }
+      escalation_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          escalation_id: string
+          event_type: string
+          from_level: number | null
+          id: string
+          note: string | null
+          to_level: number | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          escalation_id: string
+          event_type: string
+          from_level?: number | null
+          id?: string
+          note?: string | null
+          to_level?: number | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          escalation_id?: string
+          event_type?: string
+          from_level?: number | null
+          id?: string
+          note?: string | null
+          to_level?: number | null
+        }
+        Relationships: []
+      }
+      escalation_levels: {
+        Row: {
+          hours_to_next: number | null
+          level: number
+          name: string
+          target_role: Database["public"]["Enums"]["app_role"] | null
+        }
+        Insert: {
+          hours_to_next?: number | null
+          level: number
+          name: string
+          target_role?: Database["public"]["Enums"]["app_role"] | null
+        }
+        Update: {
+          hours_to_next?: number | null
+          level?: number
+          name?: string
+          target_role?: Database["public"]["Enums"]["app_role"] | null
+        }
+        Relationships: []
+      }
+      escalations: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          created_by: string | null
+          current_level: number
+          id: string
+          level_deadline: string | null
+          resolved_at: string | null
+          source_id: string
+          source_table: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_level?: number
+          id?: string
+          level_deadline?: string | null
+          resolved_at?: string | null
+          source_id: string
+          source_table: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_level?: number
+          id?: string
+          level_deadline?: string | null
+          resolved_at?: string | null
+          source_id?: string
+          source_table?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      incidents: {
+        Row: {
+          capa_action: string | null
+          capa_deadline: string | null
+          capa_owner: string | null
+          capa_status: string | null
+          containment_details: string | null
+          created_at: string
+          date_of_incident: string | null
+          date_reported: string | null
+          department: string | null
+          description: string | null
+          estimated_value: number | null
+          financial_amount: number | null
+          financial_impact: string | null
+          id: string
+          immediate_actions: string[] | null
+          incident_number: string
+          incident_type: string | null
+          item_description: string | null
+          item_quantity: number | null
+          location: string | null
+          operational_impact: string[] | null
+          persons_involved: string | null
+          problem_statement: string | null
+          reported_by: string | null
+          root_cause_categories: string[] | null
+          root_cause_statement: string | null
+          safety_impact: string[] | null
+          serial_numbers: string | null
+          severity: string | null
+          status: string
+          supporting_docs: string[] | null
+          time_of_incident: string | null
+          updated_at: string
+          urgency: string | null
+          user_id: string
+          why_1: string | null
+          why_2: string | null
+          why_3: string | null
+          why_4: string | null
+          why_5: string | null
+          witnesses: string | null
+        }
+        Insert: {
+          capa_action?: string | null
+          capa_deadline?: string | null
+          capa_owner?: string | null
+          capa_status?: string | null
+          containment_details?: string | null
+          created_at?: string
+          date_of_incident?: string | null
+          date_reported?: string | null
+          department?: string | null
+          description?: string | null
+          estimated_value?: number | null
+          financial_amount?: number | null
+          financial_impact?: string | null
+          id?: string
+          immediate_actions?: string[] | null
+          incident_number: string
+          incident_type?: string | null
+          item_description?: string | null
+          item_quantity?: number | null
+          location?: string | null
+          operational_impact?: string[] | null
+          persons_involved?: string | null
+          problem_statement?: string | null
+          reported_by?: string | null
+          root_cause_categories?: string[] | null
+          root_cause_statement?: string | null
+          safety_impact?: string[] | null
+          serial_numbers?: string | null
+          severity?: string | null
+          status?: string
+          supporting_docs?: string[] | null
+          time_of_incident?: string | null
+          updated_at?: string
+          urgency?: string | null
+          user_id: string
+          why_1?: string | null
+          why_2?: string | null
+          why_3?: string | null
+          why_4?: string | null
+          why_5?: string | null
+          witnesses?: string | null
+        }
+        Update: {
+          capa_action?: string | null
+          capa_deadline?: string | null
+          capa_owner?: string | null
+          capa_status?: string | null
+          containment_details?: string | null
+          created_at?: string
+          date_of_incident?: string | null
+          date_reported?: string | null
+          department?: string | null
+          description?: string | null
+          estimated_value?: number | null
+          financial_amount?: number | null
+          financial_impact?: string | null
+          id?: string
+          immediate_actions?: string[] | null
+          incident_number?: string
+          incident_type?: string | null
+          item_description?: string | null
+          item_quantity?: number | null
+          location?: string | null
+          operational_impact?: string[] | null
+          persons_involved?: string | null
+          problem_statement?: string | null
+          reported_by?: string | null
+          root_cause_categories?: string[] | null
+          root_cause_statement?: string | null
+          safety_impact?: string[] | null
+          serial_numbers?: string | null
+          severity?: string | null
+          status?: string
+          supporting_docs?: string[] | null
+          time_of_incident?: string | null
+          updated_at?: string
+          urgency?: string | null
+          user_id?: string
+          why_1?: string | null
+          why_2?: string | null
+          why_3?: string | null
+          why_4?: string | null
+          why_5?: string | null
+          witnesses?: string | null
+        }
+        Relationships: []
+      }
+      ops_notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          link: string | null
+          read: boolean
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          read?: boolean
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          read?: boolean
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      password_renewals: {
+        Row: {
+          created_at: string
+          id: string
+          new_expiry: string
+          notes: string | null
+          password_id: string
+          previous_expiry: string | null
+          renewed_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          new_expiry: string
+          notes?: string | null
+          password_id: string
+          previous_expiry?: string | null
+          renewed_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          new_expiry?: string
+          notes?: string | null
+          password_id?: string
+          previous_expiry?: string | null
+          renewed_by?: string | null
+        }
+        Relationships: []
+      }
+      passwords: {
+        Row: {
+          assigned_to: string | null
+          backup_user_id: string | null
+          created_at: string
+          expiry_date: string
+          id: string
+          last_notified_at: string | null
+          last_renewed_at: string | null
+          notified: boolean | null
+          owner_user_id: string | null
+          phone_number: string | null
+          rotation_days: number
+          system_name: string
+          updated_at: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          backup_user_id?: string | null
+          created_at?: string
+          expiry_date: string
+          id?: string
+          last_notified_at?: string | null
+          last_renewed_at?: string | null
+          notified?: boolean | null
+          owner_user_id?: string | null
+          phone_number?: string | null
+          rotation_days?: number
+          system_name: string
+          updated_at?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          assigned_to?: string | null
+          backup_user_id?: string | null
+          created_at?: string
+          expiry_date?: string
+          id?: string
+          last_notified_at?: string | null
+          last_renewed_at?: string | null
+          notified?: boolean | null
+          owner_user_id?: string | null
+          phone_number?: string | null
+          rotation_days?: number
+          system_name?: string
+          updated_at?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      vendor_issues: {
+        Row: {
+          created_at: string
+          date_reported: string | null
+          downtime: string | null
+          id: string
+          impact: string
+          issue: string
+          rca_status: string | null
+          status: string
+          system_name: string | null
+          updated_at: string
+          uptime_end: string | null
+          uptime_percentage: number | null
+          uptime_start: string | null
+          user_id: string
+          vendor: string
+        }
+        Insert: {
+          created_at?: string
+          date_reported?: string | null
+          downtime?: string | null
+          id?: string
+          impact?: string
+          issue: string
+          rca_status?: string | null
+          status?: string
+          system_name?: string | null
+          updated_at?: string
+          uptime_end?: string | null
+          uptime_percentage?: number | null
+          uptime_start?: string | null
+          user_id: string
+          vendor: string
+        }
+        Update: {
+          created_at?: string
+          date_reported?: string | null
+          downtime?: string | null
+          id?: string
+          impact?: string
+          issue?: string
+          rca_status?: string | null
+          status?: string
+          system_name?: string | null
+          updated_at?: string
+          uptime_end?: string | null
+          uptime_percentage?: number | null
+          uptime_start?: string | null
+          user_id?: string
+          vendor?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -884,7 +1283,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "staff" | "customer"
+      app_role: "admin" | "staff" | "customer" | "manager" | "user"
       document_status: "pending" | "approved" | "archived"
       staff_position: "super_admin" | "hr" | "hod" | "staff"
       task_priority: "low" | "normal" | "high"
@@ -1016,7 +1415,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "staff", "customer"],
+      app_role: ["admin", "staff", "customer", "manager", "user"],
       document_status: ["pending", "approved", "archived"],
       staff_position: ["super_admin", "hr", "hod", "staff"],
       task_priority: ["low", "normal", "high"],
