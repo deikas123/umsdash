@@ -2,7 +2,7 @@
   "id": "FEAT-001",
   "type": "feat",
   "description": "Scaffold the workspace from ums-docs-vault as the base project. Copy all source files, create merged package.json and vite.config.ts, create .env with new Supabase credentials, update Supabase client and config.toml, and install dependencies. After this feature the workspace has a buildable (though route-incomplete) ums-docs-vault project pointed at the new Supabase project.",
-  "status": "pending",
+  "status": "completed",
   "steps": [
     "1. Copy these files/dirs from .agents/temp/ums-docs-vault/ to workspace root (exclude .git, node_modules, dist, .env): index.html, tsconfig.json, tsconfig.app.json, tsconfig.node.json, postcss.config.js, tailwind.config.ts, eslint.config.js, vitest.config.ts, components.json, DOCUMENTATION.md, MIGRATION.md, src/ (full tree), public/ (full tree), supabase/ (full tree).",
     "2. Create package.json at workspace root: name='ums-hub', description='UMS Hub — Unified Management Platform', merge all deps from ums-docs-vault + add framer-motion:^12.38.0 (new dep from uptime-hub) + upgrade @supabase/supabase-js to ^2.99.2 + add drizzle-kit:0.x and drizzle-orm:0.x and postgres:^3.4.9 as devDependencies. Full package.json content is specified in plan.md step 2.",
@@ -29,5 +29,5 @@
     "powershell: Select-String -Path 'src\\integrations\\supabase\\types.ts' -Pattern 'ixdhpeuzpxqlcqctofsd' — should return no matches"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "Build completed successfully (exit 0). 3565 modules transformed, built in ~81s. One expected warning: main chunk (index-mbe_1SBO.js) is 2470KB > 1000KB limit — this is the full ums-docs-vault app bundled together and will be addressed via code-splitting in later FEATs when routes are added. npm install took ~18 minutes due to fresh download of all deps including framer-motion. Old project ID ixdhpeuzpxqlcqctofsd not found anywhere in src/ or supabase/. .env has all 4 required keys. supabase/config.toml updated to mmnpopwzfjyfasvzzatg. Git repo initialized with initial commit 82f9c84."
 }
