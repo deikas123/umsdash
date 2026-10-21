@@ -2,16 +2,23 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PasswordExpiryGate } from "@/components/PasswordExpiryGate";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { useInactivityTimeout } from "@/hooks/useInactivityTimeout";
 import { useNotifications } from "@/hooks/useNotifications";
 
-// Pages
+// Launcher
+import AppLauncher from "./pages/AppLauncher";
+
+// Auth pages
 import Auth from "./pages/Auth";
 import SetupAdmin from "./pages/SetupAdmin";
+import NotFound from "./pages/NotFound";
+
+// Document Vault pages
 import Dashboard from "./pages/Dashboard";
 import Upload from "./pages/Upload";
 import Documents from "./pages/Documents";
@@ -36,7 +43,18 @@ import StorageAnalytics from "./pages/StorageAnalytics";
 import ActivityHeatmap from "./pages/ActivityHeatmap";
 import UserActivityLog from "./pages/UserActivityLog";
 import DatabaseExport from "./pages/DatabaseExport";
-import NotFound from "./pages/NotFound";
+
+// Operations Hub pages
+import OpDashboard from "./pages/operations/OpDashboard";
+import OpVendorIssues from "./pages/operations/OpVendorIssues";
+import OpVendorUptime from "./pages/operations/OpVendorUptime";
+import OpIncidents from "./pages/operations/OpIncidents";
+import OpPasswords from "./pages/operations/OpPasswords";
+import OpDocuments from "./pages/operations/OpDocuments";
+import OpAnalytics from "./pages/operations/OpAnalytics";
+import OpSmsLogs from "./pages/operations/OpSmsLogs";
+import OpEscalations from "./pages/operations/OpEscalations";
+import OpUserManagement from "./pages/operations/OpUserManagement";
 
 const queryClient = new QueryClient();
 
@@ -47,253 +65,118 @@ function InactivityWrapper({ children }: { children: React.ReactNode }) {
   return <PasswordExpiryGate>{children}</PasswordExpiryGate>;
 }
 
-// Route handler for authenticated users
+// Route handler for root: redirect authenticated users to launcher
 function AuthenticatedRedirect() {
-  const { user, role, loading } = useAuth();
-
+  const { user, loading } = useAuth();
   if (loading) return null;
-
-  if (user) {
-    if (role === 'customer') {
-      return <Navigate to="/my-documents" replace />;
-    }
-    return <Navigate to="/dashboard" replace />;
-  }
-
+  if (user) return <Navigate to="/" replace />;
   return <Navigate to="/auth" replace />;
 }
 
 // Auth page wrapper to redirect if already logged in
 function AuthPageWrapper() {
-  const { user, role, loading } = useAuth();
-
+  const { user, loading } = useAuth();
   if (loading) return null;
-
-  if (user) {
-    if (role === 'customer') {
-      return <Navigate to="/my-documents" replace />;
-    }
-    return <Navigate to="/dashboard" replace />;
-  }
-
+  if (user) return <Navigate to="/" replace />;
   return <Auth />;
+}
+
+// AppLayout shell for nested routes using <Outlet />
+function DocShell() {
+  return (
+    <AppLayout>
+      <Outlet />
+    </AppLayout>
+  );
+}
+
+function OpsShell() {
+  return (
+    <AppLayout>
+      <Outlet />
+    </AppLayout>
+  );
 }
 
 const AppRoutes = () => (
   <InactivityWrapper>
     <Routes>
-      {/* Public Routes */}
+      {/* Public routes */}
       <Route path="/auth" element={<AuthPageWrapper />} />
       <Route path="/setup" element={<SetupAdmin />} />
 
-      {/* Root redirect */}
-      <Route path="/" element={<AuthenticatedRedirect />} />
-
-      {/* Staff/Admin Routes */}
+      {/* Root — App Launcher (any authenticated role) */}
       <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute allowedRoles={['admin', 'staff']}>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/upload"
-        element={
-          <ProtectedRoute allowedRoles={['admin', 'staff']}>
-            <Upload />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/documents"
-        element={
-          <ProtectedRoute allowedRoles={['admin', 'staff']}>
-            <Documents />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/search"
-        element={
-          <ProtectedRoute allowedRoles={['admin', 'staff']}>
-            <SearchPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/customers"
-        element={
-          <ProtectedRoute allowedRoles={['admin', 'staff']}>
-            <Customers />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Folders - Admin/Staff can create, all can view shared */}
-      <Route
-        path="/folders"
+        path="/"
         element={
           <ProtectedRoute>
-            <Folders />
+            <AppLauncher />
           </ProtectedRoute>
         }
       />
 
-      {/* Reminders & Tasks - All authenticated users */}
+      {/* ── Document Vault (/docs/*) ── */}
       <Route
-        path="/reminders"
+        path="/docs"
         element={
           <ProtectedRoute>
-            <Reminders />
+            <DocShell />
           </ProtectedRoute>
         }
-      />
-      <Route
-        path="/tasks"
-        element={
-          <ProtectedRoute>
-            <Tasks />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/chat"
-        element={
-          <ProtectedRoute>
-            <Chat />
-          </ProtectedRoute>
-        }
-      />
+      >
+        {/* Staff/Admin */}
+        <Route index element={<ProtectedRoute allowedRoles={['admin', 'staff']}><Dashboard /></ProtectedRoute>} />
+        <Route path="upload" element={<ProtectedRoute allowedRoles={['admin', 'staff']}><Upload /></ProtectedRoute>} />
+        <Route path="documents" element={<ProtectedRoute allowedRoles={['admin', 'staff']}><Documents /></ProtectedRoute>} />
+        <Route path="document-expiry" element={<ProtectedRoute allowedRoles={['admin', 'staff']}><DocumentExpiry /></ProtectedRoute>} />
+        <Route path="search" element={<ProtectedRoute allowedRoles={['admin', 'staff']}><SearchPage /></ProtectedRoute>} />
+        <Route path="customers" element={<ProtectedRoute allowedRoles={['admin', 'staff']}><Customers /></ProtectedRoute>} />
+        <Route path="notifications" element={<ProtectedRoute allowedRoles={['admin', 'staff']}><Notifications /></ProtectedRoute>} />
 
-      {/* Admin Only Routes */}
+        {/* All authenticated */}
+        <Route path="folders" element={<ProtectedRoute><Folders /></ProtectedRoute>} />
+        <Route path="reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
+        <Route path="tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+        <Route path="chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+        <Route path="in-app-notifications" element={<ProtectedRoute><InAppNotifications /></ProtectedRoute>} />
+        <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+
+        {/* Customer only */}
+        <Route path="my-documents" element={<ProtectedRoute allowedRoles={['customer']}><MyDocuments /></ProtectedRoute>} />
+
+        {/* Admin only */}
+        <Route path="users" element={<ProtectedRoute allowedRoles={['admin']}><Users /></ProtectedRoute>} />
+        <Route path="users/:userId/activity" element={<ProtectedRoute allowedRoles={['admin']}><UserActivityLog /></ProtectedRoute>} />
+        <Route path="audit-logs" element={<ProtectedRoute allowedRoles={['admin']}><AuditLogs /></ProtectedRoute>} />
+        <Route path="categories" element={<ProtectedRoute allowedRoles={['admin']}><Categories /></ProtectedRoute>} />
+        <Route path="deletion-requests" element={<ProtectedRoute allowedRoles={['admin']}><DeletionRequests /></ProtectedRoute>} />
+        <Route path="activity" element={<ProtectedRoute allowedRoles={['admin']}><ActivityFeed /></ProtectedRoute>} />
+        <Route path="reports" element={<ProtectedRoute allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
+        <Route path="storage-analytics" element={<ProtectedRoute allowedRoles={['admin']}><StorageAnalytics /></ProtectedRoute>} />
+        <Route path="activity-heatmap" element={<ProtectedRoute allowedRoles={['admin']}><ActivityHeatmap /></ProtectedRoute>} />
+        <Route path="database-export" element={<ProtectedRoute allowedRoles={['admin']}><DatabaseExport /></ProtectedRoute>} />
+      </Route>
+
+      {/* ── Operations Hub (/ops/*) ── */}
       <Route
-        path="/users"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <Users />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/users/:userId/activity"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <UserActivityLog />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/audit-logs"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <AuditLogs />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/categories"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <Categories />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/deletion-requests"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <DeletionRequests />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/notifications"
+        path="/ops"
         element={
           <ProtectedRoute allowedRoles={['admin', 'staff']}>
-            <Notifications />
+            <OpsShell />
           </ProtectedRoute>
         }
-        />
-      <Route
-        path="/in-app-notifications"
-        element={
-          <ProtectedRoute>
-            <InAppNotifications />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/activity"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <ActivityFeed />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/reports"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <Reports />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/document-expiry"
-        element={
-          <ProtectedRoute allowedRoles={['admin', 'staff']}>
-            <DocumentExpiry />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/storage-analytics"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <StorageAnalytics />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/activity-heatmap"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <ActivityHeatmap />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/database-export"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <DatabaseExport />
-          </ProtectedRoute>
-        }
-      />
-
-
-
-      {/* Customer Routes */}
-      <Route
-        path="/my-documents"
-        element={
-          <ProtectedRoute allowedRoles={['customer']}>
-            <MyDocuments />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Shared Routes */}
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute>
-            <Settings />
-          </ProtectedRoute>
-        }
-      />
+      >
+        <Route index element={<OpDashboard />} />
+        <Route path="vendor-issues" element={<OpVendorIssues />} />
+        <Route path="vendor-uptime" element={<OpVendorUptime />} />
+        <Route path="incidents" element={<OpIncidents />} />
+        <Route path="passwords" element={<OpPasswords />} />
+        <Route path="documents" element={<OpDocuments />} />
+        <Route path="analytics" element={<OpAnalytics />} />
+        <Route path="sms-logs" element={<OpSmsLogs />} />
+        <Route path="escalations" element={<OpEscalations />} />
+        <Route path="users" element={<ProtectedRoute allowedRoles={['admin']}><OpUserManagement /></ProtectedRoute>} />
+      </Route>
 
       {/* Catch-all */}
       <Route path="*" element={<NotFound />} />

@@ -1,40 +1,17 @@
 import { useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  Upload,
-  FileText,
-  Search,
-  Users,
-  ClipboardList,
-  Settings,
-  FolderOpen,
-  FolderLock,
-  LogOut,
-  Bell,
-  ListTodo,
-  Trash2,
-  MessageSquare,
-  Activity,
-  BarChart3,
-  CalendarClock,
-  HardDrive,
-  Flame,
-  DatabaseBackup,
+  LayoutDashboard, Upload, FileText, Search, Users, ClipboardList, Settings,
+  FolderOpen, FolderLock, LogOut, Bell, ListTodo, Trash2, MessageSquare,
+  Activity, BarChart3, CalendarClock, HardDrive, Flame, DatabaseBackup,
+  AlertTriangle, FileWarning, KeyRound, Siren, Home,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
+  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
+  SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,41 +19,84 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import umsLogo from '@/assets/ums-logo.png';
 import { useNotificationCounts } from '@/hooks/useNotificationCounts';
 
-const staffNavItems = [
-  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-  { title: 'Upload Document', url: '/upload', icon: Upload },
-  { title: 'All Documents', url: '/documents', icon: FileText },
-  { title: 'Doc Expiry', url: '/document-expiry', icon: CalendarClock },
-  { title: 'Private Folders', url: '/folders', icon: FolderLock },
-  { title: 'Tasks', url: '/tasks', icon: ListTodo, badge: 'tasks' },
-  { title: 'Reminders', url: '/reminders', icon: Bell, badge: 'reminders' },
-  { title: 'Team Chat', url: '/chat', icon: MessageSquare },
-  { title: 'Search', url: '/search', icon: Search },
-  { title: 'Customers', url: '/customers', icon: Users },
-];
-
 const SUPER_ADMIN_EMAIL = 'amsterntechhub@gmail.com';
 
-const adminNavItems = [
-  { title: 'User Management', url: '/users', icon: Users },
-  { title: 'Reports', url: '/reports', icon: BarChart3 },
-  { title: 'Activity Feed', url: '/activity', icon: Activity },
-  { title: 'Notifications', url: '/notifications', icon: MessageSquare },
-  { title: 'Deletion Requests', url: '/deletion-requests', icon: Trash2, badge: 'deletions' },
-  { title: 'Categories', url: '/categories', icon: FolderOpen },
-  { title: 'Audit Logs', url: '/audit-logs', icon: ClipboardList },
-  { title: 'Storage Analytics', url: '/storage-analytics', icon: HardDrive },
-  { title: 'Activity Heatmap', url: '/activity-heatmap', icon: Flame },
-  { title: 'Database Export', url: '/database-export', icon: DatabaseBackup, superAdminOnly: true },
+// Document Vault — staff/admin items
+const docNavItems = [
+  { title: 'Dashboard', url: '/docs', icon: LayoutDashboard },
+  { title: 'Upload Document', url: '/docs/upload', icon: Upload },
+  { title: 'All Documents', url: '/docs/documents', icon: FileText },
+  { title: 'Doc Expiry', url: '/docs/document-expiry', icon: CalendarClock },
+  { title: 'Private Folders', url: '/docs/folders', icon: FolderLock },
+  { title: 'Tasks', url: '/docs/tasks', icon: ListTodo, badge: 'tasks' },
+  { title: 'Reminders', url: '/docs/reminders', icon: Bell, badge: 'reminders' },
+  { title: 'Team Chat', url: '/docs/chat', icon: MessageSquare },
+  { title: 'Search', url: '/docs/search', icon: Search },
+  { title: 'Customers', url: '/docs/customers', icon: Users },
 ];
 
-const customerNavItems = [
-  { title: 'My Documents', url: '/my-documents', icon: FolderOpen },
-  { title: 'Shared Folders', url: '/folders', icon: FolderLock },
-  { title: 'Tasks', url: '/tasks', icon: ListTodo, badge: 'tasks' },
-  { title: 'Reminders', url: '/reminders', icon: Bell, badge: 'reminders' },
-  { title: 'Team Chat', url: '/chat', icon: MessageSquare },
+// Document Vault — customer items
+const docCustomerItems = [
+  { title: 'My Documents', url: '/docs/my-documents', icon: FolderOpen },
+  { title: 'Shared Folders', url: '/docs/folders', icon: FolderLock },
+  { title: 'Tasks', url: '/docs/tasks', icon: ListTodo, badge: 'tasks' },
+  { title: 'Reminders', url: '/docs/reminders', icon: Bell, badge: 'reminders' },
+  { title: 'Team Chat', url: '/docs/chat', icon: MessageSquare },
 ];
+
+// Operations Hub nav items (admin/staff only)
+const opsNavItems = [
+  { title: 'Ops Dashboard', url: '/ops', icon: LayoutDashboard },
+  { title: 'Vendor Issues', url: '/ops/vendor-issues', icon: AlertTriangle },
+  { title: 'Vendor Uptime', url: '/ops/vendor-uptime', icon: Activity },
+  { title: 'Incidents', url: '/ops/incidents', icon: FileWarning },
+  { title: 'Passwords', url: '/ops/passwords', icon: KeyRound },
+  { title: 'Documents', url: '/ops/documents', icon: FolderOpen },
+  { title: 'Analytics', url: '/ops/analytics', icon: BarChart3 },
+  { title: 'SMS Logs', url: '/ops/sms-logs', icon: MessageSquare },
+  { title: 'Escalations', url: '/ops/escalations', icon: Siren },
+  { title: 'Users', url: '/ops/users', icon: Users },
+];
+
+// Administration — admin-only doc items
+const adminDocItems = [
+  { title: 'User Management', url: '/docs/users', icon: Users },
+  { title: 'Reports', url: '/docs/reports', icon: BarChart3 },
+  { title: 'Activity Feed', url: '/docs/activity', icon: Activity },
+  { title: 'Notifications', url: '/docs/notifications', icon: MessageSquare },
+  { title: 'Deletion Requests', url: '/docs/deletion-requests', icon: Trash2, badge: 'deletions' },
+  { title: 'Categories', url: '/docs/categories', icon: FolderOpen },
+  { title: 'Audit Logs', url: '/docs/audit-logs', icon: ClipboardList },
+  { title: 'Storage Analytics', url: '/docs/storage-analytics', icon: HardDrive },
+  { title: 'Activity Heatmap', url: '/docs/activity-heatmap', icon: Flame },
+  { title: 'Database Export', url: '/docs/database-export', icon: DatabaseBackup, superAdminOnly: true },
+];
+
+function NavItem({
+  item,
+  badgeCount = 0,
+  isActive,
+}: {
+  item: { title: string; url: string; icon: React.ElementType };
+  badgeCount?: number;
+  isActive: boolean;
+}) {
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} className="nav-item" data-active={isActive}>
+        <NavLink to={item.url} className="flex items-center gap-3" activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium">
+          <item.icon className="h-4 w-4" />
+          <span>{item.title}</span>
+          {badgeCount > 0 && (
+            <Badge variant="destructive" className="ml-auto h-5 min-w-[20px] px-1.5 text-[10px] font-semibold">
+              {badgeCount > 9 ? '9+' : badgeCount}
+            </Badge>
+          )}
+        </NavLink>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -84,171 +104,110 @@ export function AppSidebar() {
   const { isAdmin, isStaff, isCustomer, profile, user, signOut } = useAuth();
   const { pendingTasksCount, pendingRemindersCount, pendingDeletionsCount } = useNotificationCounts();
   const isSuperAdmin = (user?.email ?? profile?.email ?? '').toLowerCase() === SUPER_ADMIN_EMAIL;
-  const visibleAdminItems = adminNavItems.filter((i) => !i.superAdminOnly || isSuperAdmin);
+  const visibleAdminItems = adminDocItems.filter(i => !i.superAdminOnly || isSuperAdmin);
   const collapsed = state === 'collapsed';
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => location.pathname === path || (path !== '/' && location.pathname.startsWith(path + '/'));
 
-  const handleSignOut = async () => {
-    await signOut();
+  const getBadgeCount = (badge?: string) => {
+    if (badge === 'tasks') return pendingTasksCount;
+    if (badge === 'reminders') return pendingRemindersCount;
+    if (badge === 'deletions') return pendingDeletionsCount;
+    return 0;
   };
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border p-4">
         <div className="flex items-center gap-3">
-          <img 
-            src={umsLogo} 
-            alt="UMS Kenya" 
-            className="h-10 w-auto object-contain"
-          />
+          <img src={umsLogo} alt="UMS Hub" className="h-10 w-auto object-contain" />
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="font-semibold text-sidebar-foreground text-sm">
-                UMS Kenya
-              </span>
-              <span className="text-xs text-sidebar-foreground/70">
-                Document Portal
-              </span>
+              <span className="font-semibold text-sidebar-foreground text-sm">UMS Hub</span>
+              <span className="text-xs text-sidebar-foreground/70">Unified Platform</span>
             </div>
           )}
         </div>
       </SidebarHeader>
 
       <SidebarContent>
-        {/* Main Navigation */}
+        {/* Home link */}
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {/* Staff/Admin navigation */}
-              {(isAdmin || isStaff) && staffNavItems.map((item) => {
-                const badgeCount = item.badge === 'tasks' ? pendingTasksCount : item.badge === 'reminders' ? pendingRemindersCount : 0;
-                const active = isActive(item.url);
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={active}
-                      tooltip={item.title}
-                      className="nav-item"
-                      data-active={active}
-                    >
-                      <NavLink
-                        to={item.url}
-                        className="flex items-center gap-3"
-                        activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                      >
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
-                        {badgeCount > 0 && (
-                          <Badge variant="destructive" className="ml-auto h-5 min-w-[20px] px-1.5 text-[10px] font-semibold">
-                            {badgeCount > 9 ? '9+' : badgeCount}
-                          </Badge>
-                        )}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-
-              {/* Customer navigation */}
-              {isCustomer && customerNavItems.map((item) => {
-                const badgeCount = item.badge === 'tasks' ? pendingTasksCount : item.badge === 'reminders' ? pendingRemindersCount : 0;
-                const active = isActive(item.url);
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={active}
-                      tooltip={item.title}
-                      className="nav-item"
-                      data-active={active}
-                    >
-                      <NavLink
-                        to={item.url}
-                        className="flex items-center gap-3"
-                        activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                      >
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
-                        {badgeCount > 0 && (
-                          <Badge variant="destructive" className="ml-auto h-5 min-w-[20px] px-1.5 text-[10px] font-semibold">
-                            {badgeCount > 9 ? '9+' : badgeCount}
-                          </Badge>
-                        )}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              <NavItem item={{ title: 'Home', url: '/', icon: Home }} isActive={location.pathname === '/'} />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Admin Only Navigation */}
-        {isAdmin && (
+        {/* Document Vault */}
+        <Collapsible defaultOpen>
           <SidebarGroup>
-            <SidebarGroupLabel>Administration</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-              {visibleAdminItems.map((item) => {
-                const badgeCount = (item as any).badge === 'deletions' ? pendingDeletionsCount : 0;
-                const active = isActive(item.url);
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={active}
-                      tooltip={item.title}
-                      className="nav-item"
-                      data-active={active}
-                    >
-                      <NavLink
-                        to={item.url}
-                        className="flex items-center gap-3"
-                        activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                      >
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
-                        {badgeCount > 0 && (
-                          <Badge variant="destructive" className="ml-auto h-5 min-w-[20px] px-1.5 text-[10px] font-semibold">
-                            {badgeCount > 9 ? '9+' : badgeCount}
-                          </Badge>
-                        )}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-              </SidebarMenu>
-            </SidebarGroupContent>
+            <SidebarGroupLabel asChild>
+              <CollapsibleTrigger className="flex w-full items-center justify-between">
+                Document Vault
+              </CollapsibleTrigger>
+            </SidebarGroupLabel>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {(isAdmin || isStaff) && docNavItems.map(item => (
+                    <NavItem key={item.url} item={item} badgeCount={getBadgeCount((item as any).badge)} isActive={isActive(item.url)} />
+                  ))}
+                  {isCustomer && docCustomerItems.map(item => (
+                    <NavItem key={item.url} item={item} badgeCount={getBadgeCount((item as any).badge)} isActive={isActive(item.url)} />
+                  ))}
+                  {/* Settings always visible */}
+                  <NavItem item={{ title: 'Settings', url: '/docs/settings', icon: Settings }} isActive={isActive('/docs/settings')} />
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
           </SidebarGroup>
+        </Collapsible>
+
+        {/* Operations Hub — staff/admin only */}
+        {(isAdmin || isStaff) && (
+          <Collapsible defaultOpen>
+            <SidebarGroup>
+              <SidebarGroupLabel asChild>
+                <CollapsibleTrigger className="flex w-full items-center justify-between">
+                  Operations Hub
+                </CollapsibleTrigger>
+              </SidebarGroupLabel>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {opsNavItems.map(item => (
+                      <NavItem key={item.url} item={item} isActive={isActive(item.url)} />
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </SidebarGroup>
+          </Collapsible>
         )}
 
-        {/* Settings */}
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  asChild 
-                  isActive={isActive('/settings')}
-                  tooltip="Settings"
-                >
-                  <NavLink
-                    to="/settings"
-                    className="flex items-center gap-3"
-                    activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
-                  >
-                    <Settings className="h-4 w-4" />
-                    <span>Settings</span>
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Administration — admin only */}
+        {isAdmin && (
+          <Collapsible defaultOpen>
+            <SidebarGroup>
+              <SidebarGroupLabel asChild>
+                <CollapsibleTrigger className="flex w-full items-center justify-between">
+                  Administration
+                </CollapsibleTrigger>
+              </SidebarGroupLabel>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {visibleAdminItems.map(item => (
+                      <NavItem key={item.url} item={item} badgeCount={getBadgeCount((item as any).badge)} isActive={isActive(item.url)} />
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </SidebarGroup>
+          </Collapsible>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
@@ -258,23 +217,19 @@ export function AppSidebar() {
               <Avatar className="h-8 w-8 flex-shrink-0">
                 {profile.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.full_name} />}
                 <AvatarFallback className="text-xs">
-                  {profile.full_name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()}
+                  {profile.full_name.split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col min-w-0">
-                <span className="font-medium text-sidebar-foreground truncate">
-                  {profile.full_name}
-                </span>
-                <span className="text-xs text-sidebar-foreground/70 truncate">
-                  {profile.email}
-                </span>
+                <span className="font-medium text-sidebar-foreground truncate">{profile.full_name}</span>
+                <span className="text-xs text-sidebar-foreground/70 truncate">{profile.email}</span>
               </div>
             </div>
           )}
           <Button
             variant="ghost"
             size={collapsed ? 'icon' : 'sm'}
-            onClick={handleSignOut}
+            onClick={signOut}
             className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           >
             <LogOut className="h-4 w-4" />

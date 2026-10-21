@@ -46,7 +46,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (roleData) {
-        setRole(roleData.role as AppRole);
+        // Map uptime-hub legacy roles to ums-docs-vault roles
+        const rawRole = roleData.role as string;
+        const mappedRole: AppRole = (rawRole === 'manager' || rawRole === 'user') ? 'staff' : rawRole as AppRole;
+        setRole(mappedRole);
       }
 
       // Fetch user profile
