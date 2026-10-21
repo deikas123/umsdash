@@ -23,6 +23,7 @@ export default class ChunkErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error) {
+    console.error('[ChunkErrorBoundary] caught:', error);
     const message = error?.message || "";
     const isChunkError =
       /Loading chunk [\d]+ failed/i.test(message) ||
@@ -55,6 +56,12 @@ export default class ChunkErrorBoundary extends Component<
             A newer version of the app is available. Please reload to
             continue.
           </p>
+          {this.state.error && (
+            <pre className="mt-4 max-w-xl rounded bg-muted p-3 text-left text-xs text-destructive overflow-auto">
+              {this.state.error.name}: {this.state.error.message}
+              {'\n'}{this.state.error.stack}
+            </pre>
+          )}
           <button
             onClick={this.handleReload}
             className="mt-5 rounded-[4px] bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"

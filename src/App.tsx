@@ -9,6 +9,7 @@ import { PasswordExpiryGate } from "@/components/PasswordExpiryGate";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useInactivityTimeout } from "@/hooks/useInactivityTimeout";
 import { useNotifications } from "@/hooks/useNotifications";
+import ChunkErrorBoundary from "@/components/operations/ChunkErrorBoundary";
 
 // Launcher
 import AppLauncher from "./pages/AppLauncher";
@@ -179,17 +180,19 @@ const AppRoutes = () => (
 );
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ChunkErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ChunkErrorBoundary>
 );
 
 export default App;

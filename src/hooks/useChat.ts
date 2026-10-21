@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -18,6 +18,7 @@ export function useChat() {
   const [profiles, setProfiles] = useState<Map<string, string>>(new Map());
   const { user } = useAuth();
   const { toast } = useToast();
+  const channelId = useRef(`chat-realtime-${Math.random().toString(36).slice(2)}`);
 
   const fetchProfiles = useCallback(async (userIds: string[]) => {
     if (userIds.length === 0) return new Map<string, string>();
@@ -61,7 +62,7 @@ export function useChat() {
     fetchMessages();
 
     const channel = supabase
-      .channel('chat-realtime')
+      .channel(channelId.current)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => {
         fetchMessages();
       })

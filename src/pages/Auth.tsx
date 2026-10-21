@@ -51,8 +51,8 @@ export default function Auth() {
         return;
       }
 
-      // Redirect will be handled by the auth context
-      navigate('/docs');
+      // Redirect to app launcher after login
+      navigate('/');
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
     } finally {

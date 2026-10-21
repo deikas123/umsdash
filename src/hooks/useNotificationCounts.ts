@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -8,6 +8,7 @@ export function useNotificationCounts() {
   const [pendingDeletionsCount, setPendingDeletionsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const { user, isAdmin } = useAuth();
+  const uid = useRef(Math.random().toString(36).slice(2));
 
   const fetchCounts = async () => {
     if (!user) return;
@@ -44,17 +45,17 @@ export function useNotificationCounts() {
     fetchCounts();
     
     const tasksChannel = supabase
-      .channel('tasks-count-changes')
+      .channel(`tasks-count-changes-${uid.current}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => fetchCounts())
       .subscribe();
 
     const remindersChannel = supabase
-      .channel('reminders-count-changes')
+      .channel(`reminders-count-changes-${uid.current}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reminders' }, () => fetchCounts())
       .subscribe();
 
     const deletionsChannel = supabase
-      .channel('deletions-count-changes')
+      .channel(`deletions-count-changes-${uid.current}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'deletion_requests' }, () => fetchCounts())
       .subscribe();
 
