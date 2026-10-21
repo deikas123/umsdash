@@ -2,7 +2,7 @@
   "id": "FEAT-002",
   "type": "feat",
   "description": "Integrate all uptime-hub source code into the workspace. Copy pages (renamed with Op prefix) to src/pages/operations/, copy shared components to src/components/operations/, copy lib utilities, copy all 8 edge functions to supabase/functions/, copy drizzle/ directory. Create the merged ops-schema SQL migration. This feature is independent of FEAT-003 (route/auth rewrites) but depends on FEAT-001 (workspace scaffolded).",
-  "status": "pending",
+  "status": "completed",
   "steps": [
     "1. Create directory src/pages/operations/. Copy from .agents/temp/uptime-hub/src/pages/ with renames: Dashboard.tsx→OpDashboard.tsx, VendorIssues.tsx→OpVendorIssues.tsx, VendorUptime.tsx→OpVendorUptime.tsx, Incidents.tsx→OpIncidents.tsx, Passwords.tsx→OpPasswords.tsx, Documents.tsx→OpDocuments.tsx, Analytics.tsx→OpAnalytics.tsx, SmsLogs.tsx→OpSmsLogs.tsx, Escalations.tsx→OpEscalations.tsx, UserManagement.tsx→OpUserManagement.tsx, ForcePasswordChange.tsx→OpForcePasswordChange.tsx. Do NOT copy Auth.tsx, Index.tsx, NotFound.tsx.",
     "2. Create directory src/components/operations/. Copy from .agents/temp/uptime-hub/src/components/ (top-level only, not ui/): StatsCard.tsx→StatsCard.tsx, ExportMenu.tsx→ExportMenu.tsx, PageHeader.tsx→PageHeader.tsx, ChunkErrorBoundary.tsx→ChunkErrorBoundary.tsx, VendorPicker.tsx→VendorPicker.tsx, NotificationBell.tsx→OpNotificationBell.tsx.",
@@ -37,5 +37,5 @@
     "npm run build -- exits 0"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "Build completed successfully (exit 0). 3565 modules transformed, built in ~28s. All 11 ops pages created in src/pages/operations/ with corrected import paths. All 6 ops components created in src/components/operations/. src/lib/exportUtils.ts and src/lib/mask.ts created. 8 uptime-hub edge functions copied (send-sms renamed to ops-send-sms). drizzle/ directory copied. supabase/config.toml already had all JWT overrides from FEAT-001. ops schema migration and escalation cron migration created with mmnpopwzfjyfasvzzatg substituted. No hardcoded old project IDs found in edge functions. Canonical src/hooks/useUserRole.ts created early (plan.md step 13) to enable build — it re-exports from AuthContext so FEAT-003 can refine it. OpDocuments.tsx adapted to use ums-docs-vault documents schema (title instead of name). OpNotificationBell.tsx queries ops_notifications table. OpPasswords.tsx SMS invocation updated to use ops-send-sms function. One expected warning: main chunk 2470KB > 1000KB limit (code splitting deferred to later FEAT)."
 }
