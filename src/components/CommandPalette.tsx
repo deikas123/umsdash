@@ -77,6 +77,8 @@ export function CommandPaletteTrigger() {
   const navigate = useNavigate();
   const { role, user, profile } = useAuth();
   const isSuperAdmin = (user?.email ?? profile?.email ?? "").toLowerCase() === SUPER_ADMIN_EMAIL;
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent);
+  const shortcut = isMac ? '⌘K' : 'Ctrl+K';
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -116,7 +118,7 @@ export function CommandPaletteTrigger() {
         <Search className="h-3.5 w-3.5" />
         <span className="text-xs">Quick search</span>
         <kbd className="ml-1 rounded border bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
-          ⌘K
+          {shortcut}
         </kbd>
       </Button>
       <Button

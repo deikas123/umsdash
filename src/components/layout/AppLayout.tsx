@@ -9,6 +9,8 @@ import { KeyboardShortcutsDialog } from '@/components/KeyboardShortcutsDialog';
 import { PasswordExpiryBanner } from '@/components/PasswordExpiryBanner';
 import { NotificationBell } from '@/components/NotificationBell';
 import { CommandPaletteTrigger } from '@/components/CommandPalette';
+import { AppBreadcrumb } from './Breadcrumb';
+import { MobileNav } from './MobileNav';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -76,13 +78,17 @@ export function AppLayout({ children, title, description }: AppLayoutProps) {
             </div>
           </header>
 
+          {/* Breadcrumb */}
+          <AppBreadcrumb />
+
           {/* Password Expiry Banner */}
           <PasswordExpiryBanner />
 
           {/* Main Content */}
-          <main className="flex-1 p-3 sm:p-4 lg:p-6 animate-fade-in overflow-auto">
+          <main className="flex-1 p-3 sm:p-4 lg:p-6 animate-fade-in overflow-auto pb-14 md:pb-0">
             {children}
           </main>
+          <MobileNav />
         </SidebarInset>
       </div>
     </SidebarProvider>

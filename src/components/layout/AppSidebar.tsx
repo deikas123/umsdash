@@ -1,9 +1,10 @@
+import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Upload, FileText, Search, Users, ClipboardList, Settings,
   FolderOpen, FolderLock, LogOut, Bell, ListTodo, Trash2, MessageSquare,
   Activity, BarChart3, CalendarClock, HardDrive, Flame, DatabaseBackup,
-  AlertTriangle, FileWarning, KeyRound, Siren, Home, Trophy,
+  AlertTriangle, FileWarning, KeyRound, Siren, Home, Trophy, ChevronDown,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import {
@@ -109,6 +110,29 @@ export function AppSidebar() {
   const visibleAdminItems = adminDocItems.filter(i => !i.superAdminOnly || isSuperAdmin);
   const collapsed = state === 'collapsed';
 
+  const [docsOpen, setDocsOpen] = useState<boolean>(() => {
+    try { return localStorage.getItem('umshub_sidebar_docs_open') !== 'false'; } catch { return true; }
+  });
+  const [opsOpen, setOpsOpen] = useState<boolean>(() => {
+    try { return localStorage.getItem('umshub_sidebar_ops_open') !== 'false'; } catch { return true; }
+  });
+  const [adminOpen, setAdminOpen] = useState<boolean>(() => {
+    try { return localStorage.getItem('umshub_sidebar_admin_open') !== 'false'; } catch { return true; }
+  });
+
+  const handleDocsToggle = (open: boolean) => {
+    setDocsOpen(open);
+    try { localStorage.setItem('umshub_sidebar_docs_open', String(open)); } catch {}
+  };
+  const handleOpsToggle = (open: boolean) => {
+    setOpsOpen(open);
+    try { localStorage.setItem('umshub_sidebar_ops_open', String(open)); } catch {}
+  };
+  const handleAdminToggle = (open: boolean) => {
+    setAdminOpen(open);
+    try { localStorage.setItem('umshub_sidebar_admin_open', String(open)); } catch {}
+  };
+
   const isActive = (path: string) => location.pathname === path || (path !== '/' && location.pathname.startsWith(path + '/'));
 
   const getBadgeCount = (badge?: string) => {
@@ -143,11 +167,12 @@ export function AppSidebar() {
         </SidebarGroup>
 
         {/* Document Vault */}
-        <Collapsible defaultOpen>
+        <Collapsible open={docsOpen} onOpenChange={handleDocsToggle}>
           <SidebarGroup>
             <SidebarGroupLabel asChild>
               <CollapsibleTrigger className="flex w-full items-center justify-between">
                 Document Vault
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${docsOpen ? '' : '-rotate-90'}`} />
               </CollapsibleTrigger>
             </SidebarGroupLabel>
             <CollapsibleContent>
@@ -169,11 +194,12 @@ export function AppSidebar() {
 
         {/* Operations Hub — staff/admin only */}
         {(isAdmin || isStaff) && (
-          <Collapsible defaultOpen>
+          <Collapsible open={opsOpen} onOpenChange={handleOpsToggle}>
             <SidebarGroup>
               <SidebarGroupLabel asChild>
                 <CollapsibleTrigger className="flex w-full items-center justify-between">
                   Operations Hub
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${opsOpen ? '' : '-rotate-90'}`} />
                 </CollapsibleTrigger>
               </SidebarGroupLabel>
               <CollapsibleContent>
@@ -191,11 +217,12 @@ export function AppSidebar() {
 
         {/* Administration — admin only */}
         {isAdmin && (
-          <Collapsible defaultOpen>
+          <Collapsible open={adminOpen} onOpenChange={handleAdminToggle}>
             <SidebarGroup>
               <SidebarGroupLabel asChild>
                 <CollapsibleTrigger className="flex w-full items-center justify-between">
                   Administration
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${adminOpen ? '' : '-rotate-90'}`} />
                 </CollapsibleTrigger>
               </SidebarGroupLabel>
               <CollapsibleContent>
