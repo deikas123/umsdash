@@ -75,15 +75,12 @@ function AuthPageWrapper() {
   return <Auth />;
 }
 
-// AppLayout shell for nested routes using <Outlet />
+// Plain shell for nested routes — docs pages render their own AppLayout
 function DocShell() {
-  return (
-    <AppLayout>
-      <Outlet />
-    </AppLayout>
-  );
+  return <Outlet />;
 }
 
+// Ops pages don't include AppLayout themselves, so the shell provides it
 function OpsShell() {
   return (
     <AppLayout>
