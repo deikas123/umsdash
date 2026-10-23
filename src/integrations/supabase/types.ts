@@ -1521,6 +1521,179 @@ export type Database = {
         }
         Relationships: []
       }
+      departments: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      webhooks: {
+        Row: {
+          id: string
+          name: string
+          url: string
+          events: string[]
+          secret: string | null
+          active: boolean
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          url: string
+          events?: string[]
+          secret?: string | null
+          active?: boolean
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          url?: string
+          events?: string[]
+          secret?: string | null
+          active?: boolean
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      api_keys: {
+        Row: {
+          id: string
+          name: string
+          key_prefix: string
+          key_hash: string
+          scopes: string[]
+          last_used_at: string | null
+          expires_at: string | null
+          revoked: boolean
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          key_prefix: string
+          key_hash: string
+          scopes?: string[]
+          last_used_at?: string | null
+          expires_at?: string | null
+          revoked?: boolean
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          key_prefix?: string
+          key_hash?: string
+          scopes?: string[]
+          last_used_at?: string | null
+          expires_at?: string | null
+          revoked?: boolean
+          created_by?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      tour_definitions: {
+        Row: {
+          id: string
+          key: string
+          name: string
+          description: string | null
+          target_role: Database["public"]["Enums"]["app_role"] | null
+          is_active: boolean
+          steps: Json
+          display_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          key: string
+          name: string
+          description?: string | null
+          target_role?: Database["public"]["Enums"]["app_role"] | null
+          is_active?: boolean
+          steps?: Json
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          key?: string
+          name?: string
+          description?: string | null
+          target_role?: Database["public"]["Enums"]["app_role"] | null
+          is_active?: boolean
+          steps?: Json
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_tour_progress: {
+        Row: {
+          id: string
+          user_id: string
+          tour_key: string
+          status: string
+          current_step: number
+          completed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          tour_key: string
+          status?: string
+          current_step?: number
+          completed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          tour_key?: string
+          status?: string
+          current_step?: number
+          completed_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_tour_progress_tour_key_fkey"
+            columns: ["tour_key"]
+            isOneToOne: false
+            referencedRelation: "tour_definitions"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
