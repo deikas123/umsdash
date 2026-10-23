@@ -3,12 +3,15 @@ import { Navigate } from 'react-router-dom';
 import { useAuth, AppRole } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
+const SUPER_ADMIN_EMAIL = 'amsterntechhub@gmail.com';
+
 interface ProtectedRouteProps {
   children: ReactNode;
   allowedRoles?: AppRole[];
+  requireSuperAdmin?: boolean;
 }
 
-export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, allowedRoles, requireSuperAdmin }: ProtectedRouteProps) {
   const { user, role, loading } = useAuth();
 
   if (loading) {
@@ -31,6 +34,10 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     if (role === 'customer') {
       return <Navigate to="/docs/my-documents" replace />;
     }
+    return <Navigate to="/docs" replace />;
+  }
+
+  if (requireSuperAdmin && (user?.email ?? '').toLowerCase() !== SUPER_ADMIN_EMAIL) {
     return <Navigate to="/docs" replace />;
   }
 

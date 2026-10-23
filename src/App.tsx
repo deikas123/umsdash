@@ -6,9 +6,11 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PasswordExpiryGate } from "@/components/PasswordExpiryGate";
+import { MaintenanceGate } from "@/components/MaintenanceGate";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useInactivityTimeout } from "@/hooks/useInactivityTimeout";
 import { useNotifications } from "@/hooks/useNotifications";
+import { OnboardingTourProvider } from "@/hooks/useOnboardingTour";
 import ChunkErrorBoundary from "@/components/operations/ChunkErrorBoundary";
 
 // Launcher
@@ -45,6 +47,14 @@ import ActivityHeatmap from "./pages/ActivityHeatmap";
 import UserActivityLog from "./pages/UserActivityLog";
 import DatabaseExport from "./pages/DatabaseExport";
 import GamificationDashboard from "./pages/GamificationDashboard";
+import Sessions from "./pages/Sessions";
+import Webhooks from "./pages/Webhooks";
+import ApiKeys from "./pages/ApiKeys";
+import CustomerActivity from "./pages/CustomerActivity";
+import ExportScheduler from "./pages/ExportScheduler";
+import DocumentTemplates from "./pages/DocumentTemplates";
+import AppStore from "./pages/AppStore";
+import TourManager from "./pages/TourManager";
 
 // Operations Hub pages
 import OpDashboard from "./pages/operations/OpDashboard";
@@ -58,6 +68,8 @@ import OpSmsLogs from "./pages/operations/OpSmsLogs";
 import OpEscalations from "./pages/operations/OpEscalations";
 import OpUserManagement from "./pages/operations/OpUserManagement";
 import OpForcePasswordChange from "./pages/operations/OpForcePasswordChange";
+import OpVendorScorecard from "./pages/operations/OpVendorScorecard";
+import OpOnCall from "./pages/operations/OpOnCall";
 
 const queryClient = new QueryClient();
 
@@ -65,7 +77,11 @@ const queryClient = new QueryClient();
 function InactivityWrapper({ children }: { children: React.ReactNode }) {
   useInactivityTimeout();
   useNotifications();
-  return <PasswordExpiryGate>{children}</PasswordExpiryGate>;
+  return (
+    <OnboardingTourProvider>
+      <PasswordExpiryGate>{children}</PasswordExpiryGate>
+    </OnboardingTourProvider>
+  );
 }
 
 // Auth page wrapper to redirect if already logged in
@@ -92,6 +108,7 @@ function OpsShell() {
 
 const AppRoutes = () => (
   <InactivityWrapper>
+    <MaintenanceGate>
     <Routes>
       {/* Public routes */}
       <Route path="/auth" element={<AuthPageWrapper />} />
@@ -103,6 +120,16 @@ const AppRoutes = () => (
         element={
           <ProtectedRoute>
             <AppLauncher />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* App Store */}
+      <Route
+        path="/apps"
+        element={
+          <ProtectedRoute>
+            <AppStore />
           </ProtectedRoute>
         }
       />
@@ -133,6 +160,7 @@ const AppRoutes = () => (
         <Route path="in-app-notifications" element={<ProtectedRoute><InAppNotifications /></ProtectedRoute>} />
         <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         <Route path="gamification" element={<ProtectedRoute><GamificationDashboard /></ProtectedRoute>} />
+        <Route path="sessions" element={<ProtectedRoute><Sessions /></ProtectedRoute>} />
 
         {/* Customer only */}
         <Route path="my-documents" element={<ProtectedRoute allowedRoles={['customer']}><MyDocuments /></ProtectedRoute>} />
@@ -148,6 +176,12 @@ const AppRoutes = () => (
         <Route path="storage-analytics" element={<ProtectedRoute allowedRoles={['admin']}><StorageAnalytics /></ProtectedRoute>} />
         <Route path="activity-heatmap" element={<ProtectedRoute allowedRoles={['admin']}><ActivityHeatmap /></ProtectedRoute>} />
         <Route path="database-export" element={<ProtectedRoute allowedRoles={['admin']}><DatabaseExport /></ProtectedRoute>} />
+        <Route path="tour-manager" element={<ProtectedRoute requireSuperAdmin><TourManager /></ProtectedRoute>} />
+        <Route path="webhooks" element={<ProtectedRoute allowedRoles={['admin']}><Webhooks /></ProtectedRoute>} />
+        <Route path="api-keys" element={<ProtectedRoute allowedRoles={['admin']}><ApiKeys /></ProtectedRoute>} />
+        <Route path="customer-activity" element={<ProtectedRoute allowedRoles={['admin']}><CustomerActivity /></ProtectedRoute>} />
+        <Route path="export-scheduler" element={<ProtectedRoute allowedRoles={['admin']}><ExportScheduler /></ProtectedRoute>} />
+        <Route path="templates" element={<ProtectedRoute allowedRoles={['admin']}><DocumentTemplates /></ProtectedRoute>} />
       </Route>
 
       {/* ── Operations Hub (/ops/*) ── */}
@@ -168,6 +202,8 @@ const AppRoutes = () => (
         <Route path="analytics" element={<ProtectedRoute allowedRoles={['admin', 'staff']}><OpAnalytics /></ProtectedRoute>} />
         <Route path="escalations" element={<ProtectedRoute allowedRoles={['admin', 'staff']}><OpEscalations /></ProtectedRoute>} />
         <Route path="force-password-change" element={<ProtectedRoute allowedRoles={['admin', 'staff']}><OpForcePasswordChange /></ProtectedRoute>} />
+        <Route path="scorecard" element={<ProtectedRoute allowedRoles={['admin', 'staff']}><OpVendorScorecard /></ProtectedRoute>} />
+        <Route path="oncall" element={<ProtectedRoute allowedRoles={['admin', 'staff']}><OpOnCall /></ProtectedRoute>} />
         <Route path="sms-logs" element={<ProtectedRoute allowedRoles={['admin']}><OpSmsLogs /></ProtectedRoute>} />
         <Route path="users" element={<ProtectedRoute allowedRoles={['admin']}><OpUserManagement /></ProtectedRoute>} />
       </Route>
@@ -175,6 +211,7 @@ const AppRoutes = () => (
       {/* Catch-all */}
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </MaintenanceGate>
   </InactivityWrapper>
 );
 

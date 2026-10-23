@@ -5,6 +5,7 @@ import {
   FolderOpen, FolderLock, LogOut, Bell, ListTodo, Trash2, MessageSquare,
   Activity, BarChart3, CalendarClock, HardDrive, Flame, DatabaseBackup,
   AlertTriangle, FileWarning, KeyRound, Siren, Home, Trophy, ChevronDown,
+  Monitor, Zap, Calendar, UserCheck, TrendingUp, ShoppingBag, GraduationCap,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import {
@@ -19,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import umsLogo from '@/assets/ums-logo.png';
 import { useNotificationCounts } from '@/hooks/useNotificationCounts';
+import { useOrgSettings } from '@/hooks/useOrgSettings';
 
 const SUPER_ADMIN_EMAIL = 'amsterntechhub@gmail.com';
 
@@ -35,6 +37,7 @@ const docNavItems = [
   { title: 'My Progress', url: '/docs/gamification', icon: Trophy },
   { title: 'Search', url: '/docs/search', icon: Search },
   { title: 'Customers', url: '/docs/customers', icon: Users },
+  { title: 'Sessions', url: '/docs/sessions', icon: Monitor },
 ];
 
 // Document Vault — customer items
@@ -52,12 +55,14 @@ const opsNavItems = [
   { title: 'Ops Dashboard', url: '/ops', icon: LayoutDashboard },
   { title: 'Vendor Issues', url: '/ops/vendor-issues', icon: AlertTriangle },
   { title: 'Vendor Uptime', url: '/ops/vendor-uptime', icon: Activity },
+  { title: 'Vendor Scorecard', url: '/ops/scorecard', icon: TrendingUp },
   { title: 'Incidents', url: '/ops/incidents', icon: FileWarning },
   { title: 'Passwords', url: '/ops/passwords', icon: KeyRound },
   { title: 'Documents', url: '/ops/documents', icon: FolderOpen },
   { title: 'Analytics', url: '/ops/analytics', icon: BarChart3 },
   { title: 'SMS Logs', url: '/ops/sms-logs', icon: MessageSquare },
   { title: 'Escalations', url: '/ops/escalations', icon: Siren },
+  { title: 'On-Call Schedule', url: '/ops/oncall', icon: UserCheck },
   { title: 'Users', url: '/ops/users', icon: Users },
 ];
 
@@ -72,7 +77,13 @@ const adminDocItems = [
   { title: 'Audit Logs', url: '/docs/audit-logs', icon: ClipboardList },
   { title: 'Storage Analytics', url: '/docs/storage-analytics', icon: HardDrive },
   { title: 'Activity Heatmap', url: '/docs/activity-heatmap', icon: Flame },
+  { title: 'Customer Activity', url: '/docs/customer-activity', icon: Activity },
+  { title: 'Document Templates', url: '/docs/templates', icon: FileText },
+  { title: 'Export Scheduler', url: '/docs/export-scheduler', icon: Calendar },
+  { title: 'Webhooks', url: '/docs/webhooks', icon: Zap },
+  { title: 'API Keys', url: '/docs/api-keys', icon: KeyRound },
   { title: 'Database Export', url: '/docs/database-export', icon: DatabaseBackup, superAdminOnly: true },
+  { title: 'Tour Manager', url: '/docs/tour-manager', icon: GraduationCap, superAdminOnly: true },
 ];
 
 function NavItem({
@@ -106,9 +117,11 @@ export function AppSidebar() {
   const location = useLocation();
   const { isAdmin, isStaff, isCustomer, profile, user, signOut } = useAuth();
   const { pendingTasksCount, pendingRemindersCount, pendingDeletionsCount } = useNotificationCounts();
+  const { settings } = useOrgSettings();
   const isSuperAdmin = (user?.email ?? profile?.email ?? '').toLowerCase() === SUPER_ADMIN_EMAIL;
   const visibleAdminItems = adminDocItems.filter(i => !i.superAdminOnly || isSuperAdmin);
   const collapsed = state === 'collapsed';
+  const logoSrc = settings.org_logo_url || umsLogo;
 
   const [docsOpen, setDocsOpen] = useState<boolean>(() => {
     try { return localStorage.getItem('umshub_sidebar_docs_open') !== 'false'; } catch { return true; }
@@ -146,7 +159,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border p-4">
         <div className="flex items-center gap-3">
-          <img src={umsLogo} alt="UMS Hub" className="h-10 w-auto object-contain" />
+          <img src={logoSrc} alt="UMS Hub" className="h-10 w-auto object-contain" />
           {!collapsed && (
             <div className="flex flex-col">
               <span className="font-semibold text-sidebar-foreground text-sm">UMS Hub</span>
@@ -162,6 +175,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <NavItem item={{ title: 'Home', url: '/', icon: Home }} isActive={location.pathname === '/'} />
+              <NavItem item={{ title: 'App Store', url: '/apps', icon: ShoppingBag }} isActive={isActive('/apps')} />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
