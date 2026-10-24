@@ -287,14 +287,14 @@ export default function UserHub() {
   const [deptOpen, setDeptOpen] = useState(false);
   const [deptEditing, setDeptEditing] = useState<DepartmentRow | null>(null);
   const [deptName, setDeptName] = useState('');
-  const [deptDesc, setDeptDesc] = useState('');
+  const [deptColor, setDeptColor] = useState('#6366f1');
   const [deptSaving, setDeptSaving] = useState(false);
   const [deptToDelete, setDeptToDelete] = useState<DepartmentRow | null>(null);
 
   const openDept = (d?: DepartmentRow) => {
     setDeptEditing(d ?? null);
     setDeptName(d?.name ?? '');
-    setDeptDesc(d?.description ?? '');
+    setDeptColor(d?.color ?? '#6366f1');
     setDeptOpen(true);
   };
 
@@ -308,13 +308,13 @@ export default function UserHub() {
       if (deptEditing) {
         const { error } = await supabase
           .from('departments')
-          .update({ name: deptName.trim(), description: deptDesc || null })
+          .update({ name: deptName.trim(), color: deptColor })
           .eq('id', deptEditing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('departments')
-          .insert({ name: deptName.trim(), description: deptDesc || null });
+          .insert({ name: deptName.trim(), color: deptColor });
         if (error) throw error;
       }
       toast({ title: deptEditing ? 'Department updated' : 'Department created', description: deptName.trim() });
@@ -1178,17 +1178,21 @@ export default function UserHub() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="dept-name">Name</Label>
-              <Input id="dept-name" value={deptName} onChange={(e) => setDeptName(e.target.value)} placeholder="Finance" />
+              <Input id="dept-name" value={deptName} onChange={(e) => setDeptName(e.target.value)} placeholder="e.g. Finance, IT, HR" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dept-desc">Description</Label>
-              <Textarea
-                id="dept-desc"
-                value={deptDesc}
-                onChange={(e) => setDeptDesc(e.target.value)}
-                placeholder="Optional"
-                rows={3}
-              />
+              <Label>Color</Label>
+              <div className="flex gap-2 flex-wrap">
+                {['#6366f1','#3b82f6','#22c55e','#ef4444','#f59e0b','#8b5cf6','#ec4899','#14b8a6'].map(c => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setDeptColor(c)}
+                    className={`h-8 w-8 rounded-full border-2 transition-transform ${deptColor === c ? 'border-foreground scale-110' : 'border-transparent'}`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
             </div>
             <div className="flex justify-end gap-3">
               <Button variant="outline" onClick={() => setDeptOpen(false)} disabled={deptSaving}>Cancel</Button>

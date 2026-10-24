@@ -36,7 +36,7 @@ export interface UserAppAccessRow {
 export interface DepartmentRow {
   id: string;
   name: string;
-  description: string | null;
+  color: string | null;
   created_at: string;
 }
 
@@ -86,7 +86,7 @@ export function useUserHub() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('departments')
-        .select('id, name, description, created_at')
+        .select('id, name, color, created_at')
         .order('name', { ascending: true });
       if (error) throw error;
       return (data ?? []) as DepartmentRow[];
