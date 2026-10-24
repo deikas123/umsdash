@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ import {
 } from 'recharts';
 import {
   FileText, Users, ListTodo, MessageSquare, Download, TrendingUp,
-  Calendar, BarChart3, PieChart as PieChartIcon, FileDown,
+  Calendar, BarChart3, PieChart as PieChartIcon, FileDown, ArrowRight,
 } from 'lucide-react';
 import { format, subDays, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 
@@ -162,6 +163,25 @@ export default function Reports() {
 
   return (
     <AppLayout title="Reports & Analytics" description="System performance metrics and downloadable reports">
+      {/* Reports Hub upgrade banner */}
+      <div className="mb-4 flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-900 px-4 py-3 text-sm">
+        <BarChart3 className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+        <div className="flex-1">
+          <span className="font-medium text-blue-900 dark:text-blue-200">
+            New: Reports Hub is now available.
+          </span>{' '}
+          <span className="text-blue-700 dark:text-blue-300">
+            Generate customized reports across all UMS Hub data, build custom queries, and export to CSV, PDF, or Excel.
+          </span>
+        </div>
+        <Link
+          to="/admin/reports"
+          className="flex items-center gap-1 font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 whitespace-nowrap"
+        >
+          Open Reports Hub <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+
       {/* Period Selector */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-2">
