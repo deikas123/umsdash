@@ -6,6 +6,7 @@ import StatsCard from "@/components/operations/StatsCard";
 import PageHeader from "@/components/operations/PageHeader";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   CheckCircle2, KeyRound, Server, FileWarning, TrendingUp, Activity, ShieldAlert, BarChart3,
 } from "lucide-react";
