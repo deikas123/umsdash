@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { EmptyState } from '@/components/EmptyState';
 import { useChat } from '@/hooks/useChat';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -139,10 +140,12 @@ export default function Chat() {
                 {[1, 2, 3].map(i => <Skeleton key={i} className="h-14 w-3/4" />)}
               </div>
             ) : messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                <MessageCircle className="h-16 w-16 mb-3 opacity-20" />
-                <p className="text-lg font-medium">No messages yet</p>
-                <p className="text-sm">Start the conversation!</p>
+              <div className="flex items-center justify-center h-full">
+                <EmptyState
+                  icon={MessageCircle}
+                  title="No messages yet"
+                  description="Start the conversation!"
+                />
               </div>
             ) : (
               messages.map(msg => {

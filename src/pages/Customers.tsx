@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { EmptyState } from '@/components/EmptyState';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -319,15 +320,11 @@ export default function Customers() {
               ))}
             </div>
           ) : customers.length === 0 ? (
-            <div className="text-center py-12">
-              <Users className="mx-auto h-16 w-16 text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-medium mb-2">No customers found</h3>
-              <p className="text-muted-foreground">
-                {searchTerm
-                  ? 'Try adjusting your search'
-                  : 'Add your first customer to get started'}
-              </p>
-            </div>
+            <EmptyState
+              icon={Users}
+              title="No customers found"
+              description={searchTerm ? 'Try adjusting your search.' : 'Add your first customer to get started.'}
+            />
           ) : (
             <div className="divide-y">
               {customers.map((customer) => (

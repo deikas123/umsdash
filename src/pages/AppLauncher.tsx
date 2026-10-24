@@ -7,13 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Activity, LogOut } from 'lucide-react';
+import { FileText, Activity, LogOut, ShoppingBag } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useOrgSettings } from '@/hooks/useOrgSettings';
+import umsLogo from '@/assets/ums-logo.png';
 
 export default function AppLauncher() {
   const { profile, role, isCustomer, signOut } = useAuth();
   const navigate = useNavigate();
+  const { settings } = useOrgSettings();
+  const logoSrc = settings.org_logo_url || umsLogo;
 
   const { data: recentNotifs = [] } = useQuery({
     queryKey: ['launcher-notifications'],
@@ -36,6 +40,7 @@ export default function AppLauncher() {
       href: '/docs',
       color: 'from-blue-600 to-blue-800',
       visible: true,
+      dataTour: 'docs-vault-card',
     },
     {
       id: 'ops',
@@ -45,14 +50,26 @@ export default function AppLauncher() {
       href: '/ops',
       color: 'from-emerald-600 to-emerald-800',
       visible: !isCustomer,
+      dataTour: 'ops-hub-card',
+    },
+    {
+      id: 'apps',
+      title: 'App Store',
+      description: 'Browse available and upcoming UMS Hub applications.',
+      icon: ShoppingBag,
+      href: '/apps',
+      color: 'from-violet-600 to-violet-800',
+      visible: !isCustomer,
+      dataTour: 'app-store-card',
     },
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div data-tour="app-launcher" className="min-h-screen bg-background">
       {/* Top bar */}
       <header className="flex items-center justify-between px-6 py-4 border-b bg-card">
         <div className="flex items-center gap-3">
+          <img src={logoSrc} alt="UMS Hub" className="h-8 w-auto object-contain" />
           <div>
             <h1 className="font-bold text-lg leading-none">UMS Hub</h1>
             <p className="text-xs text-muted-foreground">Unified Management Platform</p>
@@ -62,7 +79,7 @@ export default function AppLauncher() {
           <ThemeToggle />
           {role && <Badge variant="outline" className="capitalize">{role}</Badge>}
           {profile && (
-            <div className="flex items-center gap-2">
+            <div data-tour="user-avatar" className="flex items-center gap-2 tour-target">
               <span className="text-sm text-muted-foreground hidden sm:block">{profile.full_name}</span>
               <Avatar className="h-8 w-8">
                 {profile.avatar_url && <AvatarImage src={profile.avatar_url} />}
@@ -89,7 +106,8 @@ export default function AppLauncher() {
           {apps.filter(a => a.visible).map(app => (
             <Card
               key={app.id}
-              className="cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5 border-2 hover:border-primary/40"
+              data-tour={app.dataTour}
+              className={`cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5 border-2 hover:border-primary/40 tour-target`}
               onClick={() => navigate(app.href)}
             >
               <CardHeader className="pb-3">

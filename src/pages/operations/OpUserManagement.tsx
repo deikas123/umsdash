@@ -53,29 +53,28 @@ export default function OpUserManagement() {
 
   const { data: myProfileData } = useQuery({
     queryKey: ["my_profile", user!.id],
-    queryFn: () =>
-      supabase
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from("profiles")
-        .select("phone_number, full_name")
+        .select("phone, full_name")
         .eq("user_id", user!.id)
-        .single()
-        .then(({ data, error }) => {
-          if (error) throw error;
-          return data;
-        }),
+        .single();
+      if (error) throw error;
+      return data;
+    },
   });
 
   useEffect(() => {
-    if (myProfileData?.phone_number) {
-      setMyPhone(myProfileData.phone_number);
+    if (myProfileData?.phone) {
+      setMyPhone(myProfileData.phone);
     }
-  }, [myProfileData?.phone_number]);
+  }, [myProfileData?.phone]);
 
   const savePhoneMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
         .from("profiles")
-        .update({ phone_number: myPhone || null })
+        .update({ phone: myPhone || null })
         .eq("user_id", user!.id);
       if (error) throw error;
     },
@@ -188,7 +187,7 @@ export default function OpUserManagement() {
     mutationFn: async ({ userId, phone }: { userId: string; phone: string }) => {
       const { error } = await supabase
         .from("profiles")
-        .update({ phone_number: phone || null })
+        .update({ phone: phone || null })
         .eq("user_id", userId);
       if (error) throw error;
     },
@@ -307,7 +306,7 @@ export default function OpUserManagement() {
                   <tr key={p.id} className="border-b border-border last:border-0 transition-colors hover:bg-secondary/50">
                     <td className="px-5 py-3 font-medium">{p.full_name || "—"}</td>
                     <td className="px-5 py-3 text-muted-foreground">{p.department || "—"}</td>
-                    <td className="px-5 py-3 font-mono-data text-muted-foreground">{p.phone_number || "—"}</td>
+                    <td className="px-5 py-3 font-mono-data text-muted-foreground">{p.phone || "—"}</td>
                     <td className="px-5 py-3">
                       <span className={`inline-flex rounded-[4px] px-2 py-0.5 text-xs font-medium ${roleColors[p.role] || ""}`}>{p.role}</span>
                     </td>
@@ -340,7 +339,7 @@ export default function OpUserManagement() {
                               <KeyRound className="h-3 w-3" /> Reset Password
                             </Button>
                             <Button variant="ghost" size="sm" className="h-7 gap-1 rounded-[4px] text-xs" onClick={() => {
-                              setPhoneDialog({ open: true, userId: p.user_id, phone: p.phone_number || "" });
+                              setPhoneDialog({ open: true, userId: p.user_id, phone: p.phone || "" });
                             }}>
                               <Phone className="h-3 w-3" /> Phone
                             </Button>

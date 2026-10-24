@@ -9,6 +9,8 @@ import { useReminders } from '@/hooks/useReminders';
 import { useTasks } from '@/hooks/useTasks';
 import { useAuth } from '@/contexts/AuthContext';
 import { useStreakWidget } from '@/hooks/useStreakWidget';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -40,7 +42,7 @@ import {
   Flame,
   Trophy,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from 'date-fns';
 import {
   PieChart,
   Pie,
@@ -48,6 +50,11 @@ import {
   ResponsiveContainer,
   Tooltip,
   Legend,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
 } from 'recharts';
 
 function formatBytes(bytes: number): string {
@@ -68,6 +75,56 @@ export default function Dashboard() {
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const { currentStreak, todayXp } = useStreakWidget();
+
+  // Upload trend — uploads per month (last 6 months)
+  const { data: uploadTrend = [] } = useQuery({
+    queryKey: ['dashboard_upload_trend'],
+    queryFn: async () => {
+      const months: Array<{ name: string; count: number }> = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = subMonths(new Date(), i);
+        const from = startOfMonth(d).toISOString();
+        const to = endOfMonth(d).toISOString();
+        const { count } = await supabase.from('documents').select('*', { count: 'exact', head: true }).gte('created_at', from).lte('created_at', to);
+        months.push({ name: format(d, 'MMM'), count: count ?? 0 });
+      }
+      return months;
+    },
+    enabled: isAdmin || isStaff,
+  });
+
+  // Uploads this week (by day)
+  const { data: weeklyUploads = [] } = useQuery({
+    queryKey: ['dashboard_weekly_uploads'],
+    queryFn: async () => {
+      const days = eachDayOfInterval({ start: subDays(new Date(), 6), end: new Date() });
+      const results = await Promise.all(days.map(async (d) => {
+        const from = new Date(d); from.setHours(0, 0, 0, 0);
+        const to = new Date(d); to.setHours(23, 59, 59, 999);
+        const { count } = await supabase.from('documents').select('*', { count: 'exact', head: true }).gte('created_at', from.toISOString()).lte('created_at', to.toISOString());
+        return { name: format(d, 'EEE'), count: count ?? 0 };
+      }));
+      return results;
+    },
+    enabled: isAdmin || isStaff,
+  });
+
+  // Top uploaders (last 30 days)
+  const { data: topUploaders = [] } = useQuery({
+    queryKey: ['dashboard_top_uploaders'],
+    queryFn: async () => {
+      const since = subDays(new Date(), 30).toISOString();
+      const { data } = await supabase.from('documents').select('uploaded_by').gte('created_at', since);
+      if (!data) return [];
+      const counts: Record<string, number> = {};
+      data.forEach(d => { if (d.uploaded_by) counts[d.uploaded_by] = (counts[d.uploaded_by] || 0) + 1; });
+      const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+      const { data: profiles } = await supabase.from('profiles').select('user_id, full_name').in('user_id', sorted.map(s => s[0]));
+      const nameMap = Object.fromEntries((profiles ?? []).map(p => [p.user_id, p.full_name]));
+      return sorted.map(([uid, count]) => ({ name: nameMap[uid] || 'Unknown', count }));
+    },
+    enabled: isAdmin || isStaff,
+  });
 
   useEffect(() => {
     const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');

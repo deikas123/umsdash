@@ -257,7 +257,8 @@ export default function Upload() {
   };
 
   const checkDuplicate = (fileItem: FileUploadItem): Promise<boolean> => {
-    return new Promise(async (resolve) => {
+    return new Promise((resolve) => {
+      (async () => {
       let query = supabase
         .from('documents')
         .select('title, created_at')
@@ -279,6 +280,7 @@ export default function Upload() {
           resolve(proceed);
         },
       });
+      })();
     });
   };
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { EmptyState } from '@/components/EmptyState';
 import { useTasks, Task } from '@/hooks/useTasks';
 import { ReassignTaskDialog } from '@/components/tasks/ReassignTaskDialog';
 import { EditTaskDialog } from '@/components/tasks/EditTaskDialog';
@@ -272,21 +273,19 @@ export default function Tasks() {
       {loading ? (
         <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>
       ) : filtered.length === 0 ? (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <ListTodo className="mx-auto h-16 w-16 text-muted-foreground/30 mb-4" />
-            <h3 className="text-lg font-medium mb-1">No tasks found</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              {canManage ? 'Create a task to get started' : 'No tasks assigned to you yet'}
-            </p>
-            {canManage && (
+        <EmptyState
+          icon={ListTodo}
+          title="No tasks found"
+          description={canManage ? 'Create a task to get started.' : 'No tasks assigned to you yet.'}
+          action={
+            canManage ? (
               <Button variant="outline" onClick={() => setOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Your First Task
               </Button>
-            )}
-          </CardContent>
-        </Card>
+            ) : undefined
+          }
+        />
       ) : (
         <div className="space-y-4">
           {filtered.map(task => {

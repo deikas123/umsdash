@@ -17,17 +17,16 @@ export function OpNotificationBell() {
 
   const { data: notifications } = useQuery({
     queryKey: ["ops_notifications", user!.id],
-    queryFn: () =>
-      supabase
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from("ops_notifications")
         .select("*")
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false })
-        .limit(20)
-        .then(({ data, error }) => {
-          if (error) throw error;
-          return data ?? [];
-        }),
+        .limit(20);
+      if (error) throw error;
+      return data ?? [];
+    },
   });
 
   const unreadCount = (notifications ?? []).filter((n) => !n.read).length;
@@ -52,27 +51,25 @@ export function OpNotificationBell() {
   }, [user!.id, queryClient]);
 
   const markRead = useMutation({
-    mutationFn: (id: string) =>
-      supabase
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
         .from("ops_notifications")
         .update({ read: true })
-        .eq("id", id)
-        .then(({ error }) => {
-          if (error) throw error;
-        }),
+        .eq("id", id);
+      if (error) throw error;
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ops_notifications", user!.id] }),
   });
 
   const markAllRead = useMutation({
-    mutationFn: () =>
-      supabase
+    mutationFn: async () => {
+      const { error } = await supabase
         .from("ops_notifications")
         .update({ read: true })
         .eq("user_id", user!.id)
-        .eq("read", false)
-        .then(({ error }) => {
-          if (error) throw error;
-        }),
+        .eq("read", false);
+      if (error) throw error;
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ops_notifications", user!.id] }),
   });
 

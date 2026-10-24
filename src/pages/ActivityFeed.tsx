@@ -41,7 +41,7 @@ import {
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 
-type AppRole = 'admin' | 'staff' | 'customer';
+type AppRole = 'admin' | 'staff' | 'customer' | 'manager' | 'user';
 
 interface AuditLog {
   id: string;
@@ -140,7 +140,7 @@ export default function ActivityFeed() {
       ]);
       const nameMap = Object.fromEntries((profilesRes.data || []).map(p => [p.user_id, p.full_name]));
       const roleMap: Record<string, AppRole> = {};
-      const rank: Record<AppRole, number> = { admin: 3, staff: 2, customer: 1 };
+      const rank: Record<AppRole, number> = { admin: 5, manager: 4, staff: 3, user: 2, customer: 1 };
       (rolesRes.data || []).forEach(r => {
         if (!roleMap[r.user_id] || rank[r.role] > rank[roleMap[r.user_id]]) {
           roleMap[r.user_id] = r.role;

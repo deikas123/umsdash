@@ -32,7 +32,7 @@ import {
   DatabaseBackup,
   Search as SearchIcon,
 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, AppRole } from "@/contexts/AuthContext";
 
 const SUPER_ADMIN_EMAIL = "amsterntechhub@gmail.com";
 
@@ -41,7 +41,7 @@ type CmdItem = {
   path: string;
   icon: React.ComponentType<{ className?: string }>;
   group: "Navigation" | "Administration" | "Personal";
-  roles: Array<"admin" | "staff" | "customer">;
+  roles: AppRole[];
   superAdminOnly?: boolean;
 };
 

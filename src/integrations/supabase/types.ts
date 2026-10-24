@@ -474,10 +474,12 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          department: string | null
           email: string
           full_name: string
           id: string
           must_reset_password: boolean
+          notification_preferences: Json | null
           password_changed_at: string | null
           password_expiry_days: number | null
           phone: string | null
@@ -488,10 +490,12 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          department?: string | null
           email: string
           full_name: string
           id?: string
           must_reset_password?: boolean
+          notification_preferences?: Json | null
           password_changed_at?: string | null
           password_expiry_days?: number | null
           phone?: string | null
@@ -502,10 +506,12 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          department?: string | null
           email?: string
           full_name?: string
           id?: string
           must_reset_password?: boolean
+          notification_preferences?: Json | null
           password_changed_at?: string | null
           password_expiry_days?: number | null
           phone?: string | null

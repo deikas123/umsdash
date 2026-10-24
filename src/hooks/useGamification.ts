@@ -166,7 +166,7 @@ export function useLeaderboard() {
           .limit(10);
 
         if (!error && data) {
-          const entries: LeaderboardEntry[] = (data as Array<{
+          const entries: LeaderboardEntry[] = (data as unknown as Array<{
             user_id: string;
             total_xp: number;
             level: number;

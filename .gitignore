@@ -25,3 +25,9 @@ dist-ssr
 
 # Secrets
 .env
+
+# Agent task scaffolding and working files
+.agents/
+# Local DB dumps and supabase CLI temp
+new upload/
+supabase/.temp/
