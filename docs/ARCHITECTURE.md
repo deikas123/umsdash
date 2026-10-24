@@ -1,182 +1,184 @@
-# UMS Hub — Architecture
+# Architecture
 
-## High-Level Overview
+## Overview
 
-UMS Hub is a single-page application (SPA) built with React 18 and TypeScript, bundled by Vite, and backed entirely by Supabase. Two full applications — **Document Vault** and **Operations Hub** — share one React shell, one Supabase project (auth, PostgreSQL database, storage, edge functions, realtime), and one set of user accounts. Users authenticate once and switch between apps via a top-bar app switcher without re-authenticating.
+UMS Hub is a single-page application (SPA) built with React 18 and served from a static `dist/` directory. There is no custom server — all backend logic runs on Supabase (PostgreSQL, Auth, Storage, Edge Functions, Realtime). The frontend communicates exclusively through the `@supabase/supabase-js` client; no raw REST calls are made.
 
 ```
-Browser (SPA)
-  └── React 18 + TypeScript + Vite
-        ├── Document Vault  (/docs/*)
-        ├── Operations Hub  (/ops/*)
-        ├── App Launcher    (/)
-        └── Admin routes    (/admin/*)
-
-Supabase
-  ├── Auth (JWT, session management, MFA)
-  ├── PostgreSQL 14 (all app data + RLS)
-  ├── Storage (documents, avatars, task files, op-documents)
-  ├── Edge Functions (Deno runtime — 17 functions)
-  └── Realtime (chat, notifications)
+Browser
+  └── React SPA (Vite)
+        ├── supabase-js client  ──→  Supabase Cloud
+        │                              ├── PostgreSQL (RLS)
+        │                              ├── Auth (JWT + MFA)
+        │                              ├── Storage (4 private buckets)
+        │                              ├── Edge Functions (Deno)
+        │                              └── Realtime (chat, notifications)
+        └── TextSMS Kenya  ──→  sms.textsms.co.ke
 ```
 
 ---
 
-## Routing Table
-
-| Route Group | Description |
-|---|---|
-| `/auth` | Login / signup page. Redirects to `/` if already authenticated. |
-| `/setup` | First-run super-admin setup wizard. Public. |
-| `/` | **App Launcher** — animated welcome, then app tile grid with live stats and recent notifications. |
-| `/apps` | App Store — browse available and upcoming UMS Hub applications. |
-| `/docs/*` | **Document Vault** — all document, customer, task, reminder, chat, and admin pages. Protected by `ProtectedRoute`. |
-| `/ops/*` | **Operations Hub** — vendor issues, uptime, incidents, passwords, escalations, on-call. Restricted to `admin` and `staff`. Rendered inside `OpsShell` which provides `AppLayout`. |
-| `/admin/users` | **User Hub** — unified cross-app user management. Admin only. |
-| `/admin/reports` | **Reports Hub** — comprehensive report builder across both apps. Admin only. |
-| `/admin/roles` | **Role Manager** — RBAC custom role/permission management. Super admin only. |
-
----
-
-## App Launcher (`/`)
-
-The launcher is the first screen a user sees after login (and after the welcome animation). It has three distinct layers:
-
-### Welcome Screen
-On the first visit of each browser session, `WelcomeScreen` renders as a full-screen overlay (`z-[9999]`) with a Framer Motion gradient background. The sequence:
-
-1. Logo springs in from above (delay 0.5 s).
-2. "UMS Hub" title appears letter-by-letter (stagger 0.05 s/char, starting at 1.0 s).
-3. Tagline fades in (delay 1.4 s).
-4. App preview cards slide up one-by-one (delay 1.8 s, stagger 0.15 s).
-5. Personalised greeting fades in (delay 2.5 s).
-6. A progress bar at the bottom sweeps from 0 % to 100 % over 2.7 s.
-
-After 3 s the screen fades out (or the user can click anywhere to dismiss it early). `AnimatePresence.onExitComplete` calls the parent `handleWelcomeComplete` callback, which sets `sessionStorage.umshub_welcome_seen = '1'` so the screen does not repeat in the same session.
-
-### View Modes
-Three view modes are toggled in the top-right corner of the launcher and persisted to `localStorage` key `umshub_launcher_view`:
-
-| Mode | Layout |
-|---|---|
-| `classic` | Hero greeting with live stats + medium cards in a 2-column grid + recent activity below |
-| `modern` | Featured app (most recently launched) as a large gradient card on the left, other apps as compact rows on the right + recent activity panel |
-| `compact` | Simple flat list of apps (no cards) + recent activity below, suitable for narrow screens |
-
-### Live Stats
-A single `useQuery` with key `launcher-stats` fetches four values in parallel:
-- Total document count from `documents`
-- Total customer count from `customers`
-- Count of `open` incidents from `incidents`
-- Current upload streak for the signed-in user from `upload_streaks`
-
-### Recent Notifications Panel
-All three views render `RecentActivity`, a shared component fed by a query to `in_app_notifications` (ordered by `created_at DESC`, limit 10). Unread items are highlighted with a primary-tinted background.
-
-### "Continue" Deep-linking
-`AppSidebar` writes `localStorage.umshub_last_docs_page` and `localStorage.umshub_last_ops_page` on every navigation. The launcher reads these to offer a "Continue: \<page\>" link inside the app cards.
-
----
-
-## Per-App Sidebar Switching
-
-`AppSidebar` detects which app is active from `location.pathname`:
-
-```
-currentApp = 'docs'  if pathname starts with /docs
-currentApp = 'ops'   if pathname starts with /ops
-currentApp = 'home'  otherwise
-```
-
-Based on `currentApp`, the sidebar renders the matching nav group:
-- `docs` or `home` → **Document Vault** section + **Administration** section (admin only)
-- `ops` → **Operations Hub** section
-
-A two-button app switcher (Docs / Ops) is shown in the sidebar header for admin/staff. Clicking a button calls `switchToApp()`, which navigates to the last visited page for that app (stored in localStorage) or falls back to the app root.
-
-Collapsible group states (`umshub_sidebar_docs_open`, `umshub_sidebar_ops_open`, `umshub_sidebar_admin_open`) and scroll position (`umshub_sidebar_scroll` in sessionStorage) are persisted so the sidebar remembers its state across navigations.
-
----
-
-## Component Hierarchy
+## Component Tree
 
 ```
 App
-└── ChunkErrorBoundary              (catches lazy-load chunk errors, shows reload prompt)
-    └── QueryClientProvider         (TanStack React Query v5 — global query client)
-        └── TooltipProvider         (Radix UI tooltip context)
-            ├── Toaster             (shadcn/ui toast)
-            ├── Sonner              (sonner toast)
-            └── BrowserRouter
-                └── AuthProvider   (Supabase auth state — user, profile, role, isAdmin…)
-                    └── AppRoutes
-                        └── InactivityWrapper
-                            ├── useInactivityTimeout()   (15-min idle logout)
-                            ├── useNotifications()       (Realtime badge subscriptions)
-                            └── OnboardingTourProvider   (tour context, step navigation)
-                                └── PasswordExpiryGate   (forces password change when expired)
-                                    └── MaintenanceGate  (shows maintenance screen if flag set)
-                                        └── Routes
-                                            ├── /auth   → AuthPageWrapper
-                                            ├── /setup  → SetupAdmin
-                                            ├── /       → ProtectedRoute → AppLauncher
-                                            ├── /apps   → ProtectedRoute → AppStore
-                                            ├── /docs/* → ProtectedRoute → DocShell → Outlet
-                                            │   └── (each page renders its own AppLayout)
-                                            ├── /ops/*  → ProtectedRoute → OpsShell
-                                            │   └── AppLayout → Outlet (ops pages are bare)
-                                            ├── /admin/users  → ProtectedRoute → UserHub
-                                            ├── /admin/reports → ProtectedRoute → ReportsHub
-                                            └── /admin/roles  → ProtectedRoute → RoleManager
+ └── ChunkErrorBoundary
+      └── QueryClientProvider (TanStack Query v5)
+           └── TooltipProvider
+                └── BrowserRouter
+                     └── AuthProvider (AuthContext)
+                          └── AppRoutes
+                               └── InactivityWrapper
+                                    ├── useInactivityTimeout()
+                                    ├── useNotifications()
+                                    └── OnboardingTourProvider
+                                         └── PasswordExpiryGate
+                                              └── MaintenanceGate
+                                                   └── Routes
+                                                        ├── /auth  → Auth
+                                                        ├── /      → AppLauncher (ProtectedRoute)
+                                                        ├── /apps  → AppStore (ProtectedRoute)
+                                                        ├── /docs/* → DocShell → (pages with own AppLayout)
+                                                        ├── /ops/*  → OpsShell (AppLayout) → Outlet
+                                                        ├── /admin/users  → UserHub
+                                                        ├── /admin/reports → ReportsHub
+                                                        └── /admin/roles  → RoleManager (super admin)
 ```
 
-### `AppLayout`
-Wraps every inner page. Renders:
-- `SidebarProvider` + `AppSidebar` (collapsible icon sidebar)
-- Top header bar: sidebar trigger, page title, breadcrumb, `AnnouncementBanner`, `NotificationBell`, `CommandPaletteTrigger`, `KeyboardShortcutsDialog`, `DensityToggle`, `ThemeToggle`, role badge, avatar
-- `PasswordExpiryBanner` (non-blocking warning strip before the gate triggers)
-- `AnimatePresence` page transition wrapper (`opacity` + `y` fade)
-- `MobileNav` bottom bar for small screens
-- `QuickActions` floating action button
+Each Document Vault page renders its own `<AppLayout>` wrapper. Operations Hub pages are wrapped by the shared `OpsShell` which renders `<AppLayout>` once and uses `<Outlet>` for child routes.
 
 ---
 
-## Supabase
+## Route Structure
 
-| Feature | Details |
-|---|---|
-| Database | PostgreSQL 14 (managed), project ref `mmnpopwzfjyfasvzzatg` |
-| Auth | Supabase Auth — email/password, JWT stored in localStorage, `onAuthStateChange` listener, optional TOTP MFA |
-| Storage | Four private/public buckets: `documents`, `task-files`, `avatars`, `op-documents` |
-| Edge Functions | Deno runtime, 17 functions — see `API.md` |
-| Realtime | Subscriptions on `chat_messages`, `in_app_notifications`, `ops_notifications` tables |
-| RLS | Enabled on all tables; `SECURITY DEFINER` functions prevent policy recursion |
+### Platform
+| Path | Component | Access |
+|---|---|---|
+| `/` | AppLauncher | all authenticated |
+| `/apps` | AppStore | all authenticated |
+| `/auth` | Auth | public |
+| `/setup` | SetupAdmin | public |
+| `/admin/users` | UserHub | admin |
+| `/admin/reports` | ReportsHub | admin |
+| `/admin/roles` | RoleManager | super admin only |
+
+### Document Vault (`/docs/*`)
+| Path | Component | Access |
+|---|---|---|
+| `/docs` | Dashboard | admin, staff |
+| `/docs/upload` | Upload | admin, staff |
+| `/docs/documents` | Documents | admin, staff |
+| `/docs/document-expiry` | DocumentExpiry | admin, staff |
+| `/docs/search` | SearchPage | admin, staff |
+| `/docs/customers` | Customers | admin, staff |
+| `/docs/notifications` | Notifications | admin, staff |
+| `/docs/folders` | Folders | all |
+| `/docs/reminders` | Reminders | all |
+| `/docs/tasks` | Tasks | all |
+| `/docs/chat` | Chat | all |
+| `/docs/in-app-notifications` | InAppNotifications | all |
+| `/docs/settings` | Settings | all |
+| `/docs/gamification` | GamificationDashboard | all |
+| `/docs/sessions` | Sessions | all |
+| `/docs/my-documents` | MyDocuments | customer only |
+| `/docs/users` | Users | admin |
+| `/docs/users/:userId/activity` | UserActivityLog | admin |
+| `/docs/audit-logs` | AuditLogs | admin |
+| `/docs/categories` | Categories | admin |
+| `/docs/deletion-requests` | DeletionRequests | admin |
+| `/docs/activity` | ActivityFeed | admin |
+| `/docs/reports` | Reports | admin |
+| `/docs/storage-analytics` | StorageAnalytics | admin |
+| `/docs/activity-heatmap` | ActivityHeatmap | admin |
+| `/docs/database-export` | DatabaseExport | admin |
+| `/docs/tour-manager` | TourManager | super admin |
+| `/docs/webhooks` | Webhooks | admin |
+| `/docs/api-keys` | ApiKeys | admin |
+| `/docs/customer-activity` | CustomerActivity | admin |
+| `/docs/export-scheduler` | ExportScheduler | admin |
+| `/docs/templates` | DocumentTemplates | admin |
+
+### Operations Hub (`/ops/*`)
+| Path | Component | Access |
+|---|---|---|
+| `/ops` | OpDashboard | admin, staff |
+| `/ops/vendor-issues` | OpVendorIssues | admin, staff |
+| `/ops/vendor-uptime` | OpVendorUptime | admin, staff |
+| `/ops/incidents` | OpIncidents | admin, staff |
+| `/ops/passwords` | OpPasswords | admin, staff |
+| `/ops/documents` | OpDocuments | admin, staff |
+| `/ops/analytics` | OpAnalytics | admin, staff |
+| `/ops/escalations` | OpEscalations | admin, staff |
+| `/ops/force-password-change` | OpForcePasswordChange | admin, staff |
+| `/ops/scorecard` | OpVendorScorecard | admin, staff |
+| `/ops/oncall` | OpOnCall | admin, staff |
+| `/ops/sms-logs` | OpSmsLogs | admin |
+| `/ops/users` | OpUserManagement | admin |
 
 ---
 
-## PWA
+## Sidebar and App Switcher
 
-Configured via `vite-plugin-pwa` with `registerType: 'autoUpdate'`. Workbox generates a service worker on every production build that:
-- Pre-caches all JS, CSS, HTML, image, and font assets (`globPatterns`)
-- Runtime-caches Supabase API responses with a NetworkFirst strategy (24-hour TTL, 50-entry cap)
-- Max asset file size: 5 MB
+`AppSidebar` reads `location.pathname` to determine the current app context (`currentApp = 'docs' | 'ops' | 'home'`). The sidebar renders only the nav group that matches the active context:
 
-The web manifest declares the app as `standalone` with category `business/productivity`. HTTPS is required for SW registration and Web Push. The SW auto-updates silently — the user does not need to manually refresh.
+- `currentApp === 'docs' || 'home'` → Document Vault nav + Administration nav
+- `currentApp === 'ops'` → Operations Hub nav
+- Global items (User Hub, Role Manager, Reports Hub, Home, App Store) always visible
+
+The **app switcher** (rendered when not collapsed and user is admin or staff) lets users jump between Docs and Ops. It uses `localStorage` keys `umshub_last_docs_page` and `umshub_last_ops_page` to resume the last visited page in each app instead of always landing on the app root. These values are written via a `useEffect` that tracks `location.pathname`.
+
+Sidebar collapse state is persisted in `localStorage` via three keys:
+- `umshub_sidebar_docs_open`
+- `umshub_sidebar_ops_open`
+- `umshub_sidebar_admin_open`
+
+Sidebar scroll position is persisted in `sessionStorage` as `umshub_sidebar_scroll`.
 
 ---
 
-## State Management
+## App Launcher
 
-| Concern | Solution |
-|---|---|
-| Server state (queries, mutations) | TanStack React Query v5 — `useQuery`, `useMutation`, `queryClient.invalidateQueries` |
-| Auth / user identity | `AuthContext` (React Context + `useContext`) |
-| Theme | `next-themes` (CSS variable-based) |
-| UI density | `DensityContext` (custom context, persisted to localStorage) |
-| Sidebar open/collapsed | Radix `SidebarProvider` + localStorage persistence |
-| No global client store | No Redux, Zustand, or Jotai — server state lives in React Query, UI state lives in component local state |
+The App Launcher (`/`) is the home screen shown after login. It supports three view modes selected from a toolbar:
 
-React Query v5 notes:
-- `onError` on `useQuery` is removed in v5; use the `queryCache` global error handler or `meta` option.
-- Mutations use `onSuccess` → `queryClient.invalidateQueries({ queryKey: [...] })`.
-- Query keys are arrays (`['documents', customerId]`) for granular invalidation.
+- **Classic** — card grid with app icons, descriptions, and entry buttons
+- **Modern** — large illustrated cards with gradient backgrounds
+- **Compact** — dense list/table layout
+
+A `WelcomeScreen` animation plays on first visit (framer-motion entrance sequence). The selected view mode is persisted in `localStorage`.
+
+---
+
+## Data Fetching Pattern
+
+All data is fetched via TanStack Query v5 hooks in `src/hooks/`. The Supabase client is a singleton at `src/integrations/supabase/client.ts`. No fetch/axios calls are made directly from components.
+
+```ts
+// Example pattern from useDocuments.ts
+export function useDocuments() {
+  return useQuery({
+    queryKey: ['documents'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*, document_categories(*), customers(*)')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+```
+
+Mutations use `useMutation` + `queryClient.invalidateQueries` to keep the cache consistent.
+
+---
+
+## Edge Functions
+
+Deno-based Edge Functions live in `supabase/functions/`. They are invoked via `supabase.functions.invoke()` from the client or via cron jobs set up in Supabase. All functions verify the caller's JWT before acting. Functions that need elevated privileges use a `SUPABASE_SERVICE_ROLE_KEY` admin client internally.
+
+---
+
+## Realtime
+
+Team Chat (`/docs/chat`) and in-app notification counts use Supabase Realtime channels subscribed to the `chat_messages` and `in_app_notifications` tables respectively.

@@ -1,85 +1,48 @@
-# UMS Hub — Project Overview
+# UMS Hub
 
-**UMS Hub** is a unified, role-based management platform for organisations that need to manage customer documents and track operational events in one place. Two full applications are bundled under a single login, database, and UI shell.
-
-## The Two Applications
-
-| App | Path | Purpose |
-|---|---|---|
-| **Document Vault** | `/docs/*` | Upload, categorise, and share customer documents; manage tasks, reminders, and team chat |
-| **Operations Hub** | `/ops/*` | Track vendor issues, uptime, incidents, passwords, escalations, and on-call schedules |
-
-Both apps share the same Supabase project (auth, DB, storage), the same React shell, and the same user accounts. A top-bar app switcher in the sidebar lets staff switch contexts without losing their place.
-
-## Who It's For
-
-- **Admin / Staff** — full access to Document Vault plus Operations Hub  
-- **Customer** — self-service portal to view their own documents and shared folders  
-- **Super Admin** (`amsterntechhub@gmail.com`) — exclusive access to Tour Manager, Database Export, and system-level settings
+UMS Hub is a unified management platform for UMS Kenya combining Document Vault (document management) and Operations Hub (vendor/incident tracking) into a single React SPA.
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | React 18, TypeScript 5, Vite 5, Tailwind CSS 3, shadcn/ui (Radix UI) |
-| Routing | React Router DOM v6 |
-| State / Data | TanStack React Query v5 |
-| Forms | React Hook Form + Zod |
-| Charts | Recharts |
-| Animation | Framer Motion |
-| Backend | Supabase (PostgreSQL 14, Auth, Storage, Edge Functions via Deno) |
-| SMS | TextSMS Kenya API (`sms.textsms.co.ke`) |
-| Export | jsPDF, jspdf-autotable, xlsx |
-| PWA | vite-plugin-pwa (Workbox, autoUpdate) |
-| Testing | Vitest + Testing Library |
+- **Frontend**: React 18, TypeScript, Vite, shadcn/ui, TanStack Query v5, Tailwind CSS, framer-motion
+- **Backend**: Supabase (PostgreSQL, Auth, Storage, Edge Functions, Realtime)
+- **SMS**: TextSMS Kenya API (`sms.textsms.co.ke`)
+- **PWA**: vite-plugin-pwa
 
 ## Quick Start
 
-```bash
-# 1. Clone
-git clone https://github.com/deikas123/umsdash.git
-cd umsdash
+1. Clone: `git clone https://github.com/deikas123/umsdash.git`
+2. Install: `npm install`
+3. Environment: copy `.env.example` to `.env` and fill values
+4. Run: `npm run dev` → http://localhost:8080
 
-# 2. Install dependencies
-npm install
+## Environment Variables
 
-# 3. Configure environment
-cp .env.example .env
-# Fill in:
-#   VITE_SUPABASE_URL=
-#   VITE_SUPABASE_ANON_KEY=
-#   VITE_SUPABASE_PUBLISHABLE_KEY=
-#   VITE_SUPABASE_PROJECT_ID=
-
-# 4. Push database migrations
-npx supabase db push
-
-# 5. Deploy Edge Functions (requires Supabase CLI and project linked)
-npx supabase functions deploy
-
-# 6. Set Supabase secrets (for SMS and other integrations)
-npx supabase secrets set TEXTSMS_API_KEY=... TEXTSMS_PARTNER_ID=... TEXTSMS_SHORTCODE=...
-
-# 7. Start the development server (port 8080)
-npm run dev
+```
+VITE_SUPABASE_URL=https://mmnpopwzfjyfasvzzatg.supabase.co
+VITE_SUPABASE_ANON_KEY=your_anon_key
+VITE_SUPABASE_PUBLISHABLE_KEY=your_publishable_key
+VITE_SUPABASE_PROJECT_ID=mmnpopwzfjyfasvzzatg
 ```
 
-After the first run, visit `/setup` to create the initial admin account.
+## Scripts
 
-## Documentation Index
-
-| Document | Contents |
+| Command | Description |
 |---|---|
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | High-level architecture, component hierarchy, app launcher design, sidebar switching |
-| [DATABASE.md](./DATABASE.md) | All tables, views, functions, triggers, RLS policies, enums, migration history |
-| [FEATURES.md](./FEATURES.md) | Every feature: what it does, URL, role access, key files |
-| [API.md](./API.md) | All 17 Edge Functions, TextSMS Kenya, Supabase Storage, Realtime, Web Push, export utilities |
-| [AUTHENTICATION.md](./AUTHENTICATION.md) | Auth flow, roles, RBAC, super admin, RLS, password expiry, MFA, inactivity timeout |
-| [DEPLOYMENT.md](./DEPLOYMENT.md) | Environment variables, Supabase setup, migrations, Edge Function deployment, hosting |
-| [GAMIFICATION.md](./GAMIFICATION.md) | Streak system, XP, achievements, daily challenges, leaderboard |
-| [ONBOARDING.md](./ONBOARDING.md) | Tour types, step types, spotlight tooltip, Tour Manager, user controls |
-| [CONTRIBUTING.md](./CONTRIBUTING.md) | Project structure, coding conventions, how to add pages/routes/permissions/migrations |
+| `npm run dev` | Start Vite dev server on port 8080 |
+| `npm run build` | Production build → `dist/` |
+| `npm run preview` | Preview production build locally |
+| `npm run test` | Run Vitest tests once |
+| `npm run lint` | ESLint check |
 
-## GitHub Repository
+## Documentation
 
-<https://github.com/deikas123/umsdash>
+- [Architecture](ARCHITECTURE.md)
+- [Database Schema](DATABASE.md)
+- [Feature Reference](FEATURES.md)
+- [API & Integrations](API.md)
+- [Authentication & Security](AUTHENTICATION.md)
+- [Deployment Guide](DEPLOYMENT.md)
+- [Gamification System](GAMIFICATION.md)
+- [Onboarding Tours](ONBOARDING.md)
+- [Contributing Guide](CONTRIBUTING.md)

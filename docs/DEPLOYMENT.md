@@ -1,243 +1,207 @@
-# UMS Hub — Deployment Guide
+# Deployment Guide
 
-## Environment Variables
+## Prerequisites
 
-Create a `.env` file in the project root (copy from `.env.example`):
+- Node.js 18+ and npm
+- Supabase CLI (`npm install -g supabase` or included as a dev dependency)
+- Git
 
-```env
-# Required — from your Supabase project dashboard (Settings → API)
+---
+
+## 1. Create a Supabase Project
+
+1. Go to [supabase.com](https://supabase.com) and create a new project
+2. Note your **Project URL** and **anon key** from Settings → API
+3. Note your **Project Ref** (e.g., `mmnpopwzfjyfasvzzatg`) from Settings → General
+
+---
+
+## 2. Configure Environment Variables
+
+Create `.env` in the workspace root (copy from `.env.example` if it exists):
+
+```
 VITE_SUPABASE_URL=https://<project-ref>.supabase.co
-VITE_SUPABASE_ANON_KEY=<anon-public-key>
-VITE_SUPABASE_PUBLISHABLE_KEY=<anon-public-key>   # same value as ANON_KEY
+VITE_SUPABASE_ANON_KEY=<your-anon-key>
+VITE_SUPABASE_PUBLISHABLE_KEY=<your-anon-key>
 VITE_SUPABASE_PROJECT_ID=<project-ref>
 ```
 
-**Do not commit `.env` to version control.** The `.gitignore` already excludes it.
+These variables are embedded into the Vite build at build time. They are **not secret** — the anon key is safe to expose in the browser because database access is controlled by Row Level Security.
 
-### Optional environment variables
+---
 
-```env
-# Web Push (required for real push notifications)
-VITE_VAPID_PUBLIC_KEY=<vapid-public-key>
+## 3. Run Database Migrations
+
+Link the CLI to your project and push all migrations:
+
+```bash
+supabase link --project-ref mmnpopwzfjyfasvzzatg
+supabase db push
+```
+
+This runs all SQL files in `supabase/migrations/` in chronological order, creating all tables, functions, triggers, RLS policies, and seed data.
+
+To verify:
+
+```bash
+supabase db diff
 ```
 
 ---
 
-## Supabase Project Setup
+## 4. Deploy Edge Functions
 
-### 1. Create a Supabase project
-
-1. Go to [supabase.com](https://supabase.com) and create a new project.
-2. Note the **Project URL** and **Anon Key** from Settings → API.
-3. Note the **Project Reference ID** from Settings → General.
-
-### 2. Install the Supabase CLI
+Deploy all 17 Edge Functions:
 
 ```bash
-npm install -g supabase
-# or use the locally installed version
-npx supabase --version
+supabase functions deploy --project-ref mmnpopwzfjyfasvzzatg
 ```
 
-### 3. Link the project
+To deploy a single function:
 
 ```bash
-npx supabase login
-npx supabase link --project-ref <project-ref>
+supabase functions deploy send-sms --project-ref mmnpopwzfjyfasvzzatg
 ```
-
-### 4. Run migrations
-
-```bash
-npx supabase db push
-```
-
-This applies all SQL migrations in `supabase/migrations/` in timestamp order to your remote Supabase project. The migrations create all tables, enums, views, functions, triggers, RLS policies, and seed data.
-
-### 5. Verify the schema
-
-After pushing, open the Supabase Dashboard → Table Editor and confirm the tables exist. Key tables to check: `profiles`, `user_roles`, `documents`, `user_xp`, `tour_definitions`.
 
 ---
 
-## Supabase Secrets
+## 5. Set Edge Function Secrets
 
-Edge Functions read credentials from Supabase secrets (not `.env`). Set them with the CLI:
+Set the TextSMS Kenya credentials and any other secrets:
 
 ```bash
-# TextSMS Kenya (required for SMS features)
-npx supabase secrets set TEXTSMS_API_KEY=<key>
-npx supabase secrets set TEXTSMS_PARTNER_ID=<partner-id>
-npx supabase secrets set TEXTSMS_SHORTCODE="UMS PREPAID"
-
-# Web Push VAPID (required for push notifications)
-npx supabase secrets set PUSH_VAPID_PRIVATE_KEY=<vapid-private-key>
-
-# OCR integration (optional — for real OCR in ocr-extract function)
-npx supabase secrets set OCR_API_KEY=<ocr-service-key>
+supabase secrets set \
+  TEXTSMS_API_KEY=your_textsms_api_key \
+  TEXTSMS_PARTNER_ID=your_partner_id \
+  TEXTSMS_SHORTCODE="UMS PREPAID" \
+  --project-ref mmnpopwzfjyfasvzzatg
 ```
 
-Supabase also automatically injects:
+Verify secrets are set:
+
+```bash
+supabase secrets list --project-ref mmnpopwzfjyfasvzzatg
+```
+
+The following secrets are automatically available in all Edge Functions and do not need to be set manually:
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
-
-into every Edge Function runtime — you do not need to set these manually.
+- `SUPABASE_DB_URL`
 
 ---
 
-## Deploying Edge Functions
+## 6. Configure Storage Buckets
 
-Deploy all functions at once:
+Create the four private buckets in Supabase Dashboard → Storage (or via migrations):
 
-```bash
-npx supabase functions deploy
-```
+| Bucket | Public |
+|---|---|
+| `documents` | No |
+| `task-files` | No |
+| `avatars` | No |
+| `db-exports` | No |
 
-Deploy a specific function:
+Storage policies are defined in the migrations. If they were not applied automatically, create them from the Storage → Policies tab matching the RLS rules in the migrations.
 
-```bash
-npx supabase functions deploy send-sms
-npx supabase functions deploy escalations
-npx supabase functions deploy export-database
-```
+---
 
-### Functions that require `verify_jwt = false`
+## 7. Set Up Cron Jobs
 
-The following functions are called without a user JWT (e.g. by cron jobs or during initial setup). This is configured in `supabase/functions/config.toml` (create if it doesn't exist):
+Two Edge Functions need to run on a schedule. Set them up in Supabase Dashboard → Database → Extensions → pg_cron, or via the SQL editor:
 
-```toml
-[functions.seed-admin]
-verify_jwt = false
-
-[functions.password-reminders]
-verify_jwt = false
-
-[functions.run-scheduled-export]
-verify_jwt = false
-
-[functions.escalations]
-# verify_jwt = true (default) — the 'tick' action bypasses auth internally
-```
-
-### Cron Jobs
-
-Set up two cron jobs in the Supabase Dashboard → Database → Cron (pg_cron extension):
-
-**Auto-escalation (runs every hour):**
 ```sql
+-- Auto-advance overdue escalations every 15 minutes
 SELECT cron.schedule(
   'auto-escalation',
-  '0 * * * *',
-  $$
-    SELECT net.http_post(
-      url := current_setting('supabase.functions_endpoint') || '/escalations',
-      body := '{"action":"tick"}'::jsonb
-    )
-  $$
+  '*/15 * * * *',
+  $$SELECT net.http_post(
+    url := 'https://mmnpopwzfjyfasvzzatg.supabase.co/functions/v1/escalations',
+    headers := '{"Content-Type":"application/json","Authorization":"Bearer <service_role_key>"}',
+    body := '{"action":"auto_advance"}'
+  )$$
 );
-```
 
-**Password reminders (runs daily at 8 AM EAT / 5 AM UTC):**
-```sql
+-- Password expiry reminders daily at 8am EAT (5am UTC)
 SELECT cron.schedule(
   'password-reminders',
   '0 5 * * *',
-  $$
-    SELECT net.http_post(
-      url := current_setting('supabase.functions_endpoint') || '/password-reminders',
-      body := '{}'::jsonb
-    )
-  $$
+  $$SELECT net.http_post(
+    url := 'https://mmnpopwzfjyfasvzzatg.supabase.co/functions/v1/password-reminders',
+    headers := '{"Content-Type":"application/json","Authorization":"Bearer <service_role_key>"}',
+    body := '{}'
+  )$$
 );
 ```
 
-The migration `supabase/migrations/20261014120000_auto_escalation_cron.sql` contains cron setup SQL that can be reviewed for exact configuration.
+---
+
+## 8. Seed the First Admin User
+
+After deploying, navigate to `https://your-domain.com/setup` to create the first admin account. This calls the `seed-admin` Edge Function which creates the user in Supabase Auth and sets their role to `admin`.
+
+This endpoint only works once — if an admin already exists, it returns an error.
 
 ---
 
-## Building for Production
+## 9. Build the Frontend
 
 ```bash
+npm install
 npm run build
 ```
 
-Output is in `dist/`. The build includes:
-- Vite code splitting with chunk size warning at 1000 KB.
-- PWA assets (service worker, manifest, icons) generated by `vite-plugin-pwa`.
-- Rollup with `external` filter for `core-js/` polyfills.
-
-### Preview the production build locally
-
-```bash
-npm run preview
-# Opens at http://localhost:4173
-```
+This produces a `dist/` directory containing the static SPA. The PWA service worker is generated automatically by `vite-plugin-pwa`.
 
 ---
 
-## PWA Configuration
+## 10. Deploy to Hosting
 
-UMS Hub is a Progressive Web App. The PWA is configured in `vite.config.ts` using `vite-plugin-pwa`:
+### Vercel
 
-- **Register type:** `autoUpdate` — the service worker updates automatically in the background.
-- **App name:** `UMS Hub`
-- **Short name:** `UMS Hub`
-- **Theme colour:** `#1e5799`
-- **Display:** `standalone` (full-screen without browser chrome)
-- **Start URL:** `/`
-- **Icons:** 192×192 and 512×512 in both `any` and `maskable` variants (files in `public/`)
-- **Categories:** `business`, `productivity`, `utilities`
-
-**Runtime caching (Workbox):**
-- Supabase API responses (`*.supabase.co/*`) are cached with `NetworkFirst` strategy, 24-hour expiry, max 50 entries.
-- Static assets (`js`, `css`, `html`, `ico`, `png`, `svg`, `woff2`) are precached.
-
-### Required PWA icon files (place in `public/`)
-
-```
-public/pwa-192x192.png
-public/pwa-512x512.png
-public/pwa-maskable-192x192.png
-public/pwa-maskable-512x512.png
-public/favicon.png
-public/favicon.ico
-public/robots.txt
-```
-
----
-
-## Recommended Hosting Options
-
-UMS Hub is a static SPA — any platform that can serve static files and handle SPA routing (all routes → `index.html`) works.
-
-### Vercel (recommended)
-
-1. Connect your GitHub repository at [vercel.com](https://vercel.com).
-2. Set build command: `npm run build`
-3. Set output directory: `dist`
-4. Add environment variables in the Vercel dashboard.
-5. Add a `vercel.json` for SPA routing:
+Create `vercel.json` in the project root:
 
 ```json
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/" }]
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" }
+      ]
+    }
+  ]
 }
 ```
 
+Then deploy:
+
+```bash
+npx vercel --prod
+```
+
+Set environment variables in Vercel Dashboard → Project → Settings → Environment Variables (same as `.env` above).
+
 ### Netlify
 
-1. Connect repo at [netlify.com](https://netlify.com).
-2. Build command: `npm run build`
-3. Publish directory: `dist`
-4. Add environment variables in Site Settings → Environment variables.
-5. Create `public/_redirects`:
+Create `netlify.toml`:
 
-```
-/*  /index.html  200
+```toml
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
 ```
 
-### VPS / Self-hosted (nginx)
+### Nginx (VPS)
 
 ```nginx
 server {
@@ -250,33 +214,40 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
-    # Recommended: redirect HTTP to HTTPS and add security headers
-    add_header X-Frame-Options DENY;
-    add_header X-Content-Type-Options nosniff;
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript;
 }
 ```
 
-### First-run after deployment
-
-1. Visit `/setup` to create the initial admin account.
-2. Log in with the admin credentials.
-3. Go to User Hub to create staff and customer accounts.
-4. Configure document categories in `/docs/categories`.
-5. Optionally customise the organisation logo and name in Settings.
+The key requirement for all hosting: **all URLs must serve `index.html`** to support React Router's client-side routing.
 
 ---
 
-## GitHub Repository
+## 11. PWA Configuration
 
-Source code is hosted at: **<https://github.com/deikas123/umsdash>**
+`vite-plugin-pwa` generates the service worker and web app manifest during `npm run build`. No additional configuration is needed for basic PWA support (install prompt, offline shell).
 
-Push a new feature branch:
+To customize the PWA manifest (name, icons, theme color), edit `vite.config.ts` and update the `pwa` plugin options.
+
+---
+
+## Updating the Application
 
 ```bash
-git checkout -b feat/my-feature
-# make changes
-git add src/...
-git commit -m "feat: add my feature"
-git push -u origin feat/my-feature
-# then open a pull request on GitHub
+git pull origin master
+npm install          # if package.json changed
+npm run build
+# redeploy dist/ to your hosting provider
+```
+
+For database changes:
+
+```bash
+supabase db push --project-ref mmnpopwzfjyfasvzzatg
+```
+
+For Edge Function changes:
+
+```bash
+supabase functions deploy <function-name> --project-ref mmnpopwzfjyfasvzzatg
 ```

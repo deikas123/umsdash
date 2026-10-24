@@ -1,578 +1,347 @@
-# UMS Hub — API & Integrations Reference
+# API & Integrations
 
-## Supabase Edge Functions
+## Edge Functions
 
-All Edge Functions run on the Deno runtime and are deployed to the same Supabase project. They are called from the frontend via `supabase.functions.invoke()` or directly via `fetch` to `https://<project-ref>.supabase.co/functions/v1/<name>`.
-
-Unless noted, every function requires a `Bearer <JWT>` header (`Authorization`). CORS headers allow all origins.
+All Edge Functions are Deno-based and deployed to `https://mmnpopwzfjyfasvzzatg.supabase.co/functions/v1/<name>`. They are invoked from the frontend via `supabase.functions.invoke(name, { body })`. Every function handles CORS preflight (`OPTIONS`) and verifies the caller's JWT before acting.
 
 ---
 
 ### `admin-create-user`
 
-**Purpose:** Create a new Supabase auth user with an email, password, full name, and role. Uses the service role key to bypass email confirmation.
+**Purpose**: Create a new Supabase Auth user from the admin panel without requiring an email invite flow.
 
-**Auth required:** Yes — caller must have `admin` role in `user_roles`.
+**Method**: `POST`
 
-**Request body:**
+**Auth**: Requires admin role (verified against `user_roles` table).
+
+**Request body**:
 ```json
 {
   "email": "user@example.com",
-  "password": "SecurePass123!",
+  "password": "strongpassword123",
   "full_name": "Jane Doe",
   "role": "staff"
 }
 ```
 
-**Response:**
+**Response**:
 ```json
-{ "success": true, "user_id": "<uuid>" }
-// or on error:
-{ "error": "A user with this email already exists." }
+{ "user": { "id": "uuid", "email": "..." } }
 ```
+or `{ "error": "message" }` on failure.
 
-**Notes:**
-- Validates admin role via service role client before creating.
-- Returns user-friendly messages for `weak_password` and `email_exists` error codes.
-- Updates `user_roles` to the specified role after creation.
+**Notes**: Uses `auth.admin.createUser` with `email_confirm: true`. If `role` differs from default, updates `user_roles` record.
 
 ---
 
 ### `admin-reset-password`
 
-**Purpose:** Admin-initiated password reset for another user.
+**Purpose**: Admin resets another user's password and flags their account for mandatory password change on next login.
 
-**Auth required:** Yes (admin only).
+**Method**: `POST`
 
-**Request body:**
+**Auth**: Requires admin role.
+
+**Request body**:
 ```json
-{ "user_id": "<uuid>", "new_password": "NewPass456!" }
+{
+  "user_id": "uuid",
+  "new_password": "temporary1234"
+}
 ```
 
-**Response:**
-```json
-{ "success": true }
-```
+**Response**: `{ "success": true }` or `{ "error": "message" }`
+
+**Notes**: Sets `app_metadata.must_change_password = true` on the target user. Password must be 10–72 characters.
 
 ---
 
 ### `admin-update-email`
 
-**Purpose:** Admin updates the email address of an existing user (uses admin Auth API).
+**Purpose**: Admin changes another user's email address, bypassing the normal email-confirmation flow.
 
-**Auth required:** Yes (admin only).
+**Method**: `POST`
 
-**Request body:**
+**Auth**: Requires admin role.
+
+**Request body**:
 ```json
-{ "user_id": "<uuid>", "new_email": "newemail@example.com" }
+{
+  "user_id": "uuid",
+  "new_email": "newemail@example.com"
+}
 ```
 
-**Response:**
-```json
-{ "success": true }
-```
+**Response**: `{ "success": true }` or `{ "error": "message" }`
 
 ---
 
 ### `complete-password-change`
 
-**Purpose:** Completes a forced password change flow. Marks `profiles.must_reset_password = false` after the user sets a new password.
+**Purpose**: Called by a user who has been forced to change their password. Updates the password and clears the `must_change_password` flag.
 
-**Auth required:** Yes (authenticated user).
+**Method**: `POST`
 
-**Request body:**
+**Auth**: Requires authenticated user JWT.
+
+**Request body**:
 ```json
-{ "new_password": "NewPass789!" }
+{
+  "new_password": "newstrongpassword123"
+}
 ```
 
-**Response:**
-```json
-{ "success": true }
-```
-
----
-
-### `reset-user-password`
-
-**Purpose:** Self-service or admin-triggered password reset using a reset token.
-
-**Auth required:** Conditional (JWT or reset token).
-
-**Request body:**
-```json
-{ "token": "<reset-token>", "new_password": "NewPass!" }
-```
-
-**Response:**
-```json
-{ "success": true }
-```
+**Response**: `{ "success": true }` or `{ "error": "message" }`
 
 ---
 
 ### `escalations`
 
-**Purpose:** All escalation lifecycle operations — create, escalate, acknowledge, resolve, reopen, comment, and automatic tick (cron-driven).
+**Purpose**: Handles escalation lifecycle operations — create, advance level, assign, resolve, and auto-advance overdue escalations via cron.
 
-**Auth required:** Yes for user actions. The `tick` action can be called without auth (from a cron job).
+**Method**: `POST`
 
-**Request body:**
-```json
-{
-  "action": "create" | "escalate" | "acknowledge" | "resolve" | "reopen" | "comment" | "tick",
-  "title": "Escalation title",
-  "source_table": "incidents" | "vendor_issues",
-  "source_id": "<uuid>",
-  "assigned_to": "<uuid>",
-  "id": "<escalation-uuid>",
-  "note": "Optional note"
-}
-```
+**Auth**: Authenticated user JWT.
 
-**Actions:**
+**Actions**: Dispatched via `action` field in the request body:
+- `create` — opens a new escalation linked to a `vendor_issues` or `incidents` record
+- `advance` — moves to the next escalation level and sends SMS to target-role users
+- `assign` — assigns escalation to a specific user
+- `resolve` — marks escalation resolved
+- `auto_advance` — called by Supabase cron; advances all escalations past their `level_deadline`
 
-| Action | Description |
-|---|---|
-| `create` | Creates a new escalation at level 1, sends notifications |
-| `escalate` | Moves escalation up one level, notifies recipients at new level |
-| `acknowledge` | Sets status to `acknowledged`, logs event |
-| `resolve` | Sets status to `resolved`, sets `resolved_at` |
-| `reopen` | Sets status back to `open` |
-| `comment` | Logs a comment event without changing status |
-| `tick` | Cron action: auto-escalates all open escalations past their `level_deadline` |
-
-**On each transition:** Writes to `escalation_events`, reads `escalation_levels` to find recipients, sends in-app notifications to all recipients, sends SMS via TextSMS Kenya to recipients with phone numbers.
-
-**Response:**
-```json
-{ "success": true }
-// or for tick:
-{ "success": true, "moved": 3 }
-```
+**SMS**: Uses TextSMS Kenya. Phone numbers normalized to `254XXXXXXXXX` format. Shortcode: `UMS PREPAID`.
 
 ---
 
 ### `export-database`
 
-**Purpose:** Full database export as a ZIP file (schema DDL + table data as SQL INSERTs + storage file copies + Edge Function source + FK graph JSONL + validation report). Streams progress via **Server-Sent Events (SSE)**.
+**Purpose**: Generates a full ZIP archive containing schema DDL, data as SQL INSERT statements, and storage bucket file listings. Uploads the ZIP to the `db-exports` private bucket. Streams progress via Server-Sent Events (SSE).
 
-**Auth required:** Yes — caller must be the super admin (`amsterntechhub@gmail.com`).
+**Method**: `POST`
 
-**Request body:**
-```json
-{ "includeFiles": true }
-```
+**Auth**: Restricted to `amsterntechhub@gmail.com` (super admin check).
 
-**Response:** `text/event-stream` with events:
+**Response**: SSE stream of progress events, then a final signed URL for the ZIP download (valid 5 minutes).
 
-| Event | Data shape |
-|---|---|
-| `progress` | `{ phase, message, pct, ...extras }` |
-| `done` | `{ filename, size_bytes, signed_url, validation, manifest }` |
-| `error` | `{ message }` |
+**Included tables**: All `public` tables in FK-safe insertion order.
 
-The resulting ZIP is uploaded to the `db-exports` storage bucket and a 30-minute signed URL is returned. Structure inside the ZIP:
-
-```
-schema.sql             — Full DDL (tables, FKs, indexes, functions, triggers, RLS)
-all-data.sql           — Combines all per-table SQL files
-full.sql               — schema + data in one file
-data/<table>.sql       — Per-table INSERT statements
-knowledge/
-  relationships.jsonl  — FK graph
-  documents.jsonl      — Document index with file paths
-  task_files.jsonl     — Task file index
-  profiles.jsonl       — User profile index
-  storage-index.jsonl  — Storage file index with signed URLs
-edge_functions/<name>/index.ts
-manifest.json          — Row counts, error log
-validation.json        — Automated integrity checks
-SUMMARY.md
-LLM_CONTEXT.md
-README.md
-```
+**Included buckets**: `documents`, `task-files`, `avatars`
 
 ---
 
 ### `notify-sms`
 
-**Purpose:** Send an SMS notification for a specific event type (reminders, tasks, etc.).
+**Purpose**: Sends an SMS notification to one or more users based on their `sms_preferences` settings (task/reminder notifications).
 
-**Auth required:** Yes.
+**Method**: `POST`
 
-**Request body:**
+**Auth**: Authenticated user JWT.
+
+**Request body**:
 ```json
 {
-  "mobile": "0712345678",
-  "message": "Your document is ready for review.",
-  "type": "reminder",
-  "recipientName": "John Doe"
+  "type": "task_assigned",
+  "user_ids": ["uuid1", "uuid2"],
+  "message": "You have been assigned a new task."
 }
-```
-
-**Response:**
-```json
-{ "success": true }
 ```
 
 ---
 
 ### `ocr-extract`
 
-**Purpose:** Extract text from a document stored in Supabase Storage. Currently a stub — returns mock extracted text. Integrate a real OCR service using the `OCR_API_KEY` environment variable.
+**Purpose**: Downloads a document from the `documents` storage bucket and extracts its text content, storing the result in `document_text_content` for full-text search.
 
-**Auth required:** Yes (service role internally).
+**Method**: `POST`
 
-**Request body:**
+**Auth**: Authenticated user JWT (service role key used internally).
+
+**Request body**:
 ```json
-{ "document_id": "<uuid>" }
+{ "document_id": "uuid" }
 ```
 
-**Response:**
-```json
-{ "success": true, "document_id": "<uuid>", "chars": 123 }
-```
+**Response**: `{ "success": true, "text": "extracted text..." }`
 
-Upserts a row in `document_text_content` with `extraction_status = 'completed'`.
+**Notes**: Currently contains a stub implementation. Replace with a real OCR provider (e.g., Google Vision, Tesseract) to enable production text extraction.
 
 ---
 
 ### `ops-send-sms`
 
-**Purpose:** Operations Hub variant of SMS sending. Sends an SMS for ops events (escalations, password reminders).
+**Purpose**: Sends SMS from the Operations Hub context (e.g., escalation notifications, password expiry alerts).
 
-**Auth required:** Yes.
+**Method**: `POST`
 
-**Request body:** Same as `send-sms`.
+**Auth**: Authenticated user JWT. Caller must be admin or staff.
+
+**Request body**:
+```json
+{
+  "phone": "0712345678",
+  "message": "Your password for SystemX expires in 2 days.",
+  "type": "password_expiry"
+}
+```
+
+**SMS provider**: TextSMS Kenya (`https://sms.textsms.co.ke/api/services/sendsms/`), shortcode `UMS PREPAID`.
 
 ---
 
 ### `password-reminders`
 
-**Purpose:** Cron job function — scans all `passwords` records and sends SMS + in-app notifications at 14, 7, 2, and 0 days before expiry, then daily once overdue (up to 14 days past expiry).
+**Purpose**: Cron-invoked function that scans the `passwords` table and sends SMS reminders at 14, 7, 2, and 0 days before expiry.
 
-**Auth required:** No (called by cron, uses service role internally).
+**Method**: `POST` (invoked by Supabase cron scheduler)
 
-**Request body:** Empty `{}`.
+**Auth**: Service role (no user JWT needed for cron invocation).
 
-**Notification logic:**
-- Reminder at 14, 7, 2, 0 days before `expiry_date`
-- Daily reminders for up to 14 days after expiry
-- Skips if `last_notified_at` was less than 20 hours ago
-- Sends to `passwords.phone_number`, `owner_user_id` profile phone, and `backup_user_id` profile phone (backup only at ≤2 days or overdue)
+**Behavior**: For each password record, checks if `expiry_date` falls within a reminder window and `last_notified_at` has not already covered that window. Sends SMS to `phone_number`, `owner_user_id`, and `backup_user_id`. Updates `last_notified_at`.
 
-**Response:**
-```json
-{ "success": true, "processed": 5, "results": [...] }
-```
+---
+
+### `reset-user-password`
+
+**Purpose**: Allows a user to reset their own password using a reset token (not an admin action).
+
+**Method**: `POST`
+
+**Auth**: Reset token passed in body.
 
 ---
 
 ### `run-scheduled-export`
 
-**Purpose:** Cron-triggered export runner. Reads due `export_schedules` records and executes the corresponding export, emailing results.
+**Purpose**: Executes a specific export schedule by ID, generates the export file (CSV/Excel), and emails it to `email_to` recipients. Called by Supabase cron based on `next_run_at`.
 
-**Auth required:** No (cron trigger, uses service role).
+**Method**: `POST`
 
-**Response:**
+**Request body**:
 ```json
-{ "success": true, "ran": 2 }
+{ "schedule_id": "uuid" }
 ```
+
+**Notes**: Updates `last_run_at` and calculates `next_run_at` after execution.
 
 ---
 
 ### `seed-admin`
 
-**Purpose:** Seeds the initial super admin user. Only used during first-time setup (`/setup` page).
+**Purpose**: One-time setup function called from `/setup` to bootstrap the first admin user. Only works when no admin users exist.
 
-**Auth required:** No (`verify_jwt = false` in config.toml).
+**Method**: `POST`
 
-**Request body:**
+**Request body**:
 ```json
 {
-  "email": "amsterntechhub@gmail.com",
-  "password": "InitialPass!",
-  "full_name": "Super Admin"
+  "email": "admin@example.com",
+  "password": "securepassword",
+  "fullName": "Admin Name"
 }
-```
-
-**Response:**
-```json
-{ "success": true, "user_id": "<uuid>" }
 ```
 
 ---
 
 ### `send-push`
 
-**Purpose:** Deliver a Web Push notification to a subscribed browser endpoint.
+**Purpose**: Sends a Web Push notification to a browser subscription endpoint.
 
-**Auth required:** Yes.
+**Method**: `POST`
 
-**Request body:**
+**Request body**:
 ```json
 {
   "subscription": { "endpoint": "...", "keys": { "p256dh": "...", "auth": "..." } },
-  "title": "New document uploaded",
-  "body": "Customer XYZ uploaded a document.",
-  "url": "/docs/documents"
+  "title": "Notification title",
+  "body": "Notification body",
+  "url": "/docs/tasks"
 }
 ```
 
-**Response:**
-```json
-{ "success": true, "message": "Push notification queued (stub)" }
-```
-
-**Note:** Currently a stub. To enable real push delivery, integrate the Web Push protocol in this function using `PUSH_VAPID_PRIVATE_KEY` secret and a Deno-compatible VAPID library.
+**Notes**: Currently a stub implementation. Integrate a real Web Push library (e.g., `web-push`) with VAPID keys to enable production push delivery.
 
 ---
 
 ### `send-sms`
 
-**Purpose:** Send a single SMS via TextSMS Kenya API, log result to `sms_logs`.
+**Purpose**: General-purpose SMS send function used by Document Vault features (task assignments, reminder notifications, customer notifications).
 
-**Auth required:** Yes.
+**Method**: `POST`
 
-**Request body:**
+**Auth**: Authenticated user Bearer token.
+
+**Request body**:
 ```json
 {
-  "mobile": "0712345678",
+  "to": "0712345678",
   "message": "Your document is ready.",
-  "type": "general",
-  "recipientName": "John Doe"
+  "type": "document_ready"
 }
 ```
 
-**Phone normalisation:** Strips spaces and non-numeric chars, removes leading `+`, converts `0XXXXXXXXX` to `254XXXXXXXXX`.
-
-**Response:** Raw TextSMS API response JSON.
+**SMS provider**: TextSMS Kenya. Phone normalized to `254XXXXXXXXX`. Shortcode: `UMS PREPAID`. Response logged to `sms_logs` table.
 
 ---
 
 ### `trigger-webhook`
 
-**Purpose:** POST a payload to a configured webhook URL with HMAC-SHA256 signature.
+**Purpose**: Fires an outbound webhook to a configured URL with HMAC-SHA256 signature verification.
 
-**Auth required:** No (called internally from other functions or DB triggers).
+**Method**: `POST`
 
-**Request body:**
+**Request body**:
 ```json
 {
-  "webhook_id": "<uuid>",
+  "webhook_id": "uuid",
   "event": "document.uploaded",
-  "payload": { "document_id": "<uuid>", "customer_id": "<uuid>" }
+  "payload": { ... }
 }
 ```
 
-**Delivery headers:**
-- `Content-Type: application/json`
-- `X-UMSHub-Signature: <hmac-sha256-hex>`
-- `X-UMSHub-Event: <event>`
-
-**Response:**
-```json
-{ "success": true, "status": 200 }
-```
+**Signature header**: `X-UMS-Signature: sha256=<hmac>`. Recipients should verify this header using the webhook secret.
 
 ---
 
 ### `watermark-download`
 
-**Purpose:** Generate a signed, watermarked download URL for a document. Returns a 5-minute signed URL plus a watermark text string (`"Downloaded by: <name> | <date>"`). Client applies the watermark visually. Logs a `watermarked_download` audit event.
+**Purpose**: Generates a signed download URL for a document from the `documents` bucket, optionally applying a watermark to PDFs with the user's name and timestamp.
 
-**Auth required:** Yes.
+**Method**: `POST`
 
-**Request body:**
+**Auth**: Authenticated user Bearer token.
+
+**Request body**:
 ```json
-{
-  "filePath": "path/in/storage/bucket",
-  "userName": "Jane Doe",
-  "userEmail": "jane@example.com"
-}
+{ "file_path": "documents/customer/filename.pdf" }
 ```
 
-**Response:**
-```json
-{
-  "signedUrl": "https://...supabase.co/storage/v1/...",
-  "watermarkText": "Downloaded by: Jane Doe | 2026-07-20"
-}
-```
+**Response**: `{ "url": "https://..." }` — signed URL valid for 5 minutes.
 
 ---
 
-## TextSMS Kenya API Integration
+## TextSMS Kenya Integration
 
-UMS Hub sends SMS messages through the [TextSMS Kenya](https://sms.textsms.co.ke) API.
-
-**Endpoint:** `POST https://sms.textsms.co.ke/api/services/sendsms/`
-
-**Request format:**
-```json
-{
-  "apikey": "<TEXTSMS_API_KEY>",
-  "partnerID": "<TEXTSMS_PARTNER_ID>",
-  "message": "SMS body text",
-  "shortcode": "<TEXTSMS_SHORTCODE>",
-  "mobile": "254712345678"
-}
-```
-
-**Phone number format:** Always normalised to `254XXXXXXXXX` (international format, no leading `+`, no spaces).
-
-**Success indicator:** Response code `"0200"` in `responses[0]["respose-code"]` (note the typo in the API — `respose` not `response`) or `result.success === true`.
-
-**Supabase secrets required:**
-```
-TEXTSMS_API_KEY=<api-key>
-TEXTSMS_PARTNER_ID=<partner-id>
-TEXTSMS_SHORTCODE=<shortcode>   # e.g. "UMS PREPAID"
-```
-
-**Where SMS is sent:**
-- `send-sms` — general document/task notifications
-- `notify-sms` — reminder notifications
-- `ops-send-sms` — Operations Hub events
-- `escalations` — escalation level changes
-- `password-reminders` — credential expiry warnings
-
-All sent messages are logged to `sms_logs` with status (`delivered`, `sent`, `failed`) and the raw API response.
-
----
-
-## Supabase Storage
-
-### Buckets
-
-| Bucket | Access | Purpose |
-|---|---|---|
-| `documents` | Private (RLS via signed URLs) | Customer documents uploaded in Document Vault |
-| `task-files` | Private | File attachments on tasks |
-| `avatars` | Public | User profile photos |
-| `db-exports` | Private (super admin only) | Database export ZIP files |
-
-### File Path Conventions
-
-**documents bucket:**
-```
-<customer_id>/<uuid>/<filename>
-```
-Example: `a1b2c3-...../doc-uuid/contract.pdf`
-
-**task-files bucket:**
-```
-<task_id>/<uuid>/<filename>
-```
-
-**avatars bucket:**
-```
-<user_id>/<filename>
-```
-
-**db-exports bucket:**
-```
-<user_id>/ums-export-<ISO-timestamp>.zip
-```
-
-### Access Patterns
-
-- **Upload:** `supabase.storage.from('documents').upload(path, file)`
-- **Signed URL (download):** `supabase.storage.from('documents').createSignedUrl(path, 300)` (5-minute expiry)
-- **Watermarked download:** via `watermark-download` Edge Function (also 5-minute expiry)
-- **Public URL (avatars):** `supabase.storage.from('avatars').getPublicUrl(path)`
-
----
-
-## Supabase Realtime
-
-Supabase Realtime (Postgres Changes) subscriptions are used in two places:
-
-### `user_xp` — Gamification updates
-- **Channel:** `'gamification-' + Math.random().toString(36).slice(2)` (unique per hook instance)
-- **Table:** `user_xp`
-- **Filter:** `user_id=eq.<current_user_id>`
-- **Events:** `*` (INSERT, UPDATE, DELETE)
-- **Used in:** `src/hooks/useGamification.ts` — triggers a full refetch when XP changes
-
-### `chat_messages` — Team Chat
-- **Channel:** `realtime:chat_messages`
-- **Table:** `chat_messages`
-- **Events:** INSERT
-- **Used in:** `src/hooks/useChat.ts` — appends new messages to the chat feed in real time
-
----
-
-## Web Push API
-
-### Subscription Flow
-
-1. User visits Settings → Push Notifications section.
-2. Browser requests notification permission.
-3. Client calls `navigator.serviceWorker.registration.pushManager.subscribe()` with the VAPID public key.
-4. Subscription object (`{ endpoint, keys: { p256dh, auth } }`) is stored in `push_subscriptions` table.
-5. When a notification is triggered, the `send-push` Edge Function is called with the subscription and payload.
-
-### VAPID Setup
-
-To enable real push delivery:
-
-1. Generate a VAPID key pair:
-   ```bash
-   npx web-push generate-vapid-keys
-   ```
-2. Set the public key in the frontend (`.env`):
-   ```
-   VITE_VAPID_PUBLIC_KEY=<public-key>
-   ```
-3. Set the private key as a Supabase secret:
-   ```bash
-   npx supabase secrets set PUSH_VAPID_PRIVATE_KEY=<private-key>
-   ```
-4. Implement the actual push delivery in `supabase/functions/send-push/index.ts` using a Deno-compatible Web Push library.
-
-### Hook
-`src/hooks/usePushNotifications.ts` — manages subscription state, subscribes/unsubscribes, calls `send-push`.
-
----
-
-## Export APIs
-
-Export utilities are available throughout the app for CSV, Excel, and PDF generation.
-
-### `src/lib/export-utils.ts` / `src/lib/exportUtils.ts`
-
-**CSV export:**
-```typescript
-exportToCSV(data: object[], filename: string): void
-```
-Converts an array of objects to CSV and triggers a browser download.
-
-**Excel export:**
-```typescript
-exportToExcel(data: object[], filename: string, sheetName?: string): void
-```
-Uses the `xlsx` library to create an `.xlsx` file.
-
-**PDF export:**
-```typescript
-exportToPDF(columns: string[], rows: any[][], title: string, filename: string): void
-```
-Uses `jsPDF` + `jspdf-autotable` to generate a PDF table.
-
-### Where exports are available
-
-| Page | Formats |
+| Property | Value |
 |---|---|
-| Reports (`/docs/reports`) | CSV, Excel, PDF |
-| Audit Logs (`/docs/audit-logs`) | CSV |
-| Documents (`/docs/documents`) | CSV |
-| Customers (`/docs/customers`) | CSV |
-| Vendor Issues (`/ops/vendor-issues`) | CSV |
-| Incidents (`/ops/incidents`) | CSV, PDF |
-| Analytics pages | CSV |
-| Database Export (`/docs/database-export`) | ZIP (via Edge Function) |
+| API endpoint | `https://sms.textsms.co.ke/api/services/sendsms/` |
+| Method | POST (JSON) |
+| Shortcode | `UMS PREPAID` |
+| Phone format | `254XXXXXXXXX` (local `0XXX` prefix auto-converted) |
+| Auth fields | `apikey`, `partnerID` |
+| Required secrets | `TEXTSMS_API_KEY`, `TEXTSMS_PARTNER_ID` |
 
-### Scheduled Exports (`run-scheduled-export`)
+All SMS sends are logged to the `sms_logs` table with the full API response.
 
-Admin configures export schedules in `/docs/export-scheduler`. The Edge Function `run-scheduled-export` is called by a Supabase cron job (configured in `supabase/migrations/20261014120000_auto_escalation_cron.sql`). It reads due `export_schedules` rows, generates the export, and optionally emails it to the configured recipients.
+---
+
+## Supabase Storage Buckets
+
+| Bucket | Access | Used by |
+|---|---|---|
+| `documents` | private | Document Vault — uploaded documents and versions |
+| `task-files` | private | Task file attachments |
+| `avatars` | private | User profile avatars |
+| `db-exports` | private | Database export ZIP archives (super admin) |
+
+All buckets are private — access requires a signed URL generated by the server. Direct public URLs are not enabled.

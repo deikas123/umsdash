@@ -1,8 +1,678 @@
-# UMS Hub — Database Reference
+# Database Schema
 
-**Engine:** PostgreSQL 14 (Supabase managed)  
-**Project ref:** `mmnpopwzfjyfasvzzatg`  
-**Types file:** `src/integrations/supabase/types.ts` (hand-edited — do **not** regenerate with `supabase gen types`)
+All tables live in the `public` schema in PostgreSQL (Supabase). Row Level Security (RLS) is enabled on every table. The type definitions are auto-generated at `src/integrations/supabase/types.ts`.
+
+---
+
+## Authentication & Users
+
+### `profiles`
+Extends `auth.users` with application-level fields.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| user_id | uuid | FK → auth.users |
+| full_name | text | |
+| email | text | |
+| phone | text | nullable |
+| department | text | nullable |
+| position | staff_position enum | nullable |
+| avatar_url | text | nullable |
+| must_reset_password | boolean | default false |
+| password_changed_at | timestamptz | nullable |
+| password_expiry_days | integer | nullable |
+| notification_preferences | jsonb | nullable |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
+
+### `user_roles`
+Maps each user to their base application role.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| user_id | uuid | FK → auth.users |
+| role | app_role enum | default 'staff' |
+| created_at | timestamptz | |
+
+### `user_app_access`
+Tracks which apps each user has been granted access to.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| user_id | uuid | |
+| app_id | text | |
+| granted_by | uuid | nullable |
+| granted_at | timestamptz | |
+
+### `custom_roles`
+Administrator-defined roles that extend the base RBAC.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| name | text | unique slug |
+| display_name | text | |
+| description | text | nullable |
+| base_role | text | default 'staff' |
+| color | text | hex color |
+| is_system | boolean | system roles cannot be deleted |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
+
+### `user_custom_roles`
+Junction table assigning custom roles to users.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| user_id | uuid | |
+| role_id | uuid | FK → custom_roles |
+| assigned_by | uuid | nullable |
+| assigned_at | timestamptz | |
+
+---
+
+## Documents
+
+### `documents`
+Core document records.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| title | text | |
+| description | text | nullable |
+| file_name | text | |
+| file_path | text | Storage path in `documents` bucket |
+| file_size | integer | bytes |
+| file_type | text | MIME type |
+| category_id | uuid | FK → document_categories |
+| customer_id | uuid | FK → customers |
+| uploaded_by | uuid | nullable, FK → auth.users |
+| status | document_status enum | pending/approved/archived |
+| is_private | boolean | |
+| expiry_date | date | nullable |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
+
+### `document_categories`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| name | text |
+| description | text nullable |
+| color | text nullable |
+| display_order | integer |
+| created_at | timestamptz |
+
+### `document_versions`
+Version history for a document.
+
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| document_id | uuid FK → documents |
+| version_number | integer |
+| file_name | text |
+| file_path | text |
+| file_size | integer |
+| file_type | text |
+| notes | text nullable |
+| uploaded_by | uuid nullable |
+| created_at | timestamptz |
+
+### `document_comments`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| document_id | uuid FK → documents |
+| user_id | uuid |
+| content | text |
+| created_at | timestamptz |
+
+### `document_text_content`
+OCR-extracted text content for full-text search.
+
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| document_id | uuid |
+| extracted_text | text nullable |
+| extraction_status | text |
+| extracted_at | timestamptz nullable |
+| created_at | timestamptz |
+
+### `deletion_requests`
+Soft-delete workflow — staff request deletion, admin approves.
+
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| document_id | uuid FK → documents |
+| requested_by | uuid |
+| reason | text nullable |
+| status | text (pending/approved/rejected) |
+| reviewed_by | uuid nullable |
+| reviewed_at | timestamptz nullable |
+| created_at | timestamptz |
+
+---
+
+## Customers
+
+### `customers`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| account_number | text |
+| full_name | text |
+| email | text nullable |
+| phone | text nullable |
+| address | text nullable |
+| user_id | uuid nullable — linked portal user |
+| created_at | timestamptz |
+| updated_at | timestamptz |
+
+---
+
+## Folders
+
+### `folders`
+Nested folder tree (parent_id self-reference).
+
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| name | text |
+| description | text nullable |
+| owner_id | uuid |
+| parent_id | uuid nullable FK → folders(id) |
+| created_at | timestamptz |
+| updated_at | timestamptz |
+
+### `folder_documents`
+Files uploaded directly into a private folder.
+
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| folder_id | uuid FK → folders |
+| file_name | text |
+| file_path | text |
+| file_size | integer |
+| file_type | text |
+| uploaded_by | uuid |
+| created_at | timestamptz |
+
+### `folder_shares`
+Per-user sharing grants on a folder.
+
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| folder_id | uuid FK → folders |
+| shared_with_user_id | uuid |
+| can_edit | boolean |
+| include_subfolders | boolean |
+| created_at | timestamptz |
+
+---
+
+## Tasks & Reminders
+
+### `tasks`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| title | text |
+| description | text nullable |
+| created_by | uuid |
+| due_date | date nullable |
+| priority | task_priority enum |
+| status | task_status enum |
+| created_at / updated_at | timestamptz |
+
+### `task_assignees`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| task_id | uuid FK → tasks |
+| user_id | uuid |
+| status | text |
+| started_at | timestamptz nullable |
+| completed_at | timestamptz nullable |
+| created_at | timestamptz |
+
+### `task_comments`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| task_id | uuid FK → tasks |
+| user_id | uuid |
+| content | text |
+| created_at | timestamptz |
+
+### `task_files`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| task_id | uuid FK → tasks |
+| uploaded_by | uuid |
+| file_name / file_path / file_size / file_type | |
+| upload_type | text |
+| created_at | timestamptz |
+
+### `reminders`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| user_id | uuid |
+| title | text |
+| description | text nullable |
+| reminder_date | timestamptz |
+| recurrence | text |
+| status | text |
+| created_at / updated_at | timestamptz |
+
+---
+
+## Communication
+
+### `chat_messages`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| user_id | uuid |
+| content | text |
+| mentions | uuid[] nullable |
+| created_at | timestamptz |
+
+### `in_app_notifications`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| user_id | uuid |
+| title | text |
+| message | text |
+| type | text |
+| is_read | boolean |
+| link | text nullable |
+| created_at | timestamptz |
+
+### `push_subscriptions`
+Web Push API subscription objects.
+
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| user_id | uuid |
+| endpoint | text |
+| p256dh | text |
+| auth | text |
+| created_at | timestamptz |
+
+### `sms_logs`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| sent_by | uuid |
+| recipient_phone | text |
+| recipient_name | text nullable |
+| message | text |
+| sms_type | text |
+| status | text |
+| api_response | jsonb nullable |
+| created_at | timestamptz |
+
+### `sms_preferences`
+Per-user SMS notification opt-in settings.
+
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| user_id | uuid |
+| sms_enabled | boolean |
+| phone_number | text nullable |
+| notify_tasks | boolean |
+| notify_task_updates | boolean |
+| notify_reminders | boolean |
+| created_at / updated_at | timestamptz |
+
+---
+
+## Operations
+
+### `vendor_issues`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| user_id | uuid |
+| vendor | text |
+| issue | text |
+| impact | text |
+| status | text |
+| system_name | text nullable |
+| date_reported | date nullable |
+| downtime | text nullable |
+| uptime_start / uptime_end | timestamptz nullable |
+| uptime_percentage | numeric nullable |
+| rca_status | text nullable |
+| created_at / updated_at | timestamptz |
+
+### `incidents`
+Full incident management with 5-Why RCA and CAPA.
+
+Key columns: `id`, `incident_number`, `incident_type`, `severity`, `status`, `urgency`, `user_id`, `department`, `location`, `date_of_incident`, `date_reported`, `time_of_incident`, `description`, `problem_statement`, `persons_involved`, `witnesses`, `immediate_actions[]`, `root_cause_categories[]`, `root_cause_statement`, `why_1..why_5`, `capa_action`, `capa_owner`, `capa_deadline`, `capa_status`, `containment_details`, `safety_impact[]`, `operational_impact[]`, `financial_impact`, `financial_amount`, `estimated_value`, `item_description`, `item_quantity`, `serial_numbers`, `supporting_docs[]`, `reported_by`, `created_at`, `updated_at`
+
+### `escalations`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| title | text |
+| source_table | text |
+| source_id | uuid |
+| status | text |
+| current_level | integer |
+| level_deadline | timestamptz nullable |
+| assigned_to | uuid nullable |
+| created_by | uuid nullable |
+| resolved_at | timestamptz nullable |
+| created_at / updated_at | timestamptz |
+
+### `escalation_events`
+Audit trail of level changes and actions on an escalation.
+
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| escalation_id | uuid |
+| event_type | text |
+| from_level / to_level | integer nullable |
+| actor_id | uuid nullable |
+| note | text nullable |
+| created_at | timestamptz |
+
+### `escalation_levels`
+Configuration table defining escalation levels and SLA hours.
+
+| Column | Type |
+|---|---|
+| level | integer PK |
+| name | text |
+| target_role | app_role enum nullable |
+| hours_to_next | integer nullable |
+
+### `passwords`
+Password rotation tracker for systems/services.
+
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| user_id | uuid |
+| system_name | text |
+| username | text |
+| assigned_to | text nullable |
+| owner_user_id / backup_user_id | uuid nullable |
+| phone_number | text nullable |
+| expiry_date | date |
+| rotation_days | integer |
+| last_renewed_at / last_notified_at | timestamptz nullable |
+| notified | boolean nullable |
+| created_at / updated_at | timestamptz |
+
+### `password_renewals`
+History of each password renewal.
+
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| password_id | uuid |
+| previous_expiry | date nullable |
+| new_expiry | date |
+| notes | text nullable |
+| renewed_by | uuid nullable |
+| created_at | timestamptz |
+
+### `ops_notifications`
+Operations Hub-specific in-app notifications.
+
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| user_id | uuid |
+| title | text |
+| body | text nullable |
+| link | text nullable |
+| read | boolean |
+| created_at | timestamptz |
+
+---
+
+## Gamification
+
+### `user_xp`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| user_id | uuid unique |
+| total_xp | integer |
+| level | integer |
+| updated_at | timestamptz |
+
+### `upload_streaks`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| user_id | uuid unique |
+| current_streak | integer |
+| longest_streak | integer |
+| last_upload_date | date nullable |
+| updated_at | timestamptz |
+
+### `achievements`
+Reference table of all achievement definitions.
+
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| key | text unique |
+| name | text |
+| description | text nullable |
+| icon | text nullable |
+| xp_reward | integer |
+| category | text nullable |
+
+### `user_achievements`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| user_id | uuid |
+| achievement_key | text FK → achievements(key) |
+| earned_at | timestamptz |
+
+### `daily_challenges`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| date | date unique |
+| type | text |
+| target_count | integer |
+| xp_reward | integer |
+| label | text |
+| icon | text |
+
+### `user_daily_progress`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| user_id | uuid |
+| challenge_date | date FK → daily_challenges(date) |
+| progress | integer |
+| completed | boolean |
+| completed_at | timestamptz nullable |
+
+### `xp_transactions`
+Immutable ledger of every XP award.
+
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| user_id | uuid |
+| amount | integer |
+| reason | text |
+| ref_id | uuid nullable |
+| created_at | timestamptz |
+
+---
+
+## Onboarding
+
+### `tour_definitions`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| key | text unique |
+| name | text |
+| description | text nullable |
+| target_role | app_role enum nullable |
+| is_active | boolean |
+| steps | jsonb |
+| display_order | integer |
+| created_at / updated_at | timestamptz |
+
+### `user_tour_progress`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| user_id | uuid |
+| tour_key | text FK → tour_definitions(key) |
+| status | text (not_started / in_progress / completed / dismissed) |
+| current_step | integer |
+| completed_at | timestamptz nullable |
+| updated_at | timestamptz |
+
+---
+
+## RBAC
+
+### `custom_roles` — see Authentication & Users section
+### `role_permissions`
+Grants individual permission keys to a custom role.
+
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| role_id | uuid FK → custom_roles |
+| permission_key | text |
+| granted_at | timestamptz |
+
+---
+
+## System
+
+### `system_settings`
+Key-value store for application configuration.
+
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| key | text |
+| value | jsonb |
+| created_at / updated_at | timestamptz |
+
+### `departments`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| name | text |
+| description | text nullable |
+| created_at | timestamptz |
+
+### `webhooks`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| name | text |
+| url | text |
+| events | text[] |
+| secret | text nullable |
+| active | boolean |
+| created_by | uuid nullable |
+| created_at / updated_at | timestamptz |
+
+### `api_keys`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| name | text |
+| key_prefix | text |
+| key_hash | text |
+| scopes | text[] |
+| last_used_at | timestamptz nullable |
+| expires_at | timestamptz nullable |
+| revoked | boolean |
+| created_by | uuid nullable |
+| created_at | timestamptz |
+
+### `export_schedules`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| name | text |
+| schedule_type | text |
+| day_of_week | integer nullable |
+| day_of_month | integer nullable |
+| export_type | text |
+| format | text |
+| email_to | text[] nullable |
+| last_run_at / next_run_at | timestamptz nullable |
+| active | boolean |
+| created_by | uuid nullable |
+| created_at | timestamptz |
+
+### `audit_logs`
+| Column | Type |
+|---|---|
+| id | uuid PK |
+| user_id | uuid nullable |
+| action | text |
+| entity_type | text |
+| entity_id | uuid nullable |
+| details | jsonb nullable |
+| ip_address | text nullable |
+| created_at | timestamptz |
+
+---
+
+## Views
+
+### `user_activity_summary`
+Aggregated view used by the admin User Hub. Columns: `user_id`, `full_name`, `email`, `avatar_url`, `department`, `phone`, `role`, `must_reset_password`, `docs_uploaded`, `tasks_created`, `audit_events`, `last_active_at`, `current_streak`, `total_xp`, `level_name`.
+
+---
+
+## Database Functions
+
+| Function | Returns | Description |
+|---|---|---|
+| `get_user_role(uuid)` | app_role | Returns the user's base role |
+| `has_role(app_role, uuid)` | boolean | Checks if user has a given role |
+| `is_super_admin(uuid)` | boolean | Checks super admin status |
+| `get_user_position(uuid)` | staff_position | Returns the user's position enum |
+| `get_customer_id_for_user(uuid)` | uuid | Resolves the customer record for a portal user |
+| `has_folder_access(folder_id, user_id)` | boolean | Checks folder ownership or share grant |
+| `is_folder_owner(folder_id, user_id)` | boolean | Checks folder ownership only |
+| `can_manage_tasks(user_id)` | boolean | Returns true for admin and staff |
+| `is_task_assignee(task_id, user_id)` | boolean | Checks task assignment |
+| `create_due_reminder_notifications()` | void | Creates in-app notifications for due reminders |
+| `export_schema_ddl()` | text | Returns full schema DDL for database export |
+| `award_xp(user_id, amount, reason, ref_id)` | void | Records XP transaction and updates user_xp level |
+| `process_document_upload(user_id, doc_id)` | void | Handles streak, XP, daily challenge, achievements on upload |
+| `check_and_award_achievements(user_id)` | void | Checks volume achievements (uploads_10, uploads_50) |
+| `insert_in_app_notification_for_user(...)` | void | SECURITY DEFINER wrapper for notification inserts |
 
 ---
 
@@ -10,842 +680,10 @@
 
 | Enum | Values |
 |---|---|
-| `app_role` | `admin` \| `staff` \| `customer` \| `manager` \| `user` |
-| `document_status` | `pending` \| `approved` \| `archived` |
-| `task_priority` | `low` \| `normal` \| `high` |
-| `task_status` | `pending` \| `in_progress` \| `completed` |
-| `staff_position` | `super_admin` \| `hr` \| `hod` \| `staff` |
-
----
-
-## Tables
-
-### Core / Identity
-
-#### `profiles`
-User profile data. One row per auth user.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `user_id` | uuid | FK → `auth.users.id` |
-| `full_name` | text | |
-| `email` | text | |
-| `phone` | text | nullable |
-| `avatar_url` | text | nullable |
-| `department` | text | nullable |
-| `position` | staff_position | nullable |
-| `must_reset_password` | boolean | admin-forced reset flag |
-| `password_changed_at` | timestamptz | nullable |
-| `password_expiry_days` | integer | nullable — null = never expires |
-| `notification_preferences` | jsonb | nullable |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
-
-#### `user_roles`
-Base role assignments (one role per user).
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `user_id` | uuid | FK → `auth.users.id` |
-| `role` | app_role | |
-| `created_at` | timestamptz | |
-
-#### `custom_roles`
-RBAC named roles with a base role and optional permissions.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `name` | text | unique slug |
-| `display_name` | text | |
-| `description` | text | nullable |
-| `base_role` | text | one of app_role values |
-| `color` | text | hex or CSS color |
-| `is_system` | boolean | system roles cannot be deleted |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
-
-#### `role_permissions`
-Per-role permission key strings.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `role_id` | uuid | FK → `custom_roles.id` |
-| `permission_key` | text | e.g. `docs.upload`, `ops.incidents.write` |
-| `granted_at` | timestamptz | |
-
-#### `user_custom_roles`
-Assigns custom roles to users.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `user_id` | uuid | FK → `auth.users.id` |
-| `role_id` | uuid | FK → `custom_roles.id` |
-| `assigned_by` | uuid | FK → `auth.users.id` |
-| `assigned_at` | timestamptz | |
-
-#### `user_app_access`
-Explicit per-user app access grants (beyond base role).
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `user_id` | uuid | FK → `auth.users.id` |
-| `app_id` | text | `docs` or `ops` |
-| `granted_by` | uuid | FK → `auth.users.id` |
-| `granted_at` | timestamptz | |
-
-#### `departments`
-Organisational departments for grouping users.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `name` | text | |
-| `description` | text | nullable |
-| `created_at` | timestamptz | |
-
----
-
-### Document Vault
-
-#### `customers`
-Customer records, optionally linked to an auth user for portal access.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `user_id` | uuid | nullable, FK → `auth.users.id` |
-| `account_number` | text | unique |
-| `full_name` | text | |
-| `email` | text | nullable |
-| `phone` | text | nullable |
-| `address` | text | nullable |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
-
-#### `document_categories`
-Configurable categories for organising documents.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `name` | text | |
-| `description` | text | nullable |
-| `color` | text | nullable |
-| `display_order` | integer | |
-| `created_at` | timestamptz | |
-
-#### `documents`
-Core document records. Files stored in Supabase Storage `documents` bucket.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `customer_id` | uuid | FK → `customers.id` |
-| `category_id` | uuid | FK → `document_categories.id` |
-| `title` | text | |
-| `description` | text | nullable |
-| `file_name` | text | |
-| `file_path` | text | storage path |
-| `file_type` | text | MIME type |
-| `file_size` | integer | bytes |
-| `status` | document_status | `pending` / `approved` / `archived` |
-| `is_private` | boolean | |
-| `uploaded_by` | uuid | FK → `auth.users.id` |
-| `expiry_date` | date | nullable |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
-
-#### `document_versions`
-Version history for a document (each upload of a new version).
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `document_id` | uuid | FK → `documents.id` |
-| `file_name` | text | |
-| `file_path` | text | |
-| `file_size` | integer | |
-| `file_type` | text | |
-| `version_number` | integer | |
-| `uploaded_by` | uuid | FK → `auth.users.id` |
-| `notes` | text | nullable |
-| `created_at` | timestamptz | |
-
-#### `document_comments`
-Staff/admin comments on a document.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `document_id` | uuid | FK → `documents.id` |
-| `user_id` | uuid | FK → `auth.users.id` |
-| `content` | text | |
-| `created_at` | timestamptz | |
-
-#### `document_text_content`
-Full-text extraction results (from `ocr-extract` edge function).
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `document_id` | uuid | FK → `documents.id` |
-| `extracted_text` | text | nullable |
-| `extraction_status` | text | e.g. `pending`, `done`, `failed` |
-| `extracted_at` | timestamptz | nullable |
-| `created_at` | timestamptz | |
-
-#### `folders`
-Hierarchical private folder tree.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `name` | text | |
-| `description` | text | nullable |
-| `owner_id` | uuid | FK → `auth.users.id` |
-| `parent_id` | uuid | nullable self-ref FK → `folders.id` |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
-
-#### `folder_documents`
-Files stored directly inside a folder.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `folder_id` | uuid | FK → `folders.id` |
-| `file_name` | text | |
-| `file_path` | text | |
-| `file_size` | integer | nullable |
-| `file_type` | text | nullable |
-| `uploaded_by` | uuid | FK → `auth.users.id` |
-| `created_at` | timestamptz | |
-
-#### `folder_shares`
-Grants another user access to a folder.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `folder_id` | uuid | FK → `folders.id` |
-| `shared_with_user_id` | uuid | FK → `auth.users.id` |
-| `can_edit` | boolean | |
-| `include_subfolders` | boolean | |
-| `created_at` | timestamptz | |
-
-#### `deletion_requests`
-Staff-submitted requests to delete a document (admin approval required).
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `document_id` | uuid | FK → `documents.id` |
-| `requested_by` | uuid | FK → `auth.users.id` |
-| `reason` | text | nullable |
-| `status` | text | `pending` / `approved` / `rejected` |
-| `reviewed_by` | uuid | nullable FK → `auth.users.id` |
-| `reviewed_at` | timestamptz | nullable |
-| `created_at` | timestamptz | |
-
-#### `export_schedules`
-Scheduled automatic data exports.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `name` | text | |
-| `schedule_type` | text | `daily` / `weekly` / `monthly` |
-| `day_of_week` | integer | nullable (0–6) |
-| `day_of_month` | integer | nullable (1–31) |
-| `export_type` | text | what data to export |
-| `format` | text | `pdf` / `excel` / `csv` |
-| `email_to` | text[] | recipients |
-| `last_run_at` | timestamptz | nullable |
-| `next_run_at` | timestamptz | nullable |
-| `active` | boolean | |
-| `created_by` | uuid | FK → `auth.users.id` |
-| `created_at` | timestamptz | |
-
----
-
-### Communication & Notifications
-
-#### `chat_messages`
-Real-time team chat messages (Supabase Realtime).
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `user_id` | uuid | FK → `auth.users.id` |
-| `content` | text | |
-| `mentions` | text[] | nullable, array of mentioned user IDs |
-| `created_at` | timestamptz | |
-
-#### `reminders`
-User-created reminders with optional recurrence.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `user_id` | uuid | FK → `auth.users.id` |
-| `title` | text | |
-| `description` | text | nullable |
-| `reminder_date` | timestamptz | |
-| `recurrence` | text | nullable — `daily`, `weekly`, `monthly`, `none` |
-| `status` | text | `pending` / `completed` |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
-
-#### `in_app_notifications`
-In-app notification inbox for Document Vault.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `user_id` | uuid | FK → `auth.users.id` |
-| `title` | text | |
-| `message` | text | nullable |
-| `type` | text | e.g. `reminder`, `task`, `document` |
-| `is_read` | boolean | |
-| `link` | text | nullable — href to navigate to |
-| `created_at` | timestamptz | |
-
-#### `ops_notifications`
-In-app notification inbox for Operations Hub.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `user_id` | uuid | FK → `auth.users.id` |
-| `title` | text | |
-| `body` | text | nullable |
-| `link` | text | nullable |
-| `read` | boolean | |
-| `created_at` | timestamptz | |
-
-#### `push_subscriptions`
-Web Push VAPID subscriptions per user.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `user_id` | uuid | FK → `auth.users.id` |
-| `endpoint` | text | Push service URL |
-| `p256dh` | text | ECDH public key |
-| `auth` | text | auth secret |
-| `created_at` | timestamptz | |
-
-#### `sms_logs`
-Audit log of every outbound SMS sent via TextSMS Kenya.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `sent_by` | uuid | nullable FK → `auth.users.id` |
-| `recipient_phone` | text | |
-| `recipient_name` | text | nullable |
-| `message` | text | |
-| `sms_type` | text | e.g. `reminder`, `task`, `password_expiry`, `oncall` |
-| `status` | text | `sent` / `failed` |
-| `api_response` | jsonb | nullable — raw provider response |
-| `created_at` | timestamptz | |
-
-#### `sms_preferences`
-Per-user opt-in/out for SMS notifications.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `user_id` | uuid | FK → `auth.users.id` |
-| `sms_enabled` | boolean | |
-| `phone_number` | text | nullable |
-| `notify_tasks` | boolean | |
-| `notify_task_updates` | boolean | |
-| `notify_reminders` | boolean | |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
-
----
-
-### Tasks
-
-#### `tasks`
-Task records. Supports kanban and list views.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `title` | text | |
-| `description` | text | nullable |
-| `priority` | task_priority | `low` / `normal` / `high` |
-| `status` | task_status | `pending` / `in_progress` / `completed` |
-| `due_date` | date | nullable |
-| `created_by` | uuid | FK → `auth.users.id` |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
-
-#### `task_assignees`
-Users assigned to a task (many-to-many).
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `task_id` | uuid | FK → `tasks.id` |
-| `user_id` | uuid | FK → `auth.users.id` |
-| `status` | text | assignee-level status |
-| `started_at` | timestamptz | nullable |
-| `completed_at` | timestamptz | nullable |
-| `created_at` | timestamptz | |
-
-#### `task_comments`
-Comments on tasks.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `task_id` | uuid | FK → `tasks.id` |
-| `user_id` | uuid | FK → `auth.users.id` |
-| `content` | text | |
-| `created_at` | timestamptz | |
-
-#### `task_files`
-File attachments on tasks (stored in `task-files` bucket).
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `task_id` | uuid | FK → `tasks.id` |
-| `uploaded_by` | uuid | FK → `auth.users.id` |
-| `file_name` | text | |
-| `file_path` | text | |
-| `file_size` | integer | nullable |
-| `file_type` | text | nullable |
-| `upload_type` | text | nullable |
-| `created_at` | timestamptz | |
-
----
-
-### Gamification
-
-#### `upload_streaks`
-Per-user consecutive upload streak tracking.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `user_id` | uuid | FK → `auth.users.id` |
-| `current_streak` | integer | |
-| `longest_streak` | integer | |
-| `last_upload_date` | date | nullable |
-| `updated_at` | timestamptz | |
-
-#### `user_xp`
-Per-user XP total and level.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `user_id` | uuid | FK → `auth.users.id` |
-| `total_xp` | integer | |
-| `level` | integer | |
-| `updated_at` | timestamptz | |
-
-#### `xp_transactions`
-Append-only log of every XP award.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `user_id` | uuid | FK → `auth.users.id` |
-| `amount` | integer | XP awarded |
-| `reason` | text | e.g. `document_upload`, `task_completed` |
-| `ref_id` | uuid | nullable — entity that caused the award |
-| `created_at` | timestamptz | |
-
-#### `achievements`
-Achievement definitions (seeded at setup).
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `key` | text | unique slug |
-| `name` | text | display name |
-| `description` | text | nullable |
-| `icon` | text | nullable — emoji or icon name |
-| `category` | text | nullable — e.g. `upload`, `task`, `streak` |
-| `xp_reward` | integer | XP granted when earned |
-
-#### `user_achievements`
-Records which achievements a user has earned.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `user_id` | uuid | FK → `auth.users.id` |
-| `achievement_key` | text | FK → `achievements.key` |
-| `earned_at` | timestamptz | |
-
-#### `daily_challenges`
-One challenge per calendar date.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `date` | date | unique |
-| `type` | text | `upload` / `task_complete` / `reminder_complete` / `chat_message` / `login` |
-| `label` | text | display label |
-| `icon` | text | emoji or icon |
-| `target_count` | integer | how many actions needed |
-| `xp_reward` | integer | |
-
-#### `user_daily_progress`
-Tracks a user's progress on the daily challenge for each date.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `user_id` | uuid | FK → `auth.users.id` |
-| `challenge_date` | date | FK → `daily_challenges.date` |
-| `progress` | integer | current count |
-| `completed` | boolean | |
-| `completed_at` | timestamptz | nullable |
-
----
-
-### Operations Hub
-
-#### `vendor_issues`
-Vendor service issues with lifecycle status.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `user_id` | uuid | FK → `auth.users.id` |
-| `vendor` | text | |
-| `issue` | text | |
-| `impact` | text | nullable |
-| `status` | text | |
-| `system_name` | text | nullable |
-| `date_reported` | date | |
-| `downtime` | numeric | nullable — hours |
-| `uptime_start` | timestamptz | nullable |
-| `uptime_end` | timestamptz | nullable |
-| `uptime_percentage` | numeric | nullable |
-| `rca_status` | text | nullable |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
-
-#### `incidents`
-Full incident reports with RCA and CAPA tracking.
-
-| Column | Type | Notable sub-fields |
-|---|---|---|
-| `id` | uuid PK | |
-| `incident_number` | text | auto-generated unique ref |
-| `incident_type` | text | |
-| `severity` | text | `low` / `medium` / `high` / `critical` |
-| `urgency` | text | |
-| `department` | text | nullable |
-| `location` | text | nullable |
-| `status` | text | `open` / `investigating` / `resolved` / `closed` |
-| `description` | text | |
-| `why_1` … `why_5` | text | 5-Why RCA fields |
-| `capa_action` | text | nullable |
-| `capa_deadline` | date | nullable |
-| `capa_owner` | text | nullable |
-| `capa_status` | text | nullable |
-| `financial_impact` | text[] | nullable |
-| `safety_impact` | text[] | nullable |
-| `operational_impact` | text[] | nullable |
-| `supporting_docs` | text[] | nullable — storage paths |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
-
-#### `passwords`
-Operations credentials vault with rotation tracking.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `user_id` | uuid | FK → `auth.users.id` |
-| `system_name` | text | |
-| `username` | text | nullable |
-| `assigned_to` | text | nullable |
-| `owner_user_id` | uuid | nullable |
-| `backup_user_id` | uuid | nullable |
-| `phone_number` | text | nullable — for SMS alerts |
-| `expiry_date` | date | nullable |
-| `rotation_days` | integer | nullable |
-| `last_renewed_at` | timestamptz | nullable |
-| `last_notified_at` | timestamptz | nullable |
-| `notified` | boolean | |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
-
-#### `password_renewals`
-Audit log of password renewals.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `password_id` | uuid | FK → `passwords.id` |
-| `renewed_by` | uuid | FK → `auth.users.id` |
-| `previous_expiry` | date | nullable |
-| `new_expiry` | date | |
-| `notes` | text | nullable |
-| `created_at` | timestamptz | |
-
-#### `escalations`
-Multi-level escalation records.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `title` | text | |
-| `source_id` | uuid | nullable — incident/issue being escalated |
-| `source_table` | text | nullable — e.g. `incidents` |
-| `status` | text | `open` / `escalated` / `resolved` |
-| `current_level` | integer | current escalation level |
-| `assigned_to` | uuid | nullable FK → `auth.users.id` |
-| `created_by` | uuid | nullable FK → `auth.users.id` |
-| `level_deadline` | timestamptz | nullable |
-| `resolved_at` | timestamptz | nullable |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
-
-#### `escalation_events`
-Timeline of events on an escalation.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `escalation_id` | uuid | FK → `escalations.id` |
-| `event_type` | text | e.g. `created`, `escalated`, `resolved` |
-| `from_level` | integer | nullable |
-| `to_level` | integer | nullable |
-| `actor_id` | uuid | nullable FK → `auth.users.id` |
-| `note` | text | nullable |
-| `created_at` | timestamptz | |
-
-#### `escalation_levels`
-Static configuration for escalation level thresholds.
-
-| Column | Type | Notes |
-|---|---|---|
-| `level` | integer PK | |
-| `name` | text | |
-| `target_role` | app_role | role to notify at this level |
-| `hours_to_next` | integer | nullable — hours before auto-escalating |
-
----
-
-### System & Integration
-
-#### `audit_logs`
-Immutable audit trail of all significant actions.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `user_id` | uuid | nullable FK → `auth.users.id` |
-| `action` | text | e.g. `document_uploaded`, `user_deleted` |
-| `entity_type` | text | table/entity affected |
-| `entity_id` | uuid | nullable |
-| `details` | jsonb | nullable — arbitrary context |
-| `ip_address` | text | nullable |
-| `created_at` | timestamptz | |
-
-#### `system_settings`
-Key-value store for global app configuration.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `key` | text | unique |
-| `value` | jsonb | |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
-
-#### `webhooks`
-Outbound webhook configurations.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `name` | text | |
-| `url` | text | destination URL |
-| `events` | text[] | e.g. `["document.uploaded", "task.completed"]` |
-| `secret` | text | HMAC signing secret |
-| `active` | boolean | |
-| `created_by` | uuid | FK → `auth.users.id` |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
-
-#### `api_keys`
-API key management for programmatic access.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `name` | text | |
-| `key_prefix` | text | first 8 chars shown in UI |
-| `key_hash` | text | bcrypt hash of the full key |
-| `scopes` | text[] | e.g. `["documents:read"]` |
-| `last_used_at` | timestamptz | nullable |
-| `expires_at` | timestamptz | nullable |
-| `revoked` | boolean | |
-| `created_by` | uuid | FK → `auth.users.id` |
-| `created_at` | timestamptz | |
-
----
-
-### Onboarding
-
-#### `tour_definitions`
-Admin-managed onboarding tour definitions.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `key` | text | unique slug |
-| `name` | text | |
-| `description` | text | nullable |
-| `target_role` | app_role | nullable — null = all roles |
-| `is_active` | boolean | |
-| `steps` | jsonb | array of step objects |
-| `display_order` | integer | |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
-
-#### `user_tour_progress`
-Tracks each user's progress through each tour.
-
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid PK | |
-| `user_id` | uuid | FK → `auth.users.id` |
-| `tour_key` | text | FK → `tour_definitions.key` |
-| `status` | text | `not_started` / `in_progress` / `completed` / `skipped` |
-| `current_step` | integer | 0-indexed step position |
-| `completed_at` | timestamptz | nullable |
-| `updated_at` | timestamptz | |
-
----
-
-## Views
-
-### `user_activity_summary`
-Denormalized view joining `profiles`, `user_roles`, `upload_streaks`, `user_xp`, and `audit_logs`. Used by User Hub and Reports Hub.
-
-| Column | Source |
-|---|---|
-| `user_id` | profiles |
-| `full_name` | profiles |
-| `email` | profiles |
-| `avatar_url` | profiles |
-| `department` | profiles |
-| `phone` | profiles |
-| `role` | user_roles |
-| `must_reset_password` | profiles |
-| `docs_uploaded` | count from documents |
-| `tasks_created` | count from tasks |
-| `audit_events` | count from audit_logs |
-| `last_active_at` | max created_at from audit_logs |
-| `current_streak` | upload_streaks |
-| `total_xp` | user_xp |
-| `level_name` | derived from user_xp.level |
-
----
-
-## Database Functions
-
-All functions are `SECURITY DEFINER` to safely read across RLS boundaries.
-
-| Function | Returns | Purpose |
-|---|---|---|
-| `has_role(_user_id uuid, _role app_role)` | boolean | Returns true if user has the given role |
-| `get_user_role(_user_id uuid)` | app_role | Returns the user's current base role |
-| `get_user_position(_user_id uuid)` | staff_position | Returns the user's staff_position value |
-| `is_super_admin(_user_id uuid)` | boolean | True if user email = `amsterntechhub@gmail.com` or position = `super_admin` |
-| `can_manage_tasks(_user_id uuid)` | boolean | True if user is admin or staff |
-| `is_task_assignee(_task_id uuid, _user_id uuid)` | boolean | True if user is assigned to the task |
-| `has_folder_access(_folder_id uuid, _user_id uuid)` | boolean | True if user owns or has a share record for the folder |
-| `is_folder_owner(_folder_id uuid, _user_id uuid)` | boolean | True if user owns the folder |
-| `get_customer_id_for_user(_user_id uuid)` | uuid | Returns the customer ID linked to the given auth user |
-| `create_due_reminder_notifications()` | void | Called by cron/trigger; inserts `in_app_notifications` for overdue reminders |
-| `export_schema_ddl()` | text | Returns the full public schema DDL as a string (used by Database Export page) |
-
----
-
-## Row Level Security (RLS)
-
-RLS is enabled on all tables. Key policies:
-
-| Table | Policy summary |
-|---|---|
-| `profiles` | Users can read and update their own row; admins can read all rows |
-| `user_roles` | Reads use `SECURITY DEFINER` helper functions only; writes require admin |
-| `documents` | Admins and staff read/write all; customers read only their own (via `customer_id → user_id`) |
-| `document_categories` | All authenticated users read; admin writes |
-| `folders` / `folder_documents` | Owners and users with a `folder_shares` record |
-| `tasks` / `task_assignees` | Assignees and the task creator |
-| `chat_messages` | All authenticated users |
-| `audit_logs` | Admins only |
-| `system_settings` | Admins only |
-| `passwords` | Admins and staff |
-| `incidents` / `vendor_issues` | Admins and staff |
-| `in_app_notifications` | Users read/update their own rows |
-
----
-
-## Migration History
-
-Files in `supabase/migrations/` (oldest first):
-
-| File | Description |
-|---|---|
-| `20260125095345_…` | Initial schema — auth, profiles, user_roles |
-| `20260125095400_…` | Document categories and documents |
-| `20260127081543_…` | Customer table and RLS |
-| `20260129051002_…` | Tasks and task assignees |
-| `20260130054407_…` | Folders, folder documents, folder shares |
-| `20260202030804_…` | Reminders and notifications |
-| `20260209215411_…` | Audit logs and system settings |
-| `20260210052328_…` | Chat messages |
-| `20260301081719_…` | Deletion requests |
-| `20260306092719_…` | Export schedules |
-| `20260307053839_…` | Document versions and text content |
-| `20260307055522_…` | Push subscriptions |
-| `20260307055742_…` | SMS logs and SMS preferences |
-| `20260309095415_…` | Webhooks and API keys |
-| `20260404082912_…` | Sessions and activity tracking |
-| `20260404111534_…` | Document templates |
-| `20260406182534_…` | Storage analytics improvements |
-| `20260406182828_…` | Activity heatmap data |
-| `20260412194227_…` | Customer activity tracking |
-| `20260412194737_…` | User activity log |
-| `20260413070342_…` | Database export function |
-| `20260502082118_…` | Announcement and whats-new system |
-| `20260527123055_…` | Command palette and keyboard shortcuts |
-| `20260528064216_…` | Password expiry gate |
-| `20260706064741_…` | Quick actions |
-| `20260706065731_…` | Mobile nav improvements |
-| `20260712192328_…` | Density toggle |
-| `20260712192855_…` | Breadcrumb |
-| `20260713062731_…` | Notification bell |
-| `20261014120000_auto_escalation_cron` | Auto-escalation cron job |
-| `20261015000000_ops_schema` | Full Operations Hub schema (vendor_issues, incidents, passwords, escalations) |
-| `20261022000001_gamification` | Gamification tables (upload_streaks, user_xp, xp_transactions, achievements) |
-| `20261022000004_tier3_features` | Tier 3 feature additions |
-| `20261022000005_onboarding_tours` | tour_definitions, user_tour_progress |
-| `20261022000005_tier1_infra` | Tier 1 infrastructure |
-| `20261022000006_all_tiers` | Combined tier migrations |
-| `20261022000006_tier2_features` | Tier 2 features |
-| `20261023000001_unified_user_management` | user_app_access, departments, user_activity_summary view |
-| `20261023000002_rbac_system` | custom_roles, role_permissions, user_custom_roles |
+| `app_role` | `admin`, `staff`, `customer`, `manager`, `user` |
+| `document_status` | `pending`, `approved`, `archived` |
+| `staff_position` | `super_admin`, `hr`, `hod`, `staff` |
+| `task_priority` | `low`, `normal`, `high` |
+| `task_status` | `pending`, `in_progress`, `completed` |
+
+> Note: `manager` and `user` values in `app_role` are legacy and mapped to `staff` in the application layer.

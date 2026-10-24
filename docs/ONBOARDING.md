@@ -1,190 +1,147 @@
-# UMS Hub — Onboarding Tour System
+# Onboarding Tours
 
-The onboarding tour system guides new users through the platform. Tours are stored in the database, managed by the super admin, and auto-start on first login.
-
-## Tour Types
-
-Four tours are seeded by default:
-
-| Key | Name | Target Role | Description |
-|---|---|---|---|
-| `platform_welcome` | Platform Welcome | All roles (null) | 5-step intro to the App Launcher, apps, and user profile |
-| `docs_welcome` | Document Vault Tour | admin | 4-step walkthrough of Document Vault for admin/staff |
-| `ops_welcome` | Operations Hub Tour | staff | 4-step walkthrough of Operations Hub |
-| `customer_welcome` | Customer Portal Tour | customer | 4-step intro for customer portal users |
-
-**Role filter:** `target_role = null` means the tour is shown to all roles. A specific value restricts the tour to that role only. The client filters tours after fetching:
-
-```typescript
-const filtered = defs.filter(
-  t => t.is_active && (t.target_role === null || t.target_role === role)
-);
-```
+The onboarding tour system provides guided walkthroughs for new users. Tours are stored in the database, making them editable without a code deployment. The super admin can create, edit, and preview tours from the Tour Manager UI.
 
 ---
 
-## When Tours Trigger
+## Database Tables
 
-### Auto-start
+### `tour_definitions`
 
-600ms after a user logs in, `OnboardingTourProvider` checks for the first tour with `status = 'not_started'` (or no progress row). That tour starts automatically. Only one tour auto-starts per session — subsequent eligible tours queue for the next login.
+Stores the tour configuration.
 
-```typescript
-// In useOnboardingTour.ts
-useEffect(() => {
-  if (loading || !user || isOpen || !queryData) return;
-  const timer = setTimeout(() => {
-    const first = queryData.tours.find(tour => {
-      const prog = progress[tour.key];
-      return !prog || prog.status === 'not_started';
-    });
-    if (first) startTour(first.key);
-  }, 600);
-}, [queryData, user]);
-```
-
-### Manual start
-
-Users can replay any tour from **Settings → Onboarding Tours** → "Replay" button. This calls `resetTour(key)` followed by `startTour(key)`.
-
-### Admin reset
-
-Super admin can reset a specific user's tour progress from **Tour Manager** (`/docs/tour-manager`).
-
----
-
-## Tour Step Types
-
-Each tour step is a JSON object in the `steps` array of `tour_definitions.steps`:
-
-```typescript
-type TourStep = {
-  title: string;         // Step heading
-  body: string;          // Step body text
-  selector: string | null; // CSS data-tour attribute value, or null for modal
-  route?: string | null;   // Optional: navigate to this route before showing step
-  placement?: 'center' | 'top' | 'bottom' | 'left' | 'right';
-};
-```
-
-### Modal Step (selector = null)
-
-When `selector` is `null`, the step renders as a centred dialog overlay on top of the page content. Used for introductory and closing steps that don't point at a specific element.
-
-### Spotlight Tooltip Step (selector = string)
-
-When `selector` is a non-null string (e.g. `'docs-vault-card'`), the `TourController` looks for a DOM element with `data-tour="<selector>"`. It renders a spotlight (darkened overlay with a cutout around the target) and positions a tooltip adjacent to it using the `placement` value.
-
-Elements that can be targeted must have the `data-tour` attribute and the `tour-target` CSS class:
-
-```tsx
-<Card data-tour="docs-vault-card" className="tour-target">
-```
-
-**Existing `data-tour` targets in the codebase:**
-
-| Selector | Element | Location |
+| Column | Type | Description |
 |---|---|---|
-| `app-launcher` | Entire App Launcher page | `AppLauncher.tsx` |
-| `docs-vault-card` | Document Vault app card | `AppLauncher.tsx` |
-| `ops-hub-card` | Operations Hub app card | `AppLauncher.tsx` |
-| `app-store-card` | App Store card | `AppLauncher.tsx` |
-| `user-avatar` | User avatar in header/launcher | `AppLayout.tsx`, `AppLauncher.tsx` |
+| `id` | uuid | Primary key |
+| `key` | text | Unique slug used to reference the tour (e.g., `platform_welcome`) |
+| `name` | text | Human-readable tour name |
+| `description` | text | Short description shown in Settings |
+| `target_role` | app_role nullable | If set, tour is only shown to this role. `NULL` means all roles |
+| `is_active` | boolean | Inactive tours are hidden from users but visible to super admin |
+| `steps` | jsonb | Array of step objects (see schema below) |
+| `display_order` | integer | Order in the Settings tour list |
+
+### `user_tour_progress`
+
+Tracks each user's progress per tour.
+
+| Column | Type | Description |
+|---|---|---|
+| `id` | uuid | Primary key |
+| `user_id` | uuid | FK → auth.users |
+| `tour_key` | text | FK → tour_definitions(key) |
+| `status` | text | `not_started`, `in_progress`, `completed`, `dismissed` |
+| `current_step` | integer | 0-based index of the current step |
+| `completed_at` | timestamptz | Set when status = 'completed' |
 
 ---
 
-## Spotlight Tooltip Implementation
+## Step Schema (JSONB)
 
-`src/components/onboarding/TourController.tsx` renders the active tour overlay:
+Each element in the `steps` array:
 
-1. Reads `activeTour`, `currentStep`, and `isOpen` from `OnboardingTourContext`.
-2. If the current step has a `selector`, finds `document.querySelector('[data-tour="<selector>"]')`.
-3. Computes the element's `getBoundingClientRect()`.
-4. Renders a full-screen dark overlay with a transparent cutout over the target element.
-5. Positions a tooltip card adjacent to the cutout according to `placement`.
-6. If `route` is set on the step, the tour navigates to that route before showing the step.
+```json
+{
+  "title": "Step title",
+  "body": "Step description text shown to the user.",
+  "selector": "css-selector-or-null",
+  "placement": "center | right | left | top | bottom"
+}
+```
 
-For modal steps (no selector), a centred dialog is shown with the page dimmed.
-
----
-
-## Tour Progress States
-
-Each `user_tour_progress` row tracks one user's journey through one tour:
-
-| Status | Meaning |
-|---|---|
-| `not_started` | No progress row, or row with this status |
-| `in_progress` | Tour started but not finished |
-| `completed` | User clicked through all steps |
-| `dismissed` | User closed the tour without completing it |
-
-`completed` and `dismissed` tours do not auto-start again. `not_started` tours are eligible for auto-start. `in_progress` tours also auto-start (they resume, but currently restart from step 0).
+- `selector: null` with `placement: "center"` → **modal** step: centered dialog with a full-screen backdrop
+- `selector: "element-id"` with a direction placement → **tooltip** step: spotlight overlay positioned near the target DOM element
 
 ---
 
-## Admin Tour Manager
+## Default Tours (seeded by migration)
 
-**URL:** `/docs/tour-manager`  
-**Access:** Super admin only (`requireSuperAdmin` on `ProtectedRoute`)
+### 1. `platform_welcome` — Platform Welcome
+- **Target role**: All roles (target_role = NULL)
+- **Steps**: 5
+  1. Welcome to UMS Hub! (modal/center)
+  2. Document Vault — card on launcher (tooltip)
+  3. Operations Hub — card on launcher (tooltip)
+  4. Your Profile — user avatar (tooltip)
+  5. You are all set! (modal/center)
 
-The Tour Manager (`src/pages/TourManager.tsx`) allows the super admin to:
+### 2. `docs_welcome` — Document Vault Tour
+- **Target role**: `admin` (also shown to staff via UI logic)
+- **Steps**: 4
+  1. Document Vault overview (modal/center)
+  2. Upload Documents (modal/center)
+  3. Tasks & Reminders (modal/center)
+  4. Ready to go! (modal/center)
 
-1. **View all tour definitions** — name, key, target role, active status, step count.
-2. **Edit tour steps** — JSON editor for the `steps` JSONB array. Changes are saved back to `tour_definitions`.
-3. **Toggle active status** — deactivate a tour so it won't be shown to users.
-4. **View user progress** — see which users have completed, dismissed, or are in progress for each tour.
-5. **Reset a user's progress** — sets `user_tour_progress.status = 'not_started'` so the tour auto-starts again for that user on next login.
+### 3. `ops_welcome` — Operations Hub Tour
+- **Target role**: `staff` (also shown to admin via UI logic)
+- **Steps**: 4
+  1. Operations Hub overview (modal/center)
+  2. Vendor Issues (modal/center)
+  3. Incidents with 5-Why RCA (modal/center)
+  4. You are ready! (modal/center)
 
-**RLS on `tour_definitions`:**
-- Authenticated users: SELECT (active tours only, or all if super admin)
-- Super admin: ALL (INSERT, UPDATE, DELETE)
+### 4. `customer_welcome` — Customer Portal Tour
+- **Target role**: `customer`
+- **Steps**: 4
+  1. Welcome, Customer! (modal/center)
+  2. My Documents (modal/center)
+  3. Tasks & Reminders (modal/center)
+  4. You are all set! (modal/center)
+
+---
+
+## How Tours Are Triggered
+
+`OnboardingTourProvider` (in `src/hooks/useOnboardingTour.ts`) is mounted inside `InactivityWrapper` in `App.tsx`, making it available across all routes including the App Launcher.
+
+On load, the provider:
+1. Fetches `tour_definitions` for the current user's role (active tours only)
+2. Fetches `user_tour_progress` for the current user
+3. For each tour with no progress record (status = `not_started`), queues it to auto-start
+4. Starts the highest-priority queued tour
+
+`TourController` renders the active tour overlay — either a `TourModal` (for center/modal steps) or a `TourTooltip` (for spotlight steps). It handles Next, Previous, Skip, and Finish actions, writing progress back to `user_tour_progress`.
 
 ---
 
 ## User Controls
 
-### Replay from Settings
+Users can manage their tours from **Settings → Onboarding Tours**:
 
-Users can manage their own tour progress from `/docs/settings` → **Onboarding Tours** section:
-
-- Lists all active tours relevant to the user's role.
-- Shows current status (completed, dismissed, in progress, not started).
-- **Replay** button calls `resetTour(key)` then `startTour(key)`.
-
-### Skip / Dismiss
-
-During a tour:
-- **Previous / Next** buttons navigate between steps.
-- **Skip** or the **×** close button calls `dismiss()`, which sets `status = 'dismissed'` in DB.
-- Closing the tour (clicking overlay or pressing Escape) calls `close()`, which hides the UI but does NOT change the DB status — the tour remains `in_progress` and will auto-start again next time.
-
-### Complete
-
-When the user clicks **Next** on the last step, `complete()` is called, setting `status = 'completed'` and `completed_at = now()`.
+- See the status of each tour (not started / in progress / completed / dismissed)
+- **Replay** any completed or dismissed tour — resets progress and re-runs from step 1
+- **Dismiss** a tour without completing it
 
 ---
 
-## Adding New Tours
+## Tour Manager (Admin)
 
-1. Insert a new row into `tour_definitions` via migration or Tour Manager:
+Accessible at `/docs/tour-manager` — super admin only.
+
+Features:
+- List all tour definitions with their status and step count
+- **Create** a new tour with a step-by-step editor
+- **Edit** an existing tour (name, description, target role, steps, active state)
+- **Preview** any tour as if you were a new user
+- **Reset for all users** — deletes all `user_tour_progress` rows for a given tour key, causing it to re-trigger for everyone on their next login
+
+---
+
+## Adding a New Tour via SQL
 
 ```sql
 INSERT INTO public.tour_definitions (key, name, description, target_role, is_active, steps, display_order)
 VALUES (
   'my_new_tour',
   'My New Feature Tour',
-  'Introduces the new feature.',
-  'staff',     -- or null for all roles
+  'Introduces the new feature to staff.',
+  'staff',
   true,
   '[
-    {"title": "Step 1", "body": "Welcome to the new feature.", "selector": null, "placement": "center"},
-    {"title": "Step 2", "body": "Click here to get started.", "selector": "my-feature-element", "placement": "right"}
+    {"title": "New Feature", "body": "We added something cool.", "selector": null, "placement": "center"},
+    {"title": "Find it here", "body": "Look in the sidebar under Documents.", "selector": "sidebar-docs-link", "placement": "right"}
   ]'::jsonb,
-  10           -- display_order (higher = starts later)
+  5
 );
 ```
-
-2. Add `data-tour="my-feature-element"` and `className="tour-target"` to the target element in the React component.
-
-3. The tour will auto-start for eligible users on their next login (after any higher-priority tours are done).

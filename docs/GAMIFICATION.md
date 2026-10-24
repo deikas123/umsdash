@@ -1,197 +1,148 @@
-# UMS Hub — Gamification System
+# Gamification System
 
-The gamification system rewards users for productive activity. It covers document uploads, task and reminder completions, streaks, achievements, daily challenges, and a leaderboard.
-
-## Database Tables
-
-| Table | Purpose |
-|---|---|
-| `user_xp` | Cumulative XP and level per user |
-| `upload_streaks` | Consecutive upload day tracker |
-| `achievements` | Achievement definitions (seed data) |
-| `user_achievements` | Earned achievements per user |
-| `daily_challenges` | One challenge per calendar date |
-| `user_daily_progress` | Per-user daily challenge progress |
-| `xp_transactions` | Immutable XP event log |
+The gamification system rewards users for consistent document management activity. It is entirely server-side — XP is awarded by PostgreSQL triggers and `SECURITY DEFINER` functions, so it cannot be manipulated from the browser.
 
 ---
 
-## XP System
+## Tables
 
-### XP Sources
+| Table | Purpose |
+|---|---|
+| `user_xp` | Current XP total and level per user |
+| `upload_streaks` | Daily upload streak tracking |
+| `xp_transactions` | Immutable ledger of every XP award |
+| `achievements` | Reference table of achievement definitions |
+| `user_achievements` | Which achievements each user has unlocked |
+| `daily_challenges` | One challenge per calendar day |
+| `user_daily_progress` | Per-user progress against the daily challenge |
+
+---
+
+## XP Sources
 
 | Action | XP Awarded | Trigger |
 |---|---|---|
-| Upload a document | +50 XP | DB trigger on `documents` INSERT → `process_document_upload()` |
-| Complete a task | +30 XP | DB trigger on `task_assignees` UPDATE (status → `completed`) |
-| Complete a reminder | +20 XP | DB trigger on `reminders` UPDATE (status → `completed`) |
-| Unlock an achievement | Varies | Inserted by gamification functions |
+| Document upload | 50 XP | `gamification_on_document_upload` trigger on `documents` INSERT |
+| Task completed | 30 XP | `gamification_on_task_complete` trigger on `task_assignees` UPDATE WHERE status = 'completed' |
+| Reminder completed | 20 XP | `gamification_on_reminder_complete` trigger on `reminders` UPDATE WHERE status = 'completed' |
+| Achievement unlocked | achievement.xp_reward | Awarded at the time the achievement is inserted into `user_achievements` |
 
-### Level Calculation
+---
 
-Level is computed inline whenever XP is awarded:
+## Level Thresholds
+
+The level is calculated by the `award_xp` function using the formula:
 
 ```sql
 level = GREATEST(1, floor(1 + sqrt(total_xp::float / 100))::int)
 ```
 
-| Total XP | Level |
+Approximate thresholds:
+
+| Level | XP Required | Title |
+|---|---|---|
+| 1 | 0 | Rookie |
+| 2 | 100 | |
+| 3 | 400 | Contributor |
+| 5 | 1,600 | |
+| 7 | 3,600 | Specialist |
+| 10 | 8,100 | Expert |
+| 14 | 16,900 | Master |
+| 20 | 36,100 | Legend |
+
+The level label displayed in the UI (`GamificationDashboard`) maps approximate ranges:
+
+| XP Range | Label |
 |---|---|
-| 0 | 1 |
-| 100 | 2 |
-| 400 | 3 |
-| 900 | 4 |
-| 1600 | 5 |
-| 2500 | 6 |
-| … | … |
-
-### XP Award Function
-
-`award_xp(p_user_id, p_amount, p_reason, p_ref_id)` — `SECURITY DEFINER` function called from triggers and other SECURITY DEFINER functions. It:
-1. Inserts a row in `xp_transactions`.
-2. UPSERTs `user_xp` — adds to `total_xp` and recalculates `level`.
+| 0 – 199 | Rookie |
+| 200 – 499 | Contributor |
+| 500 – 999 | Specialist |
+| 1,000 – 1,999 | Expert |
+| 2,000 – 3,999 | Master |
+| 4,000+ | Legend |
 
 ---
 
-## Streak System
+## Streak Logic
 
-### How Streaks Work
+The `process_document_upload(user_id, doc_id)` SECURITY DEFINER function handles streak tracking on every document INSERT:
 
-The `upload_streaks` table stores `current_streak`, `longest_streak`, and `last_upload_date` per user.
-
-The `process_document_upload()` function (called by the `gamification_on_document_upload` trigger on every document INSERT) evaluates the streak:
-
-| Condition | Result |
-|---|---|
-| No existing streak row | Start at streak = 1 |
-| `last_upload_date = CURRENT_DATE` | Same-day re-upload — streak unchanged |
-| `last_upload_date = CURRENT_DATE - 1` | Consecutive day — `current_streak + 1` |
-| `last_upload_date` more than 1 day ago | Streak reset to 1 |
-
-`longest_streak` is updated whenever `current_streak` exceeds it.
+```
+Upload received
+  └── Look up upload_streaks for this user
+       ├── No row yet → create with current_streak = 1
+       ├── last_upload_date = today → same-day re-upload, no change
+       ├── last_upload_date = yesterday → consecutive day, increment streak
+       └── last_upload_date < yesterday → gap, reset streak to 1
+  └── Update longest_streak if current_streak > longest_streak
+  └── Award 50 XP via award_xp()
+  └── Update daily challenge progress
+  └── Check streak milestone achievements
+  └── Check volume achievements
+```
 
 ### Shield Mechanic
 
-There is no automated streak shield in the current implementation. Streak protection (preventing a reset on a missed day) would need to be added as a new feature. Currently, any gap of more than one calendar day resets the streak to 1.
+> Note: The shield mechanic described in the original design (`streak_shield_available` at day 7) is referenced in the product spec but the current database schema for `upload_streaks` does not include a `streak_shield_available` column. The streak implementation in the migration uses a simple consecutive-day check. The shield feature may be added in a future migration.
 
 ---
 
 ## Achievements
 
-Nine achievements are seeded. Achievement unlock logic runs inside `process_document_upload()` and the task/reminder trigger functions.
+9 achievements are seeded by the gamification migration. All are checked server-side.
 
-### Achievement Catalogue
-
-| Key | Name | Icon | Category | Condition | XP Reward |
+| Key | Name | Icon | XP Reward | Category | Unlock Condition |
 |---|---|---|---|---|---|
-| `first_upload` | First Upload | 📄 | upload | Upload first document | 50 |
-| `streak_3` | 3-Day Streak | 🔥 | streak | 3 consecutive upload days | 75 |
-| `streak_7` | Week Warrior | ⚡ | streak | 7 consecutive upload days | 150 |
-| `streak_14` | Fortnight Fire | 🏆 | streak | 14 consecutive upload days | 300 |
-| `streak_30` | Monthly Master | 👑 | streak | 30 consecutive upload days | 500 |
-| `uploads_10` | Document Hoarder | 📚 | volume | 10 total uploads | 100 |
-| `uploads_50` | Archive Legend | 🗄️ | volume | 50 total uploads | 250 |
-| `task_complete` | Task Crusher | ✅ | tasks | Complete first task | 30 |
-| `reminder_champion` | On Time | ⏰ | reminders | Complete a reminder | 20 |
+| `first_upload` | First Upload | 📄 | 50 | upload | Upload your first document |
+| `streak_3` | 3-Day Streak | 🔥 | 75 | streak | Upload documents 3 days in a row |
+| `streak_7` | Week Warrior | ⚡ | 150 | streak | Upload 7 days in a row |
+| `streak_14` | Fortnight Fire | 🏆 | 300 | streak | 14-day upload streak |
+| `streak_30` | Monthly Master | 👑 | 500 | streak | 30-day upload streak |
+| `uploads_10` | Document Hoarder | 📚 | 100 | volume | Upload 10 total documents |
+| `uploads_50` | Archive Legend | 🗄️ | 250 | volume | Upload 50 total documents |
+| `task_complete` | Task Crusher | ✅ | 30 | tasks | Complete your first task |
+| `reminder_champion` | On Time | ⏰ | 20 | reminders | Complete a reminder on time |
 
-### Unlock Mechanism
-
-All unlocks use `INSERT … ON CONFLICT DO NOTHING` on `user_achievements` to ensure idempotency — each achievement can only be earned once per user.
-
-Streak achievements also trigger in-app notifications when first earned (using `insert_in_app_notification_for_user()`).
-
-### Adding New Achievements
-
-1. Insert a new row into `achievements` via migration.
-2. Add unlock logic to the appropriate trigger function or a new SECURITY DEFINER function.
-3. Grant execute on any new function to `authenticated`.
+Achievements are awarded with `ON CONFLICT DO NOTHING`, so they can only be earned once per user.
 
 ---
 
 ## Daily Challenges
 
-### How They Work
+One challenge exists per calendar date. Two types alternate:
 
-The `daily_challenges` table has one row per calendar date with a `type` (e.g. `upload` or `task`), `target_count`, and `xp_reward`.
+| Type | Label | Icon | XP |
+|---|---|---|---|
+| `upload` | Upload a document today | 📤 | 50 |
+| `task` | Complete a task today | ✅ | 30 |
 
-`user_daily_progress` tracks each user's progress against today's challenge:
-- `progress` counts how many qualifying actions the user has performed today.
-- `completed = true` when `progress >= target_count`.
-- `completed_at` is set the first time `completed` flips to `true`.
+The migration seeds the next 7 days on first run. The `run-scheduled-export` edge function (or a cron job) should seed new daily challenges as dates roll over.
 
-### Challenge Rotation Logic
-
-The migration seeds 7 days ahead with alternating types:
-
-```sql
--- Even days: upload challenge (50 XP)
--- Odd days: task challenge (30 XP)
-```
-
-In production, a cron job should call a function or SQL to seed new daily challenge rows to keep the table populated. Currently, the seeding only runs at migration time and covers 7 days.
-
-### Tracking Progress
-
-Progress is incremented automatically by the gamification trigger functions:
-
-- `process_document_upload()` increments `user_daily_progress.progress` when today's challenge `type = 'upload'`.
-- Task/reminder triggers do not yet increment daily challenge progress for `task`-type challenges (this is a gap to address if needed).
+`user_daily_progress` tracks each user's progress against the current day's challenge. Once `progress >= target_count`, `completed = true` and the XP is awarded via `award_xp`.
 
 ---
 
-## Leaderboard
+## UI Components
 
-The leaderboard shows the top 10 users by `user_xp.total_xp`.
+The gamification UI lives in `src/components/gamification/` and `src/pages/GamificationDashboard.tsx`:
 
-### Ranking Logic
+- **XP Bar** — progress bar showing XP toward next level
+- **Level Badge** — current level number and label
+- **Streak Widget** — flame icon + current streak count
+- **Achievement Gallery** — all 9 achievements, locked/unlocked state
+- **Daily Challenge Card** — today's challenge with progress bar
+- **XP Leaderboard** — top users by total XP
+- **XP Transaction History** — log of recent XP awards
 
-```sql
-SELECT total_xp, level, user_id, profiles!inner(full_name, avatar_url)
-FROM user_xp
-ORDER BY total_xp DESC
-LIMIT 10
-```
-
-### Weekly Reset
-
-There is no automated weekly reset in the current implementation. The leaderboard shows all-time totals. To add weekly resets, create a new `user_xp_weekly` table populated by a cron job that resets every Monday.
+Data is fetched via `useGamification()` hook in `src/hooks/useGamification.ts`.
 
 ---
 
-## Hook & Component Reference
+## Notifications
 
-### Hooks
+Streak milestone achievements trigger in-app notifications via `insert_in_app_notification_for_user()`:
 
-| Hook | File | Purpose |
-|---|---|---|
-| `useGamification()` | `src/hooks/useGamification.ts` | Fetch user's XP, streak, achievements, XP transactions; realtime subscription on `user_xp` |
-| `useLeaderboard()` | `src/hooks/useGamification.ts` | Fetch top-10 leaderboard |
-| `useDailyChallenge()` | `src/hooks/useGamification.ts` | Fetch today's challenge and user's progress |
-| `useStreakWidget()` | `src/hooks/useStreakWidget.ts` | Lightweight streak display data for sidebar/dashboard |
-
-### Components
-
-| Component | Location | Purpose |
-|---|---|---|
-| `GamificationDashboard` | `src/pages/GamificationDashboard.tsx` | Full gamification page |
-| Gamification components | `src/components/gamification/` | Individual widgets (XP bar, streak card, achievement badge, leaderboard row, etc.) |
-
-### Realtime
-
-The `useGamification` hook subscribes to `user_xp` changes via Supabase Realtime (`postgres_changes` on INSERT/UPDATE/DELETE filtered to `user_id = <current>`). Any XP award triggers a refetch, so the UI updates immediately without polling.
-
----
-
-## XP Transaction Log
-
-Every XP award is recorded immutably in `xp_transactions`:
-
-```
-amount  | reason                | ref_id (related record)
---------|------------------------|------------------------
-50      | document_upload       | <document_id>
-30      | task_completed        | <task_id>
-20      | reminder_completed    | <reminder_id>
-```
-
-Users can view their XP history on the My Progress page (`/docs/gamification`).
+- 🔥 3-Day Streak → "You've uploaded documents 3 days in a row. Keep it up!"
+- ⚡ Week Warrior (7 days) → "Amazing! 7-day upload streak achieved."
+- 🏆 Fortnight Fire (14 days) → "You've uploaded documents for 14 days straight!"
+- 👑 Monthly Master (30 days) → "Incredible! 30-day upload streak. You are a legend!"
