@@ -53,6 +53,7 @@ import {
   LayoutList,
   FolderOpen,
   Tag,
+  ScanText,
 } from 'lucide-react';
 import { downloadWithWatermark } from '@/lib/watermark-utils';
 import { format } from 'date-fns';
@@ -250,6 +251,21 @@ export default function Documents() {
     } catch {
       toast({ title: 'Error', description: 'Failed to update document privacy', variant: 'destructive' });
     }
+  };
+
+  const handleExtractText = async (doc: Document) => {
+    try {
+      await supabase.functions.invoke('ocr-extract', { body: { document_id: doc.id } });
+      toast({ title: 'Text extraction started', description: 'OCR is processing this document.' });
+      refetch();
+    } catch {
+      toast({ title: 'Error', description: 'Failed to start text extraction', variant: 'destructive' });
+    }
+  };
+
+  const canExtractText = (doc: Document) => {
+    const ft = (doc.file_type || '').toLowerCase();
+    return ft.includes('image') || ft.includes('pdf');
   };
 
   // ── bulk actions ─────────────────────────────────────────────────────────────
@@ -568,6 +584,7 @@ export default function Documents() {
                   onDelete={(isAdmin || isStaff) ? () => handleDelete(doc) : undefined}
                   onEdit={(isAdmin || isStaff) ? () => setEditingDoc(doc) : undefined}
                   onPrivacyToggle={isAdmin ? () => handlePrivacyToggle(doc) : undefined}
+                  onExtractText={(isAdmin || isStaff) && canExtractText(doc) ? () => handleExtractText(doc) : undefined}
                   onStatusChange={refetch}
                 />
               </div>
@@ -623,6 +640,11 @@ export default function Documents() {
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDownload(doc)} aria-label="Download">
                     <Download className="h-3.5 w-3.5" />
                   </Button>
+                  {(isAdmin || isStaff) && canExtractText(doc) && (
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleExtractText(doc)} aria-label="Extract Text" title="Extract Text (OCR)">
+                      <ScanText className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                   {(isAdmin || isStaff) && (
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(doc)} aria-label="Delete">
                       <Trash2 className="h-3.5 w-3.5" />
@@ -642,6 +664,7 @@ export default function Documents() {
         url={previewUrl}
         title={previewTitle}
         fileType={previewFileType}
+        documentId={previewDoc?.id}
         onDownload={previewDoc ? () => handleDownload(previewDoc) : undefined}
       />
 

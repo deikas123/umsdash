@@ -8,10 +8,15 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, AlertCircle, Eye, EyeOff, CheckCircle2, ArrowLeft, KeyRound } from 'lucide-react';
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from '@/components/ui/input-otp';
 import { z } from 'zod';
 import umsLogo from '@/assets/ums-logo.png';
 
-type Mode = 'login' | 'forgot' | 'reset';
+type Mode = 'login' | 'forgot' | 'reset' | 'mfa';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -38,6 +43,8 @@ export default function Auth() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
   const { signIn } = useAuth();
   const navigate = useNavigate();
 
@@ -79,9 +86,49 @@ export default function Auth() {
         }
         return;
       }
+      // Check if MFA is required after sign-in
+      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aalData?.currentLevel === 'aal1' && aalData?.nextLevel === 'aal2') {
+        const { data: factorsData } = await supabase.auth.mfa.listFactors();
+        const totpFactors = (factorsData?.all ?? []).filter(
+          (f) => f.factor_type === 'totp' && f.status === 'verified',
+        );
+        if (totpFactors.length > 0) {
+          setMfaFactorId(totpFactors[0].id);
+          setMfaCode('');
+          setMode('mfa');
+          return;
+        }
+      }
       navigate('/');
     } catch {
       setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── MFA Verify ────────────────────────────────────────────────────────────
+  const handleMfaVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mfaFactorId || mfaCode.length !== 6) {
+      setError('Please enter the 6-digit code from your authenticator app.');
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      const { data: challengeData, error: challengeErr } = await supabase.auth.mfa.challenge({ factorId: mfaFactorId });
+      if (challengeErr) throw challengeErr;
+      const { error: verifyErr } = await supabase.auth.mfa.verify({
+        factorId: mfaFactorId,
+        challengeId: challengeData.id,
+        code: mfaCode,
+      });
+      if (verifyErr) throw verifyErr;
+      navigate('/');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Verification failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -152,6 +199,10 @@ export default function Auth() {
     reset: {
       title: 'Set New Password',
       description: 'Create a new password for your UMS Hub account',
+    },
+    mfa: {
+      title: 'Two-Factor Authentication',
+      description: 'Enter the 6-digit code from your authenticator app',
     },
   };
 
@@ -382,6 +433,52 @@ export default function Auth() {
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
                 Request a new reset link
+              </button>
+            </form>
+          )}
+
+          {/* ── MFA FORM ── */}
+          {mode === 'mfa' && (
+            <form onSubmit={handleMfaVerify} className="space-y-5">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-3">
+                <Label>Authenticator code</Label>
+                <div className="flex justify-center">
+                  <InputOTP
+                    maxLength={6}
+                    value={mfaCode}
+                    onChange={setMfaCode}
+                    disabled={loading}
+                  >
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                      <InputOTPSlot index={3} />
+                      <InputOTPSlot index={4} />
+                      <InputOTPSlot index={5} />
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
+              </div>
+
+              <Button type="submit" className="w-full" disabled={loading || mfaCode.length !== 6}>
+                {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Verifying...</> : 'Verify'}
+              </Button>
+
+              <button
+                type="button"
+                onClick={() => { setMode('login'); setError(null); setMfaCode(''); setMfaFactorId(null); }}
+                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mx-auto"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Back to sign in
               </button>
             </form>
           )}

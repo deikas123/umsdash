@@ -6,9 +6,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Download, ExternalLink, ZoomIn, ZoomOut, RotateCw, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
+import { DocumentVersionHistory } from './DocumentVersionHistory';
 
 interface DocumentPreviewDialogProps {
   open: boolean;
@@ -16,6 +18,7 @@ interface DocumentPreviewDialogProps {
   url: string | null;
   title: string;
   fileType: string;
+  documentId?: string;
   onDownload?: () => void;
 }
 
@@ -25,6 +28,7 @@ export function DocumentPreviewDialog({
   url,
   title,
   fileType,
+  documentId,
   onDownload,
 }: DocumentPreviewDialogProps) {
   const [zoom, setZoom] = useState(100);
@@ -126,79 +130,141 @@ export function DocumentPreviewDialog({
           </div>
         </DialogHeader>
 
-        <div className="relative flex-1 overflow-hidden bg-muted/50 rounded-lg">
-          <div className="w-full h-full overflow-auto">
-            {url && isImage ? (
-              <div className="w-full h-full flex items-center justify-center p-4">
-                <img
-                  src={url}
-                  alt={title}
-                  className="max-w-full max-h-full object-contain transition-transform duration-200 select-none"
-                  draggable={false}
-                  style={{
-                    transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
-                  }}
-                />
-              </div>
-            ) : url && isPdf ? (
-              <div
-                className="w-full h-full origin-top-left transition-transform duration-200"
-                style={{ transform: `scale(${zoom / 100})`, width: `${10000 / zoom}%`, height: `${10000 / zoom}%` }}
-              >
-                <iframe
-                  src={`${url}#toolbar=1&navpanes=0`}
-                  className="w-full h-full rounded-lg border-0"
-                  title={title}
-                />
-              </div>
-            ) : url && isWord && officeViewerUrl ? (
-              <iframe
-                src={officeViewerUrl}
-                className="w-full h-full rounded-lg border-0 bg-white"
-                title={title}
-              />
-            ) : url ? (
-              <div className="w-full h-full flex items-center justify-center">
-                <div className="text-center p-8">
-                  <FileText className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
-                  <p className="text-muted-foreground mb-4">
-                    This file type cannot be previewed directly.
-                  </p>
-                  {!isCustomer && (
-                    <Button onClick={() => window.open(url, '_blank')}>
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Open in New Tab
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ) : null}
-          </div>
+        {documentId ? (
+          <Tabs defaultValue="preview" className="flex flex-col flex-1 overflow-hidden">
+            <TabsList className="flex-shrink-0 w-full sm:w-auto self-start mb-2">
+              <TabsTrigger value="preview">Preview</TabsTrigger>
+              <TabsTrigger value="versions">Versions</TabsTrigger>
+            </TabsList>
 
-          {/* Role-aware watermark for customers */}
-          {watermarkText && (
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 overflow-hidden select-none"
-              style={{
-                backgroundImage: `repeating-linear-gradient(-30deg, transparent 0 180px, rgba(0,0,0,0.001) 180px 181px)`,
-              }}
-            >
-              <div className="absolute inset-0 flex flex-wrap items-center justify-center gap-16 opacity-[0.14] rotate-[-24deg] text-foreground text-sm font-semibold tracking-wide">
-                {Array.from({ length: 40 }).map((_, i) => (
-                  <span key={i} className="whitespace-nowrap">{watermarkText}</span>
-                ))}
+            <TabsContent value="preview" className="flex-1 overflow-hidden mt-0">
+              <PreviewBody
+                url={url}
+                title={title}
+                isImage={isImage}
+                isPdf={isPdf}
+                isWord={isWord}
+                officeViewerUrl={officeViewerUrl}
+                zoom={zoom}
+                rotation={rotation}
+                isCustomer={isCustomer}
+                watermarkText={watermarkText}
+              />
+            </TabsContent>
+
+            <TabsContent value="versions" className="flex-1 overflow-auto mt-0">
+              <div className="p-1">
+                <DocumentVersionHistory documentId={documentId} />
               </div>
-            </div>
-          )}
-        </div>
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <PreviewBody
+            url={url}
+            title={title}
+            isImage={isImage}
+            isPdf={isPdf}
+            isWord={isWord}
+            officeViewerUrl={officeViewerUrl}
+            zoom={zoom}
+            rotation={rotation}
+            isCustomer={isCustomer}
+            watermarkText={watermarkText}
+          />
+        )}
 
         {isCustomer && (
-          <p className="text-[11px] text-muted-foreground text-center pt-1">
+          <p className="text-[11px] text-muted-foreground text-center pt-1 flex-shrink-0">
             Preview is watermarked with your identity for traceability.
           </p>
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface PreviewBodyProps {
+  url: string | null;
+  title: string;
+  isImage: boolean;
+  isPdf: boolean;
+  isWord: boolean;
+  officeViewerUrl: string | null;
+  zoom: number;
+  rotation: number;
+  isCustomer: boolean;
+  watermarkText: string | null;
+}
+
+function PreviewBody({
+  url, title, isImage, isPdf, isWord, officeViewerUrl, zoom, rotation, isCustomer, watermarkText,
+}: PreviewBodyProps) {
+  return (
+    <div className="relative flex-1 overflow-hidden bg-muted/50 rounded-lg">
+      <div className="w-full h-full overflow-auto">
+        {url && isImage ? (
+          <div className="w-full h-full flex items-center justify-center p-4">
+            <img
+              src={url}
+              alt={title}
+              className="max-w-full max-h-full object-contain transition-transform duration-200 select-none"
+              draggable={false}
+              style={{
+                transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
+              }}
+            />
+          </div>
+        ) : url && isPdf ? (
+          <div
+            className="w-full h-full origin-top-left transition-transform duration-200"
+            style={{ transform: `scale(${zoom / 100})`, width: `${10000 / zoom}%`, height: `${10000 / zoom}%` }}
+          >
+            <iframe
+              src={`${url}#toolbar=1&navpanes=0`}
+              className="w-full h-full rounded-lg border-0"
+              title={title}
+            />
+          </div>
+        ) : url && isWord && officeViewerUrl ? (
+          <iframe
+            src={officeViewerUrl}
+            className="w-full h-full rounded-lg border-0 bg-white"
+            title={title}
+          />
+        ) : url ? (
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="text-center p-8">
+              <FileText className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+              <p className="text-muted-foreground mb-4">
+                This file type cannot be previewed directly.
+              </p>
+              {!isCustomer && (
+                <Button onClick={() => window.open(url, '_blank')}>
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Open in New Tab
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Role-aware watermark for customers */}
+      {watermarkText && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 overflow-hidden select-none"
+          style={{
+            backgroundImage: `repeating-linear-gradient(-30deg, transparent 0 180px, rgba(0,0,0,0.001) 180px 181px)`,
+          }}
+        >
+          <div className="absolute inset-0 flex flex-wrap items-center justify-center gap-16 opacity-[0.14] rotate-[-24deg] text-foreground text-sm font-semibold tracking-wide">
+            {Array.from({ length: 40 }).map((_, i) => (
+              <span key={i} className="whitespace-nowrap">{watermarkText}</span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

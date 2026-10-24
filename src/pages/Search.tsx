@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DocumentCard } from '@/components/documents/DocumentCard';
-import { useDocuments, useCategories, useCustomers } from '@/hooks/useDocuments';
+import { useDocuments, useCategories, useCustomers, Document } from '@/hooks/useDocuments';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -54,6 +55,10 @@ export default function SearchPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewTitle, setPreviewTitle] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+
+  // OCR full-text search state
+  const [ocrResults, setOcrResults] = useState<Document[]>([]);
+  const [ocrLoading, setOcrLoading] = useState(false);
 
   const { categories } = useCategories();
   const { customers } = useCustomers(customerSearch);
@@ -121,7 +126,47 @@ export default function SearchPage() {
     setStatusFilter('all');
     setCustomerFilter('');
     setCustomerSearch('');
+    setOcrResults([]);
   };
+
+  // Run OCR full-text search whenever searchTerm changes
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setOcrResults([]);
+      return;
+    }
+    let cancelled = false;
+    setOcrLoading(true);
+    (async () => {
+      try {
+        const { data: textRows, error: textErr } = await supabase
+          .from('document_text_content')
+          .select('document_id, extracted_text')
+          .ilike('extracted_text', `%${searchTerm}%`);
+
+        if (textErr || !textRows || textRows.length === 0) {
+          if (!cancelled) setOcrResults([]);
+          return;
+        }
+
+        const docIds = [...new Set(textRows.map((r) => r.document_id))];
+
+        const { data: docs, error: docsErr } = await supabase
+          .from('documents')
+          .select('*, category:categories(id, name), customer:profiles(id, full_name, account_number)')
+          .in('id', docIds);
+
+        if (!cancelled) {
+          setOcrResults(docsErr ? [] : (docs ?? []) as unknown as Document[]);
+        }
+      } catch {
+        if (!cancelled) setOcrResults([]);
+      } finally {
+        if (!cancelled) setOcrLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [searchTerm]);
 
   const hasFilters = searchTerm || categoryFilter !== 'all' || statusFilter !== 'all' || customerFilter;
 
@@ -268,33 +313,86 @@ export default function SearchPage() {
         </h2>
       </div>
 
-      {loading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton key={i} className="h-40" />
-          ))}
-        </div>
-      ) : documents.length === 0 ? (
-        <div className="text-center py-12">
-          <FileText className="mx-auto h-16 w-16 text-muted-foreground/50 mb-4" />
-          <h3 className="text-lg font-medium mb-2">No documents found</h3>
-          <p className="text-muted-foreground">
-            Try adjusting your search criteria
-          </p>
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {documents.map((doc) => (
-            <DocumentCard
-              key={doc.id}
-              document={doc}
-              showCustomer={isAdmin || isStaff}
-              onView={() => handleView(doc)}
-              onDownload={() => handleDownload(doc)}
-            />
-          ))}
-        </div>
-      )}
+      <Tabs defaultValue="documents" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="documents">
+            Documents {!loading && `(${documents.length})`}
+          </TabsTrigger>
+          <TabsTrigger value="ocr">
+            Full Text (OCR) {!ocrLoading && searchTerm && `(${ocrResults.length})`}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Documents tab */}
+        <TabsContent value="documents">
+          {loading ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Skeleton key={i} className="h-40" />
+              ))}
+            </div>
+          ) : documents.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="mx-auto h-16 w-16 text-muted-foreground/50 mb-4" />
+              <h3 className="text-lg font-medium mb-2">No documents found</h3>
+              <p className="text-muted-foreground">
+                Try adjusting your search criteria
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {documents.map((doc) => (
+                <DocumentCard
+                  key={doc.id}
+                  document={doc}
+                  showCustomer={isAdmin || isStaff}
+                  onView={() => handleView(doc)}
+                  onDownload={() => handleDownload(doc)}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Full Text (OCR) tab */}
+        <TabsContent value="ocr">
+          {!searchTerm.trim() ? (
+            <div className="text-center py-12">
+              <FileText className="mx-auto h-16 w-16 text-muted-foreground/50 mb-4" />
+              <h3 className="text-lg font-medium mb-2">Enter a search term</h3>
+              <p className="text-muted-foreground">
+                Type a word or phrase above to search extracted document text
+              </p>
+            </div>
+          ) : ocrLoading ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-40" />
+              ))}
+            </div>
+          ) : ocrResults.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="mx-auto h-16 w-16 text-muted-foreground/50 mb-4" />
+              <h3 className="text-lg font-medium mb-2">No OCR results</h3>
+              <p className="text-muted-foreground">
+                No documents contain that text in their extracted content
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {ocrResults.map((doc) => (
+                <DocumentCard
+                  key={doc.id}
+                  document={doc}
+                  showCustomer={isAdmin || isStaff}
+                  onView={() => handleView(doc)}
+                  onDownload={() => handleDownload(doc)}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Preview Dialog */}
       <Dialog open={!!previewUrl} onOpenChange={() => setPreviewUrl(null)}>

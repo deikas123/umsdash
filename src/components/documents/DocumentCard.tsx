@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Download, Eye, MoreVertical, Calendar, User, Trash2, Lock, Unlock, Upload, Pencil, History, MessageSquare, Stamp } from 'lucide-react';
+import { FileText, Download, Eye, MoreVertical, Calendar, User, Trash2, Lock, Unlock, Upload, Pencil, History, MessageSquare, Stamp, ScanText } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +24,7 @@ interface DocumentCardProps {
   onEdit?: () => void;
   onStatusChange?: () => void;
   onPrivacyToggle?: () => void;
+  onExtractText?: () => void;
   showCustomer?: boolean;
 }
 
@@ -35,6 +36,7 @@ export function DocumentCard({
   onEdit,
   onStatusChange,
   onPrivacyToggle,
+  onExtractText,
   showCustomer = true,
 }: DocumentCardProps) {
   const { isAdmin, isStaff } = useAuth();
@@ -141,6 +143,12 @@ export function DocumentCard({
                       <DropdownMenuItem onClick={() => setVersionsOpen(true)}>
                         <History className="mr-2 h-4 w-4" />
                         Versions & Comments
+                      </DropdownMenuItem>
+                    )}
+                    {onExtractText && (isAdmin || isStaff) && (
+                      <DropdownMenuItem onClick={onExtractText}>
+                        <ScanText className="mr-2 h-4 w-4" />
+                        Extract Text
                       </DropdownMenuItem>
                     )}
                     {onPrivacyToggle && isAdmin && (

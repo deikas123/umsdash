@@ -122,6 +122,7 @@ export default function MyDocuments() {
         url={previewUrl}
         title={previewTitle}
         fileType={previewFileType}
+        documentId={previewDoc?.id}
         onDownload={previewDoc ? () => handleDownload(previewDoc) : undefined}
       />
     </AppLayout>
