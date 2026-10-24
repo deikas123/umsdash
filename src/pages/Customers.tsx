@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Dialog,
@@ -17,9 +19,11 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, Plus, Users, ChevronDown, ChevronRight, Edit, Mail, Phone, MapPin, FileText, ChevronLeft, ChevronRightIcon } from 'lucide-react';
+import { Search, Plus, Users, ChevronDown, ChevronRight, Edit, Mail, Phone, MapPin, FileText, ChevronLeft, ChevronRight as ChevronRightIcon, UserPlus } from 'lucide-react';
 import { EditCustomerDialog } from '@/components/customers/EditCustomerDialog';
 import { CustomerDocuments } from '@/components/customers/CustomerDocuments';
+import { motion } from 'framer-motion';
+import { formatDistanceToNow } from 'date-fns';
 
 interface Customer {
   id: string;
@@ -30,9 +34,27 @@ interface Customer {
   address: string | null;
   user_id: string | null;
   document_count?: number;
+  created_at?: string;
 }
 
 const PAGE_SIZE = 10;
+
+function getInitials(name: string) {
+  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+}
+
+function getAvatarColor(name: string) {
+  const colors = [
+    'bg-blue-100 text-blue-700',
+    'bg-purple-100 text-purple-700',
+    'bg-green-100 text-green-700',
+    'bg-orange-100 text-orange-700',
+    'bg-pink-100 text-pink-700',
+    'bg-teal-100 text-teal-700',
+  ];
+  const idx = name.charCodeAt(0) % colors.length;
+  return colors[idx];
+}
 
 export default function Customers() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,7 +64,7 @@ export default function Customers() {
   const { user, isAdmin, isStaff } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [expandedCustomerId, setExpandedCustomerId] = useState<string | null>(null);
-  
+
   // Edit state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -51,6 +73,9 @@ export default function Customers() {
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+
+  // Stats
+  const [statsData, setStatsData] = useState({ total: 0, withDocs: 0, recent: 0 });
 
   // Form state
   const [formData, setFormData] = useState({
@@ -62,6 +87,17 @@ export default function Customers() {
   });
   const [submitting, setSubmitting] = useState(false);
 
+  const fetchStats = useCallback(async () => {
+    if (!isAdmin && !isStaff) return;
+    const { count: total } = await supabase.from('customers').select('*', { count: 'exact', head: true });
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const { count: recent } = await supabase.from('customers').select('*', { count: 'exact', head: true }).gte('created_at', thirtyDaysAgo);
+    // Customers with at least one document
+    const { data: docData } = await supabase.from('documents').select('customer_id').not('customer_id', 'is', null);
+    const uniqueCustomersWithDocs = new Set(docData?.map(d => d.customer_id) || []).size;
+    setStatsData({ total: total || 0, withDocs: uniqueCustomersWithDocs, recent: recent || 0 });
+  }, [isAdmin, isStaff]);
+
   const fetchCustomers = useCallback(async () => {
     if (!isAdmin && !isStaff) {
       setLoading(false);
@@ -70,7 +106,6 @@ export default function Customers() {
 
     setLoading(true);
 
-    // First, get total count
     let countQuery = supabase
       .from('customers')
       .select('*', { count: 'exact', head: true });
@@ -84,7 +119,6 @@ export default function Customers() {
     setTotalCount(total);
     setTotalPages(Math.ceil(total / PAGE_SIZE));
 
-    // Then, get paginated customers
     const from = (page - 1) * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
 
@@ -101,7 +135,6 @@ export default function Customers() {
     const { data, error } = await dataQuery;
 
     if (!error && data) {
-      // Get document counts for each customer
       const customerIds = data.map(c => c.id);
       if (customerIds.length > 0) {
         const { data: docCounts } = await supabase
@@ -109,7 +142,6 @@ export default function Customers() {
           .select('customer_id')
           .in('customer_id', customerIds);
 
-        // Count documents per customer
         const docCountMap: Record<string, number> = {};
         docCounts?.forEach(doc => {
           if (doc.customer_id) {
@@ -117,12 +149,7 @@ export default function Customers() {
           }
         });
 
-        // Add document count to customers
-        const customersWithDocs = data.map(customer => ({
-          ...customer,
-          document_count: docCountMap[customer.id] || 0
-        }));
-        setCustomers(customersWithDocs);
+        setCustomers(data.map(c => ({ ...c, document_count: docCountMap[c.id] || 0 })));
       } else {
         setCustomers(data);
       }
@@ -130,24 +157,16 @@ export default function Customers() {
     setLoading(false);
   }, [searchTerm, page, isAdmin, isStaff]);
 
-  // Reset to page 1 when search term changes
-  useEffect(() => {
-    setPage(1);
-  }, [searchTerm]);
+  useEffect(() => { setPage(1); }, [searchTerm]);
 
-  useEffect(() => {
-    fetchCustomers();
-  }, [fetchCustomers]);
+  useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
+  useEffect(() => { fetchStats(); }, [fetchStats]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.account_number.trim() || !formData.full_name.trim()) {
-      toast({
-        title: 'Missing fields',
-        description: 'Account number and full name are required',
-        variant: 'destructive',
-      });
+      toast({ title: 'Missing fields', description: 'Account number and full name are required', variant: 'destructive' });
       return;
     }
 
@@ -163,9 +182,7 @@ export default function Customers() {
       });
 
       if (error) {
-        if (error.code === '23505') {
-          throw new Error('Account number already exists');
-        }
+        if (error.code === '23505') throw new Error('Account number already exists');
         throw error;
       }
 
@@ -176,20 +193,12 @@ export default function Customers() {
         details: { account_number: formData.account_number },
       });
 
-      toast({
-        title: 'Success',
-        description: 'Customer created successfully',
-      });
+      toast({ title: 'Success', description: 'Customer created successfully' });
 
-      setFormData({
-        account_number: '',
-        full_name: '',
-        email: '',
-        phone: '',
-        address: '',
-      });
+      setFormData({ account_number: '', full_name: '', email: '', phone: '', address: '' });
       setDialogOpen(false);
       fetchCustomers();
+      fetchStats();
     } catch (error) {
       toast({
         title: 'Error',
@@ -212,111 +221,172 @@ export default function Customers() {
 
   return (
     <AppLayout title="Customers" description="Manage customer accounts">
-      <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name or account number..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      {/* Page header */}
+      <div className="flex flex-col gap-1 mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Customers</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">Manage customer accounts and their documents</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {(isAdmin || isStaff) && (
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Add Customer</span>
+                    <span className="sm:hidden">Add</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Add New Customer</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="account_number">Account Number *</Label>
+                      <Input
+                        id="account_number"
+                        value={formData.account_number}
+                        onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
+                        placeholder="e.g. UMS001234"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="full_name">Full Name *</Label>
+                      <Input
+                        id="full_name"
+                        value={formData.full_name}
+                        onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                        placeholder="Customer full name"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        placeholder="customer@example.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        placeholder="+254..."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Address</Label>
+                      <Input
+                        id="address"
+                        value={formData.address}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        placeholder="Customer address"
+                      />
+                    </div>
+                    <div className="flex justify-end gap-3">
+                      <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+                      <Button type="submit" disabled={submitting}>
+                        {submitting ? 'Creating...' : 'Create Customer'}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </div>
-
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Add Customer</span>
-              <span className="sm:hidden">Add</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add New Customer</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="account_number">Account Number *</Label>
-                <Input
-                  id="account_number"
-                  value={formData.account_number}
-                  onChange={(e) =>
-                    setFormData({ ...formData, account_number: e.target.value })
-                  }
-                  placeholder="e.g. UMS001234"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="full_name">Full Name *</Label>
-                <Input
-                  id="full_name"
-                  value={formData.full_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, full_name: e.target.value })
-                  }
-                  placeholder="Customer full name"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  placeholder="customer@example.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phone: e.target.value })
-                  }
-                  placeholder="+254..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) =>
-                    setFormData({ ...formData, address: e.target.value })
-                  }
-                  placeholder="Customer address"
-                />
-              </div>
-              <div className="flex justify-end gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? 'Creating...' : 'Create Customer'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
       </div>
 
+      {/* Stats bar */}
+      {(isAdmin || isStaff) && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6"
+        >
+          <Card className="hover:shadow-md transition-shadow">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Users className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{statsData.total}</p>
+                <p className="text-xs text-muted-foreground">Total Customers</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="hover:shadow-md transition-shadow">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <FileText className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-blue-600">{statsData.withDocs}</p>
+                <p className="text-xs text-muted-foreground">With Documents</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="hover:shadow-md transition-shadow">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                <UserPlus className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-green-600">{statsData.recent}</p>
+                <p className="text-xs text-muted-foreground">Added (30 days)</p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Search bar */}
+      <Card className="mb-6">
+        <CardContent className="p-3">
+          <div className="flex gap-3 items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name or account number…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {searchTerm && (
+                <Button variant="ghost" size="sm" onClick={() => setSearchTerm('')}>Clear</Button>
+              )}
+              <Badge variant="secondary" className="text-xs whitespace-nowrap">
+                {totalCount} customer{totalCount !== 1 ? 's' : ''}
+              </Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Customer list */}
       <Card>
         <CardContent className="p-0">
           {loading ? (
             <div className="p-4 space-y-3">
               {[1, 2, 3, 4, 5].map((i) => (
-                <Skeleton key={i} className="h-16 w-full" />
+                <div key={i} className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-full flex-shrink-0" />
+                  <div className="space-y-1.5 flex-1">
+                    <Skeleton className="h-4 w-48" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                  <Skeleton className="h-6 w-16 rounded-full" />
+                </div>
               ))}
             </div>
           ) : customers.length === 0 ? (
@@ -324,75 +394,90 @@ export default function Customers() {
               icon={Users}
               title="No customers found"
               description={searchTerm ? 'Try adjusting your search.' : 'Add your first customer to get started.'}
+              action={
+                isAdmin ? (
+                  <Button variant="outline" onClick={() => setDialogOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />Add Customer
+                  </Button>
+                ) : undefined
+              }
             />
           ) : (
             <div className="divide-y">
-              {customers.map((customer) => (
+              {customers.map((customer, idx) => (
                 <Collapsible
                   key={customer.id}
                   open={expandedCustomerId === customer.id}
                   onOpenChange={() => toggleExpand(customer.id)}
                 >
-                  <div className="p-4">
-                    <div className="flex items-start gap-3">
-                      <CollapsibleTrigger asChild>
-                        <Button variant="ghost" size="icon" className="shrink-0 mt-0.5">
-                          {expandedCustomerId === customer.id ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </CollapsibleTrigger>
-                      
-                      <div className="flex-1 min-w-0">
-                        <CollapsibleTrigger asChild>
-                          <button className="text-left w-full">
-                            <div className="font-medium text-foreground">
-                              {customer.full_name}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {customer.account_number}
-                            </div>
-                          </button>
-                        </CollapsibleTrigger>
-                        
-                        {/* Contact details - visible on larger screens */}
-                        <div className="hidden md:flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                          {customer.email && (
-                            <span className="flex items-center gap-1">
-                              <Mail className="h-3 w-3" />
-                              {customer.email}
-                            </span>
-                          )}
-                          {customer.phone && (
-                            <span className="flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              {customer.phone}
-                            </span>
-                          )}
-                          {customer.address && (
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {customer.address}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                  <div className={`p-4 transition-colors hover:bg-muted/30 ${expandedCustomerId === customer.id ? 'bg-muted/20' : ''}`}>
+                    <div className="flex items-center gap-3">
+                      {/* Avatar */}
+                      <Avatar className="h-10 w-10 flex-shrink-0">
+                        <AvatarFallback className={`text-sm font-medium ${getAvatarColor(customer.full_name)}`}>
+                          {getInitials(customer.full_name)}
+                        </AvatarFallback>
+                      </Avatar>
 
-                      {isAdmin && (
-                        <div className="flex items-center gap-1 shrink-0">
+                      {/* Main info */}
+                      <CollapsibleTrigger asChild>
+                        <button className="flex-1 text-left min-w-0">
+                          <div className="font-medium text-foreground truncate">{customer.full_name}</div>
+                          <div className="text-xs text-muted-foreground font-mono">{customer.account_number}</div>
+                        </button>
+                      </CollapsibleTrigger>
+
+                      {/* Right side — doc count + last activity + expand */}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {customer.document_count !== undefined && customer.document_count > 0 && (
+                          <Badge variant="secondary" className="text-xs gap-1">
+                            <FileText className="h-3 w-3" />
+                            {customer.document_count}
+                          </Badge>
+                        )}
+                        {customer.created_at && (
+                          <span className="text-[11px] text-muted-foreground hidden sm:block">
+                            Added {formatDistanceToNow(new Date(customer.created_at), { addSuffix: true })}
+                          </span>
+                        )}
+                        {isAdmin && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEdit(customer);
-                            }}
+                            className="h-7 w-7"
+                            onClick={(e) => { e.stopPropagation(); handleEdit(customer); }}
                           >
-                            <Edit className="h-4 w-4" />
+                            <Edit className="h-3.5 w-3.5" />
                           </Button>
-                        </div>
+                        )}
+                        <CollapsibleTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7">
+                            {expandedCustomerId === customer.id ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </CollapsibleTrigger>
+                      </div>
+                    </div>
+
+                    {/* Contact details inline on md+ */}
+                    <div className="hidden md:flex items-center gap-4 mt-1.5 ml-13 text-xs text-muted-foreground pl-[52px] flex-wrap">
+                      {customer.email && (
+                        <span className="flex items-center gap-1">
+                          <Mail className="h-3 w-3" />{customer.email}
+                        </span>
+                      )}
+                      {customer.phone && (
+                        <span className="flex items-center gap-1">
+                          <Phone className="h-3 w-3" />{customer.phone}
+                        </span>
+                      )}
+                      {customer.address && (
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />{customer.address}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -404,30 +489,24 @@ export default function Customers() {
                         {customer.email && (
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Mail className="h-4 w-4" />
-                            <a href={`mailto:${customer.email}`} className="hover:underline">
-                              {customer.email}
-                            </a>
+                            <a href={`mailto:${customer.email}`} className="hover:underline">{customer.email}</a>
                           </div>
                         )}
                         {customer.phone && (
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Phone className="h-4 w-4" />
-                            <a href={`tel:${customer.phone}`} className="hover:underline">
-                              {customer.phone}
-                            </a>
+                            <a href={`tel:${customer.phone}`} className="hover:underline">{customer.phone}</a>
                           </div>
                         )}
                         {customer.address && (
                           <div className="flex items-center gap-2 text-muted-foreground">
-                            <MapPin className="h-4 w-4" />
-                            {customer.address}
+                            <MapPin className="h-4 w-4" />{customer.address}
                           </div>
                         )}
                       </div>
 
-                      {/* Customer documents */}
-                      <CustomerDocuments 
-                        customerId={customer.id} 
+                      <CustomerDocuments
+                        customerId={customer.id}
                         customerName={customer.full_name}
                       />
                     </div>
@@ -443,7 +522,7 @@ export default function Customers() {
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-4">
           <div className="text-sm text-muted-foreground">
-            Showing {(page - 1) * PAGE_SIZE + 1} to {Math.min(page * PAGE_SIZE, totalCount)} of {totalCount} customers
+            Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, totalCount)} of {totalCount} customers
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -455,9 +534,7 @@ export default function Customers() {
               <ChevronLeft className="h-4 w-4" />
               Previous
             </Button>
-            <span className="text-sm text-muted-foreground">
-              Page {page} of {totalPages}
-            </span>
+            <span className="text-sm text-muted-foreground">Page {page} of {totalPages}</span>
             <Button
               variant="outline"
               size="sm"
@@ -471,7 +548,6 @@ export default function Customers() {
         </div>
       )}
 
-      {/* Edit Dialog */}
       <EditCustomerDialog
         customer={selectedCustomer}
         open={editDialogOpen}
