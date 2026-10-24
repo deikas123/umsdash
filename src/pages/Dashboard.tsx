@@ -47,6 +47,7 @@ import {
   Zap,
   FolderOpen,
   Eye,
+  Upload,
 } from 'lucide-react';
 import { format, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from 'date-fns';
 import {
