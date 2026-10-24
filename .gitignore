@@ -31,3 +31,8 @@ dist-ssr
 # Local DB dumps and supabase CLI temp
 new upload/
 supabase/.temp/
+
+# Agent workspace
+.agents/
+new upload/
+

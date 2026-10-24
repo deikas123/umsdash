@@ -1,7 +1,0 @@
-{
-  "task_id": "task-ums-hub-unification",
-  "task_description": "Merge ums-docs-vault and uptime-hub into a single Vite+React+TypeScript SPA (UMS Hub) at the workspace root, with shared auth, unified AppLauncher, /docs/* and /ops/* route namespaces, and a single new Supabase project.",
-  "status": "pending",
-  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
-  "blocked_reason": null
-}
