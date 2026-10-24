@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { format } from 'date-fns';
+import { motion } from 'framer-motion';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import {
   Select,
   SelectContent,
@@ -57,6 +59,9 @@ import { BulkCustomerUpload } from '@/components/upload/BulkCustomerUpload';
 import { 
   Upload as UploadIcon, 
   File, 
+  FileImage,
+  FilePdf,
+  FileText,
   X, 
   Check, 
   ChevronsUpDown, 
@@ -65,7 +70,12 @@ import {
   Files,
   CheckCircle,
   XCircle,
-  FolderOpen
+  FolderOpen,
+  CloudUpload,
+  User,
+  Tag,
+  ExternalLink,
+  ArrowRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -392,6 +402,16 @@ export default function Upload() {
 
   return (
     <AppLayout title="Upload" description="Add documents and customers to the system">
+      {/* ── Page header ──────────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-1 mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Upload Document</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">Add one or multiple documents to the system</p>
+          </div>
+        </div>
+      </div>
+
       <Tabs defaultValue="documents" className="space-y-6">
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="documents" className="gap-2">
@@ -409,7 +429,7 @@ export default function Upload() {
             <Card className="shadow-sm">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2">
-                  <UploadIcon className="h-5 w-5 text-primary" />
+                  <CloudUpload className="h-5 w-5 text-primary" />
                   Upload Documents
                 </CardTitle>
                 <CardDescription>
@@ -418,7 +438,7 @@ export default function Upload() {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* File Drop Zone */}
+                  {/* ── File Drop Zone ─────────────────────────────────── */}
                   <div className="space-y-3">
                     <Label className="text-sm font-medium">Document Files *</Label>
                     <div
@@ -426,28 +446,42 @@ export default function Upload() {
                       ref={dropZoneRef}
                       tabIndex={0}
                       className={cn(
-                        'drop-zone p-8 text-center cursor-pointer rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                        isDragActive && !isDragReject && 'drop-zone-active',
-                        isDragReject && 'border-destructive bg-destructive/5'
+                        'relative border-2 border-dashed rounded-xl p-10 text-center cursor-pointer outline-none',
+                        'transition-all duration-200',
+                        'focus-visible:ring-2 focus-visible:ring-ring',
+                        isDragActive && !isDragReject && 'border-primary bg-primary/5 scale-[1.01]',
+                        isDragReject && 'border-destructive bg-destructive/5',
+                        !isDragActive && !isDragReject && 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30',
                       )}
                     >
                       <input {...getInputProps()} />
-                      <UploadIcon className={cn('mx-auto h-12 w-12 mb-4', isDragReject ? 'text-destructive' : 'text-muted-foreground')} />
-                      <p className="text-sm font-medium text-foreground">
+                      <motion.div
+                        animate={isDragActive ? { scale: 1.1 } : { scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                      >
+                        <CloudUpload className={cn(
+                          'mx-auto h-14 w-14 mb-4 transition-colors',
+                          isDragReject ? 'text-destructive' : isDragActive ? 'text-primary' : 'text-muted-foreground/50',
+                        )} />
+                      </motion.div>
+                      <p className="text-base font-semibold text-foreground">
                         {isDragReject
                           ? 'Some files are not supported'
                           : isDragActive
-                            ? 'Drop the files here...'
-                            : 'Drag and drop files here, or click to browse'}
+                            ? 'Drop your files here'
+                            : 'Drag & drop files here'}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        PDF, JPG, PNG, DOC, DOCX (max 10MB each) — categories are auto-suggested from filename
+                      <p className="text-sm text-muted-foreground mt-1.5">
+                        or <span className="text-primary font-medium underline underline-offset-2">click to browse</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-3 bg-muted/50 rounded-md px-3 py-1.5 inline-block">
+                        PDF, JPG, PNG, DOC, DOCX · max 10 MB each
                       </p>
                     </div>
                     
                     <div className="flex items-center gap-4">
                       <div className="flex-1 border-t border-border" />
-                      <span className="text-xs text-muted-foreground">or</span>
+                      <span className="text-xs text-muted-foreground">or capture</span>
                       <div className="flex-1 border-t border-border" />
                     </div>
                     
@@ -459,7 +493,7 @@ export default function Upload() {
                     {files.length > 0 && (
                       <div className="space-y-2 mt-4">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="font-medium">{files.length} file(s) selected</span>
+                          <span className="font-medium">{files.length} file{files.length > 1 ? 's' : ''} selected</span>
                           <div className="flex items-center gap-2">
                             {successCount > 0 && (
                               <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
@@ -475,13 +509,19 @@ export default function Upload() {
                         </div>
                         <div className="max-h-72 overflow-auto space-y-2">
                           {files.map((fileItem, index) => (
-                            <div key={index} className={cn(
-                              'flex flex-col gap-2 p-3 rounded-lg border transition-colors',
-                              fileItem.status === 'success' && 'bg-green-50 border-green-200 dark:bg-green-900/10 dark:border-green-800',
-                              fileItem.status === 'error' && 'bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-800',
-                              fileItem.status === 'pending' && 'bg-muted/50 border-border',
-                              fileItem.status === 'uploading' && 'bg-primary/5 border-primary/20',
-                            )}>
+                            <motion.div
+                              key={index}
+                              initial={{ opacity: 0, y: 6 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className={cn(
+                                'flex flex-col gap-2 p-3 rounded-lg border transition-colors',
+                                fileItem.status === 'success' && 'bg-green-50 border-green-200 dark:bg-green-900/10 dark:border-green-800',
+                                fileItem.status === 'error' && 'bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-800',
+                                fileItem.status === 'pending' && 'bg-muted/50 border-border',
+                                fileItem.status === 'uploading' && 'bg-primary/5 border-primary/20',
+                              )}
+                            >
                               <div className="flex items-center gap-3">
                                 {fileItem.status === 'pending' && <File className="h-5 w-5 text-primary shrink-0" />}
                                 {fileItem.status === 'uploading' && <Loader2 className="h-5 w-5 animate-spin text-primary shrink-0" />}
@@ -515,6 +555,7 @@ export default function Upload() {
                                   disabled={fileItem.status !== 'pending'}
                                 >
                                   <SelectTrigger className="h-7 text-xs flex-1">
+                                    <Tag className="h-3 w-3 mr-1 text-muted-foreground" />
                                     <SelectValue placeholder="Select category" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -532,17 +573,22 @@ export default function Upload() {
                               {fileItem.error && (
                                 <p className="text-xs text-destructive ml-8">{fileItem.error}</p>
                               )}
-                            </div>
+                            </motion.div>
                           ))}
                         </div>
                       </div>
                     )}
                   </div>
 
-                  {/* Customer Selection */}
+                  <Separator />
+
+                  {/* ── Customer Selection ─────────────────────────────── */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">Customer Account *</Label>
+                      <Label className="text-sm font-medium flex items-center gap-1.5">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        Customer Account *
+                      </Label>
                       <CreateCustomerDialog onCustomerCreated={handleCustomerCreated} />
                     </div>
                     <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
@@ -556,9 +602,12 @@ export default function Upload() {
                             !selectedCustomer && "text-muted-foreground"
                           )}
                         >
-                          {selectedCustomer
-                            ? `${selectedCustomer.account_number} — ${selectedCustomer.full_name}`
-                            : 'Select customer...'}
+                          {selectedCustomer ? (
+                            <span className="flex items-center gap-2">
+                              <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{selectedCustomer.account_number}</span>
+                              {selectedCustomer.full_name}
+                            </span>
+                          ) : 'Select customer...'}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
@@ -590,10 +639,8 @@ export default function Upload() {
                                     )}
                                   />
                                   <div>
-                                    <p className="font-medium">{customer.account_number}</p>
-                                    <p className="text-sm text-muted-foreground">
-                                      {customer.full_name}
-                                    </p>
+                                    <p className="font-medium font-mono text-sm">{customer.account_number}</p>
+                                    <p className="text-sm text-muted-foreground">{customer.full_name}</p>
                                   </div>
                                 </CommandItem>
                               ))}
@@ -604,9 +651,12 @@ export default function Upload() {
                     </Popover>
                   </div>
 
-                  {/* Upload Date (Backdating) */}
+                  {/* ── Upload Date (Backdating) ───────────────────────── */}
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">Upload Date</Label>
+                    <Label className="text-sm font-medium flex items-center gap-1.5">
+                      <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                      Upload Date
+                    </Label>
                     <Popover open={dateOpen} onOpenChange={setDateOpen}>
                       <PopoverTrigger asChild>
                         <Button
@@ -639,7 +689,7 @@ export default function Upload() {
                     </p>
                   </div>
 
-                  {/* Description */}
+                  {/* ── Description ───────────────────────────────────── */}
                   <div className="space-y-2">
                     <Label htmlFor="description" className="text-sm font-medium">Description (Optional)</Label>
                     <Textarea
@@ -651,17 +701,21 @@ export default function Upload() {
                     />
                   </div>
 
-                  {/* Progress */}
+                  {/* ── Progress ──────────────────────────────────────── */}
                   {uploading && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 p-3 rounded-lg bg-muted/50 border">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2 font-medium">
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          Uploading…
+                        </span>
+                        <span className="text-muted-foreground">{Math.round(uploadProgress)}%</span>
+                      </div>
                       <Progress value={uploadProgress} className="h-2" />
-                      <p className="text-xs text-muted-foreground text-center">
-                        Uploading... {Math.round(uploadProgress)}%
-                      </p>
                     </div>
                   )}
 
-                  {/* Submit */}
+                  {/* ── Submit ────────────────────────────────────────── */}
                   <div className="flex gap-3 pt-2">
                     <Button
                       type="button"
@@ -671,15 +725,15 @@ export default function Upload() {
                     >
                       Cancel
                     </Button>
-                    <Button type="submit" disabled={uploading || files.length === 0} className="flex-1">
+                    <Button type="submit" disabled={uploading || files.length === 0} className="flex-1 gap-2">
                       {uploading ? (
                         <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Uploading...
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Uploading…
                         </>
                       ) : (
                         <>
-                          <UploadIcon className="mr-2 h-4 w-4" />
+                          <CloudUpload className="h-4 w-4" />
                           Upload {files.length > 0 ? `${files.length} Document${files.length > 1 ? 's' : ''}` : 'Documents'}
                         </>
                       )}

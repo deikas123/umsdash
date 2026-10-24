@@ -851,6 +851,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_app_access: {
+        Row: {
+          app_id: string
+          granted_at: string
+          granted_by: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          app_id: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          app_id?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       escalation_events: {
         Row: {
           actor_id: string | null
@@ -1702,7 +1726,26 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_activity_summary: {
+        Row: {
+          audit_events: number
+          avatar_url: string | null
+          current_streak: number | null
+          department: string | null
+          docs_uploaded: number
+          email: string
+          full_name: string
+          last_active_at: string | null
+          level_name: number | null
+          must_reset_password: boolean
+          phone: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          tasks_created: number
+          total_xp: number | null
+          user_id: string
+        }
+        Relationships: []
+      }
     }
     Functions: {
       can_manage_tasks: { Args: { _user_id: string }; Returns: boolean }

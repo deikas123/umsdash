@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Users, Shield, KeyRound, Mail, Search, Phone } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Plus, Users, Users2, Shield, KeyRound, Mail, Search, Phone } from "lucide-react";
 import { toast } from "sonner";
 
 const roleColors: Record<string, string> = {
@@ -22,6 +24,7 @@ const roleColors: Record<string, string> = {
 export default function OpUserManagement() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [createOpen, setCreateOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
@@ -209,6 +212,13 @@ export default function OpUserManagement() {
 
   return (
     <div>
+      <Alert className="mb-4">
+        <Users2 className="h-4 w-4" />
+        <AlertTitle>User management has moved</AlertTitle>
+        <AlertDescription>
+          Manage all users, app access and departments from the unified <Button variant="link" className="p-0 h-auto" onClick={() => navigate('/admin/users')}>User Hub -&gt;</Button>
+        </AlertDescription>
+      </Alert>
       <PageHeader
         title="User Management"
         description={isAdmin ? "Manage users, roles, and permissions." : "Manage your account settings."}

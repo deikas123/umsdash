@@ -29,6 +29,7 @@ import MyDocuments from "./pages/MyDocuments";
 import SearchPage from "./pages/Search";
 import Customers from "./pages/Customers";
 import Users from "./pages/Users";
+import UserHub from "./pages/UserHub";
 import AuditLogs from "./pages/AuditLogs";
 import Categories from "./pages/Categories";
 import Settings from "./pages/Settings";
@@ -207,6 +208,16 @@ const AppRoutes = () => (
         <Route path="sms-logs" element={<ProtectedRoute allowedRoles={['admin']}><OpSmsLogs /></ProtectedRoute>} />
         <Route path="users" element={<ProtectedRoute allowedRoles={['admin']}><OpUserManagement /></ProtectedRoute>} />
       </Route>
+
+      {/* ── User Hub (/admin/users) ── */}
+      <Route
+        path="/admin/users"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <UserHub />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Catch-all */}
       <Route path="*" element={<NotFound />} />

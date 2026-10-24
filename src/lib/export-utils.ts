@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 // CSV Export
 export function exportToCSV(data: Record<string, unknown>[], filename: string, columns: { key: string; header: string }[]) {
@@ -62,6 +63,21 @@ export function exportToPDF(
   });
   
   doc.save(`${filename}.pdf`);
+}
+
+// Excel Export
+export function exportToExcel(
+  data: Record<string, unknown>[],
+  filename: string,
+  columns: { key: string; header: string }[]
+) {
+  const rows = data.map(item =>
+    Object.fromEntries(columns.map(c => [c.header, item[c.key] ?? '']))
+  );
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Report');
+  XLSX.writeFile(wb, `${filename}.xlsx`);
 }
 
 // Helper function to download blob

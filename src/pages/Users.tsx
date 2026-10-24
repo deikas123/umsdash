@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Link } from 'react-router-dom';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Link, useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -56,7 +57,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { EditUserDialog } from '@/components/users/EditUserDialog';
-import { Search, Plus, Users as UsersIcon, MoreVertical, Pencil, Trash2, Send, Loader2, KeyRound, Activity, ShieldAlert, Undo2 } from 'lucide-react';
+import { Search, Plus, Users as UsersIcon, Users2, MoreVertical, Pencil, Trash2, Send, Loader2, KeyRound, Activity, ShieldAlert, Undo2 } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -80,6 +81,7 @@ export default function Users() {
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
@@ -550,6 +552,13 @@ export default function Users() {
 
   return (
     <AppLayout title="User Management" description="Manage system users and roles">
+      <Alert className="mb-4">
+        <Users2 className="h-4 w-4" />
+        <AlertTitle>User management has moved</AlertTitle>
+        <AlertDescription>
+          Manage all users, app access and departments from the unified <Button variant="link" className="p-0 h-auto" onClick={() => navigate('/admin/users')}>User Hub -&gt;</Button>
+        </AlertDescription>
+      </Alert>
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

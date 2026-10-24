@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Upload, FileText, Search, Users, ClipboardList, Settings,
+  LayoutDashboard, Upload, FileText, Search, Users, Users2, ClipboardList, Settings,
   FolderOpen, FolderLock, LogOut, Bell, ListTodo, Trash2, MessageSquare,
   Activity, BarChart3, CalendarClock, HardDrive, Flame, DatabaseBackup,
   AlertTriangle, FileWarning, KeyRound, Siren, Home, Trophy, ChevronDown,
@@ -115,6 +115,7 @@ function NavItem({
 export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
+  const navigate = useNavigate();
   const { isAdmin, isStaff, isCustomer, profile, user, signOut } = useAuth();
   const { pendingTasksCount, pendingRemindersCount, pendingDeletionsCount } = useNotificationCounts();
   const { settings } = useOrgSettings();
@@ -146,6 +147,32 @@ export function AppSidebar() {
     try { localStorage.setItem('umshub_sidebar_admin_open', String(open)); } catch (_e) { /* storage unavailable */ }
   };
 
+  // Restore the sidebar scroll position across navigations so selecting a page
+  // no longer snaps the sidebar back to the top.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const saved = sessionStorage.getItem('umshub_sidebar_scroll');
+    if (saved) el.scrollTop = parseInt(saved, 10);
+    const onScroll = () => sessionStorage.setItem('umshub_sidebar_scroll', String(el.scrollTop));
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Track the last visited page per app so switching apps resumes where the
+  // user left off rather than always landing on the app root.
+  useEffect(() => {
+    if (location.pathname.startsWith('/docs')) localStorage.setItem('umshub_last_docs_page', location.pathname);
+    else if (location.pathname.startsWith('/ops')) localStorage.setItem('umshub_last_ops_page', location.pathname);
+  }, [location.pathname]);
+
+  const currentApp = location.pathname.startsWith('/ops') ? 'ops' : location.pathname.startsWith('/docs') ? 'docs' : 'home';
+  const switchToApp = (app: 'docs' | 'ops') => {
+    const last = localStorage.getItem(`umshub_last_${app}_page`);
+    navigate(last || (app === 'docs' ? '/docs' : '/ops'));
+  };
+
   const isActive = (path: string) => location.pathname === path || (path !== '/' && location.pathname.startsWith(path + '/'));
 
   const getBadgeCount = (badge?: string) => {
@@ -169,45 +196,66 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
-        {/* Home link */}
+      {/* App switcher — switch between Docs and Ops, resuming the last page */}
+      {!collapsed && (isAdmin || isStaff) && (
+        <div className="flex gap-1 p-2 mx-3 mb-1 bg-sidebar-accent/20 rounded-lg">
+          <button onClick={() => switchToApp('docs')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-medium transition-all ${currentApp === 'docs' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+            <FileText className="h-3 w-3" /> Docs
+          </button>
+          <button onClick={() => switchToApp('ops')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-medium transition-all ${currentApp === 'ops' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+            <Activity className="h-3 w-3" /> Ops
+          </button>
+        </div>
+      )}
+
+      <SidebarContent ref={scrollRef}>
+        {/* Home + App Store — always visible. User Hub is a global,
+            cross-app admin item kept in this top group so it is always
+            reachable for admins regardless of the active app. */}
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
+              {isAdmin && (
+                <NavItem item={{ title: 'User Hub', url: '/admin/users', icon: Users2 }} isActive={isActive('/admin/users')} />
+              )}
               <NavItem item={{ title: 'Home', url: '/', icon: Home }} isActive={location.pathname === '/'} />
               <NavItem item={{ title: 'App Store', url: '/apps', icon: ShoppingBag }} isActive={isActive('/apps')} />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Document Vault */}
-        <Collapsible open={docsOpen} onOpenChange={handleDocsToggle}>
-          <SidebarGroup>
-            <SidebarGroupLabel asChild>
-              <CollapsibleTrigger className="flex w-full items-center justify-between">
-                Document Vault
-                <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${docsOpen ? '' : '-rotate-90'}`} />
-              </CollapsibleTrigger>
-            </SidebarGroupLabel>
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {(isAdmin || isStaff) && docNavItems.map(item => (
-                    <NavItem key={item.url} item={item} badgeCount={getBadgeCount((item as any).badge)} isActive={isActive(item.url)} />
-                  ))}
-                  {isCustomer && docCustomerItems.map(item => (
-                    <NavItem key={item.url} item={item} badgeCount={getBadgeCount((item as any).badge)} isActive={isActive(item.url)} />
-                  ))}
-                  {/* Settings always visible */}
-                  <NavItem item={{ title: 'Settings', url: '/docs/settings', icon: Settings }} isActive={isActive('/docs/settings')} />
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </SidebarGroup>
-        </Collapsible>
+        {/* Document Vault — docs / home app */}
+        {(currentApp === 'docs' || currentApp === 'home') && (
+          <Collapsible open={docsOpen} onOpenChange={handleDocsToggle}>
+            <SidebarGroup>
+              <SidebarGroupLabel asChild>
+                <CollapsibleTrigger className="flex w-full items-center justify-between">
+                  Document Vault
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${docsOpen ? '' : '-rotate-90'}`} />
+                </CollapsibleTrigger>
+              </SidebarGroupLabel>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {(isAdmin || isStaff) && docNavItems.map(item => (
+                      <NavItem key={item.url} item={item} badgeCount={getBadgeCount((item as any).badge)} isActive={isActive(item.url)} />
+                    ))}
+                    {isCustomer && docCustomerItems.map(item => (
+                      <NavItem key={item.url} item={item} badgeCount={getBadgeCount((item as any).badge)} isActive={isActive(item.url)} />
+                    ))}
+                    {/* Settings always visible */}
+                    <NavItem item={{ title: 'Settings', url: '/docs/settings', icon: Settings }} isActive={isActive('/docs/settings')} />
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </SidebarGroup>
+          </Collapsible>
+        )}
 
-        {/* Operations Hub — staff/admin only */}
-        {(isAdmin || isStaff) && (
+        {/* Operations Hub — ops app only, staff/admin */}
+        {(isAdmin || isStaff) && currentApp === 'ops' && (
           <Collapsible open={opsOpen} onOpenChange={handleOpsToggle}>
             <SidebarGroup>
               <SidebarGroupLabel asChild>
@@ -229,8 +277,8 @@ export function AppSidebar() {
           </Collapsible>
         )}
 
-        {/* Administration — admin only */}
-        {isAdmin && (
+        {/* Administration — docs / home app, admin only */}
+        {isAdmin && (currentApp === 'docs' || currentApp === 'home') && (
           <Collapsible open={adminOpen} onOpenChange={handleAdminToggle}>
             <SidebarGroup>
               <SidebarGroupLabel asChild>

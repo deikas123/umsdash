@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { DocumentCard } from '@/components/documents/DocumentCard';
@@ -54,6 +55,8 @@ import {
   FolderOpen,
   Tag,
   ScanText,
+  Filter,
+  HardDrive,
 } from 'lucide-react';
 import { downloadWithWatermark } from '@/lib/watermark-utils';
 import { format } from 'date-fns';
@@ -367,21 +370,56 @@ export default function Documents() {
   return (
     <AppLayout title="All Documents" description="Browse and manage all uploaded documents">
 
+      {/* ── Page header ─────────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-1 mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">All Documents</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">
+              Browse and manage all uploaded documents
+              {!loading && (
+                <span className="ml-2">
+                  <Badge variant="secondary" className="text-xs">{sortedDocuments.length} document{sortedDocuments.length !== 1 ? 's' : ''}</Badge>
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {sortedDocuments.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-1" />Export</Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={handleExportCSV}>Export as CSV</DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportPDF}>Export as PDF</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            <Button size="sm" onClick={() => navigate('/docs/upload')}>
+              <FileText className="h-4 w-4 mr-1" />Upload
+            </Button>
+          </div>
+        </div>
+      </div>
+
       {/* ── Recently Viewed ─────────────────────────────────────────────────── */}
       {recentDocs.length > 0 && (
         <div className="mb-4">
           <h3 className="text-sm font-medium text-muted-foreground mb-2">Recently Viewed</h3>
           <div className="flex gap-3 overflow-x-auto pb-2">
             {recentDocs.map(doc => (
-              <div
+              <motion.div
                 key={doc.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
                 className="flex-shrink-0 w-40 rounded-lg border bg-card p-2 cursor-pointer hover:bg-accent transition-colors"
                 onClick={() => handleView(doc)}
               >
                 <FileText className="h-5 w-5 text-muted-foreground mb-1" />
                 <p className="text-xs font-medium truncate">{doc.title}</p>
                 <p className="text-xs text-muted-foreground truncate">{doc.customer?.full_name || '—'}</p>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
