@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
   TableBody,
@@ -37,7 +38,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { cn } from '@/lib/utils';
 
-type AppRole = 'admin' | 'staff' | 'customer';
+type AppRole = 'admin' | 'staff' | 'customer' | 'manager' | 'user';
 
 interface AuditLog {
   id: string;
@@ -99,7 +100,7 @@ export default function AuditLogs() {
       const roleMap: Record<string, AppRole> = {};
       (rolesRes.data || []).forEach((r) => {
         // prefer highest privilege if multiple
-        const rank: Record<AppRole, number> = { admin: 3, staff: 2, customer: 1 };
+        const rank: Record<AppRole, number> = { admin: 5, manager: 4, staff: 3, user: 2, customer: 1 };
         if (!roleMap[r.user_id] || rank[r.role] > rank[roleMap[r.user_id]]) {
           roleMap[r.user_id] = r.role;
         }
@@ -292,60 +293,118 @@ export default function AuditLogs() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="p-4 space-y-3">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="p-6">
-              <EmptyState
-                icon={ClipboardList}
-                title="No matching entries"
-                description={hasFilters ? 'Try adjusting your filters or clearing them to see all logs.' : 'System activity will appear here.'}
-                action={hasFilters ? <Button variant="outline" size="sm" onClick={clearFilters}>Clear filters</Button> : undefined}
-              />
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Timestamp</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Entity</TableHead>
-                  <TableHead className="hidden lg:table-cell">Details</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                      {format(new Date(log.created_at), 'MMM d, yyyy HH:mm')}
-                    </TableCell>
-                    <TableCell className="font-medium">{log.user_name}</TableCell>
-                    <TableCell>{roleBadge(log.user_role)}</TableCell>
-                    <TableCell>
-                      <Badge variant={getActionBadgeVariant(log.action)} className="gap-1">
-                        {getActionIcon(log.action)}
-                        {formatAction(log.action)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="capitalize">{log.entity_type}</TableCell>
-                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground max-w-xs truncate">
-                      {log.details ? JSON.stringify(log.details) : '-'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="table">
+        <TabsList className="mb-4">
+          <TabsTrigger value="table">Table</TabsTrigger>
+          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="table">
+          <Card>
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="p-4 space-y-3">
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="p-6">
+                  <EmptyState
+                    icon={ClipboardList}
+                    title="No matching entries"
+                    description={hasFilters ? 'Try adjusting your filters or clearing them to see all logs.' : 'System activity will appear here.'}
+                    action={hasFilters ? <Button variant="outline" size="sm" onClick={clearFilters}>Clear filters</Button> : undefined}
+                  />
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Timestamp</TableHead>
+                      <TableHead>User</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Action</TableHead>
+                      <TableHead>Entity</TableHead>
+                      <TableHead className="hidden lg:table-cell">Details</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((log) => (
+                      <TableRow key={log.id}>
+                        <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                          {format(new Date(log.created_at), 'MMM d, yyyy HH:mm')}
+                        </TableCell>
+                        <TableCell className="font-medium">{log.user_name}</TableCell>
+                        <TableCell>{roleBadge(log.user_role)}</TableCell>
+                        <TableCell>
+                          <Badge variant={getActionBadgeVariant(log.action)} className="gap-1">
+                            {getActionIcon(log.action)}
+                            {formatAction(log.action)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="capitalize">{log.entity_type}</TableCell>
+                        <TableCell className="hidden lg:table-cell text-sm text-muted-foreground max-w-xs truncate">
+                          {log.details ? JSON.stringify(log.details) : '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="timeline">
+          <Card>
+            <CardContent className="p-4">
+              {loading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : filtered.length === 0 ? (
+                <EmptyState
+                  icon={ClipboardList}
+                  title="No matching entries"
+                  description={hasFilters ? 'Try adjusting your filters.' : 'System activity will appear here.'}
+                  action={hasFilters ? <Button variant="outline" size="sm" onClick={clearFilters}>Clear filters</Button> : undefined}
+                />
+              ) : (
+                <div className="relative pl-6">
+                  {/* Vertical line */}
+                  <div className="absolute left-2 top-2 bottom-2 w-px bg-border" />
+                  <div className="space-y-4">
+                    {filtered.map((log) => (
+                      <div key={log.id} className="relative flex items-start gap-3">
+                        {/* Dot + icon */}
+                        <div className="absolute -left-4 flex h-5 w-5 items-center justify-center rounded-full bg-secondary border border-border text-muted-foreground z-10">
+                          {getActionIcon(log.action)}
+                        </div>
+                        <div className="min-w-0 flex-1 pt-0.5">
+                          <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                            <Badge variant={getActionBadgeVariant(log.action)} className="text-xs">
+                              {formatAction(log.action)}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground capitalize">{log.entity_type}{log.entity_id ? ` · ${log.entity_id.slice(0, 8)}…` : ''}</span>
+                          </div>
+                          <p className="text-xs text-foreground font-medium">{log.user_name}</p>
+                          {log.user_role && <span className="text-xs text-muted-foreground">{roleBadge(log.user_role)}</span>}
+                        </div>
+                        <span className="flex-shrink-0 text-xs text-muted-foreground whitespace-nowrap">
+                          {format(new Date(log.created_at), 'MMM d, HH:mm')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </AppLayout>
   );
 }

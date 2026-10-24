@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Search, Eye, Pencil, Siren } from "lucide-react";
+import { Plus, Search, Eye, Pencil, Siren, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import ExportMenu from "@/components/operations/ExportMenu";
@@ -66,6 +66,10 @@ export default function OpIncidents() {
   const [escalateIncDialog, setEscalateIncDialog] = useState<{ open: boolean; sourceId: string; defaultTitle: string }>({ open: false, sourceId: "", defaultTitle: "" });
   const [escalateIncTitle, setEscalateIncTitle] = useState("");
   const [escalateIncNote, setEscalateIncNote] = useState("");
+
+  const [createTaskDialog, setCreateTaskDialog] = useState<{ open: boolean; incident: any | null }>({ open: false, incident: null });
+  const [taskTitle, setTaskTitle] = useState("");
+  const [taskPriority, setTaskPriority] = useState<"low" | "normal" | "high">("normal");
 
   const { data: incidents = [], isLoading } = useQuery({
     queryKey: ["incidents"],
@@ -157,6 +161,28 @@ export default function OpIncidents() {
       setEscalateIncDialog({ open: false, sourceId: "", defaultTitle: "" });
       setEscalateIncTitle("");
       setEscalateIncNote("");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const createTaskMutation = useMutation({
+    mutationFn: async () => {
+      const inc = createTaskDialog.incident;
+      const { error } = await supabase.from("tasks").insert({
+        title: taskTitle,
+        description: `Linked to incident ${inc.incident_number}: ${inc.description || ""}`,
+        priority: taskPriority,
+        status: "pending",
+        created_by: user!.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast.success("Task created and linked to incident.");
+      setCreateTaskDialog({ open: false, incident: null });
+      setTaskTitle("");
+      setTaskPriority("normal");
     },
     onError: (e) => toast.error(e.message),
   });
@@ -357,6 +383,7 @@ export default function OpIncidents() {
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-[4px]" onClick={() => setPreviewId(inc.id)}><Eye className="h-3.5 w-3.5" /></Button>
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-[4px]" onClick={() => handleEdit(inc)}><Pencil className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-[4px] text-accent" title="Create Task" onClick={() => { setCreateTaskDialog({ open: true, incident: inc }); setTaskTitle(inc.incident_number ? `${inc.incident_number}: ${inc.incident_type || "Incident"}` : (inc.incident_type || "Incident")); setTaskPriority("normal"); }}><ClipboardList className="h-3.5 w-3.5" /></Button>
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-[4px] text-warning" title="Escalate" onClick={() => { setEscalateIncDialog({ open: true, sourceId: inc.id, defaultTitle: `Incident ${inc.incident_number}: ${inc.incident_type || ""}` }); setEscalateIncTitle(`Incident ${inc.incident_number}: ${inc.incident_type || ""}`); setEscalateIncNote(""); }}><Siren className="h-3.5 w-3.5" /></Button>
                     </div>
                   </td>
@@ -417,6 +444,30 @@ export default function OpIncidents() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Task Dialog */}
+      <Dialog open={createTaskDialog.open} onOpenChange={(o) => { if (!o) { setCreateTaskDialog({ open: false, incident: null }); setTaskTitle(""); setTaskPriority("normal"); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Create Task from Incident</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label className="text-xs font-semibold text-muted-foreground">Task Title</Label><Input className="h-9 mt-1.5 rounded-[4px]" value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} placeholder="Task title..." /></div>
+            <div><Label className="text-xs font-semibold text-muted-foreground">Priority</Label>
+              <Select value={taskPriority} onValueChange={(v) => setTaskPriority(v as "low" | "normal" | "high")}>
+                <SelectTrigger className="h-9 mt-1.5 rounded-[4px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" size="sm" className="rounded-[4px]" onClick={() => { setCreateTaskDialog({ open: false, incident: null }); setTaskTitle(""); setTaskPriority("normal"); }}>Cancel</Button>
+              <Button size="sm" className="rounded-[4px]" onClick={() => createTaskMutation.mutate()} disabled={createTaskMutation.isPending || !taskTitle.trim()}>Create Task</Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 

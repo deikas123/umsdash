@@ -116,6 +116,26 @@ export default function Reports() {
     });
   };
 
+  const exportExecutiveSummary = () => {
+    const summaryData: { metric: string; value: string | number }[] = [
+      { metric: 'Total Documents', value: docStats.total },
+      ...docStats.byCategory.map((c: any) => ({ metric: `Documents — ${c.name}`, value: c.count })),
+      ...docStats.byStatus.map((s: any) => ({ metric: `Doc Status — ${s.name}`, value: s.count })),
+      { metric: 'Total Tasks', value: taskStats.total },
+      { metric: 'Task Completion Rate', value: `${taskStats.completionRate}%` },
+      ...taskStats.byStatus.map((s: any) => ({ metric: `Task Status — ${s.name}`, value: s.count })),
+      { metric: 'Total Users', value: userStats.total },
+      { metric: 'Total SMS Sent', value: smsStats.total },
+      { metric: 'SMS Delivered', value: smsStats.delivered },
+    ];
+    exportToPDF(
+      summaryData,
+      'executive-summary',
+      [{ key: 'metric', header: 'Metric' }, { key: 'value', header: 'Value' }],
+      'UMS Hub — Executive Summary',
+    );
+  };
+
   const exportDocReport = () => {
     const data = docStats.byCategory.map((c: any) => ({ category: c.name, documents: c.count }));
     exportToPDF(data, 'document-report', [
@@ -158,7 +178,7 @@ export default function Reports() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={exportDocReport}>
             <FileDown className="h-4 w-4 mr-2" />
             Documents PDF
@@ -170,6 +190,10 @@ export default function Reports() {
           <Button variant="outline" size="sm" onClick={exportSmsReport}>
             <Download className="h-4 w-4 mr-2" />
             SMS CSV
+          </Button>
+          <Button variant="default" size="sm" onClick={exportExecutiveSummary} disabled={loading}>
+            <FileDown className="h-4 w-4 mr-2" />
+            Executive Summary PDF
           </Button>
         </div>
       </div>

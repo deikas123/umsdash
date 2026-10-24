@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Siren,
   CheckCircle,
@@ -116,6 +117,63 @@ function EventHistory({ escalationId }: { escalationId: string }) {
       {events.length === 0 && (
         <p className="text-xs text-muted-foreground py-1">No events recorded.</p>
       )}
+    </div>
+  );
+}
+
+function EscalationTimeline({ escalationId }: { escalationId: string }) {
+  const { data: events = [], isLoading } = useQuery({
+    queryKey: ["escalation_events", escalationId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("escalation_events")
+        .select("*, profiles!actor_id(full_name)")
+        .eq("escalation_id", escalationId)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  if (isLoading) {
+    return <p className="text-xs text-muted-foreground py-2">Loading timeline...</p>;
+  }
+
+  if (events.length === 0) {
+    return <p className="text-xs text-muted-foreground py-1">No events recorded.</p>;
+  }
+
+  return (
+    <div className="relative pl-6">
+      {/* Vertical line */}
+      <div className="absolute left-2 top-2 bottom-2 w-px bg-border" />
+      <div className="space-y-4">
+        {events.map((ev: any, idx: number) => (
+          <div key={ev.id} className="relative flex items-start gap-3">
+            {/* Dot + icon */}
+            <div className="absolute -left-4 flex h-5 w-5 items-center justify-center rounded-full bg-secondary border border-border text-muted-foreground z-10">
+              {eventIcon(ev.event_type)}
+            </div>
+            <div className="min-w-0 flex-1 pt-0.5">
+              <p className="text-xs font-semibold text-foreground capitalize">
+                {ev.event_type.replace(/_/g, " ")}
+                {ev.from_level != null && ev.to_level != null && (
+                  <span className="ml-1 font-normal text-muted-foreground">
+                    (Level {ev.from_level} → Level {ev.to_level})
+                  </span>
+                )}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {ev.profiles?.full_name || "System"}
+                {ev.note && <span className="ml-1 italic">— "{ev.note}"</span>}
+              </p>
+            </div>
+            <span className="flex-shrink-0 text-xs text-muted-foreground whitespace-nowrap">
+              {format(new Date(ev.created_at), "MMM d, HH:mm")}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -338,8 +396,24 @@ export function OpEscalationsComponent() {
                 {expandedId === esc.id && (
                   <tr key={`${esc.id}-events`}>
                     <td colSpan={7} className="px-5 pb-4 bg-secondary/30">
-                      <p className="label-caps mb-3 mt-2">Event History</p>
-                      <EventHistory escalationId={esc.id} />
+                      <Tabs defaultValue="details" className="mt-3">
+                        <TabsList className="mb-3">
+                          <TabsTrigger value="details">Details</TabsTrigger>
+                          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="details">
+                          <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-xs">
+                            <div><span className="font-semibold text-muted-foreground">Source:</span> <span className="capitalize ml-1">{esc.source_table.replace("_", " ")}</span> <span className="font-mono ml-1 text-xs">{esc.source_id.slice(0, 8)}…</span></div>
+                            <div><span className="font-semibold text-muted-foreground">Status:</span> <span className="ml-1 capitalize">{esc.status}</span></div>
+                            <div><span className="font-semibold text-muted-foreground">Level:</span> <span className="ml-1">{levelLabel[esc.current_level] || `Level ${esc.current_level}`}</span></div>
+                            <div><span className="font-semibold text-muted-foreground">Deadline:</span> <span className="ml-1">{esc.level_deadline ? format(new Date(esc.level_deadline), "MMM d, yyyy HH:mm") : "—"}</span></div>
+                            <div><span className="font-semibold text-muted-foreground">Created:</span> <span className="ml-1">{format(new Date(esc.created_at), "MMM d, yyyy HH:mm")}</span></div>
+                          </div>
+                        </TabsContent>
+                        <TabsContent value="timeline">
+                          <EscalationTimeline escalationId={esc.id} />
+                        </TabsContent>
+                      </Tabs>
                     </td>
                   </tr>
                 )}
