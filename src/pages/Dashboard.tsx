@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { SmsBanner } from '@/components/SmsBanner';
 import { StatsCard } from '@/components/dashboard/StatsCard';
-import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DocumentCard } from '@/components/documents/DocumentCard';
 import { useStats } from '@/hooks/useStats';
 import { useDocuments } from '@/hooks/useDocuments';

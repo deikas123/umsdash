@@ -3,10 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/operations/PageHeader";
 import ExportMenu from "@/components/operations/ExportMenu";
 import { exportToCSV, exportToPDF, exportToExcel } from "@/lib/exportUtils";
-import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar, AreaChart, Area,
-  XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell,
 } from "recharts";
 import { format, parseISO, subMonths, startOfMonth } from "date-fns";
 
