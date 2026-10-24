@@ -71,6 +71,41 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_roles: {
+        Row: {
+          id: string
+          name: string
+          display_name: string
+          description: string | null
+          base_role: string
+          color: string
+          is_system: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          display_name: string
+          description?: string | null
+          base_role?: string
+          color?: string
+          is_system?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          display_name?: string
+          description?: string | null
+          base_role?: string
+          color?: string
+          is_system?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           account_number: string
@@ -521,6 +556,35 @@ export type Database = {
         }
         Relationships: []
       }
+      role_permissions: {
+        Row: {
+          id: string
+          role_id: string
+          permission_key: string
+          granted_at: string
+        }
+        Insert: {
+          id?: string
+          role_id: string
+          permission_key: string
+          granted_at?: string
+        }
+        Update: {
+          id?: string
+          role_id?: string
+          permission_key?: string
+          granted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "custom_roles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       push_subscriptions: {
         Row: {
           auth: string
@@ -850,6 +914,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_custom_roles: {
+        Row: {
+          id: string
+          user_id: string
+          role_id: string
+          assigned_by: string | null
+          assigned_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          role_id: string
+          assigned_by?: string | null
+          assigned_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          role_id?: string
+          assigned_by?: string | null
+          assigned_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_custom_roles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "custom_roles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       user_app_access: {
         Row: {

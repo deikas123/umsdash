@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermission } from "@/hooks/useRBAC";
 import PageHeader from "@/components/operations/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +54,7 @@ type Incident = typeof emptyForm & { id?: string; incident_number?: string; stat
 
 export default function OpIncidents() {
   const { user } = useAuth();
+  const canCreateIncident = usePermission('ops.incidents.create'); // Permission: ops.incidents.create — controlled via Role Manager
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const [showForm, setShowForm] = useState(false);
@@ -320,7 +322,9 @@ export default function OpIncidents() {
               onPDF={() => exportToPDF("Incidents", incHeaders, filtered.map(incToRow))}
               onExcel={() => exportToExcel("Incidents", incHeaders, filtered.map(incToRow))}
             />
-            <Button size="sm" className="gap-1.5 rounded-[4px]" onClick={() => { setForm(emptyForm); setEditId(null); setShowForm(true); }}><Plus className="h-3.5 w-3.5" /> New Incident</Button>
+            {canCreateIncident && (
+              <Button size="sm" className="gap-1.5 rounded-[4px]" onClick={() => { setForm(emptyForm); setEditId(null); setShowForm(true); }}><Plus className="h-3.5 w-3.5" /> New Incident</Button>
+            )}
           </>
         }
       />

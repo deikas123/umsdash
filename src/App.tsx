@@ -56,6 +56,8 @@ import ExportScheduler from "./pages/ExportScheduler";
 import DocumentTemplates from "./pages/DocumentTemplates";
 import AppStore from "./pages/AppStore";
 import TourManager from "./pages/TourManager";
+import ReportsHub from "./pages/ReportsHub";
+import RoleManager from "./pages/RoleManager";
 
 // Operations Hub pages
 import OpDashboard from "./pages/operations/OpDashboard";
@@ -215,6 +217,26 @@ const AppRoutes = () => (
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <UserHub />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ── Reports Hub (/admin/reports) ── */}
+      <Route
+        path="/admin/reports"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <ReportsHub />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ── Role Manager (/admin/roles) — super admin only ── */}
+      <Route
+        path="/admin/roles"
+        element={
+          <ProtectedRoute requireSuperAdmin>
+            <RoleManager />
           </ProtectedRoute>
         }
       />

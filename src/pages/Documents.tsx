@@ -9,6 +9,7 @@ import { EditDocumentDialog } from '@/components/documents/EditDocumentDialog';
 import { useDocuments, useCategories, Document } from '@/hooks/useDocuments';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePermission } from '@/hooks/useRBAC';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -115,6 +116,8 @@ export default function Documents() {
     status: statusFilter !== 'all' ? statusFilter : undefined,
   });
   const { isAdmin, isStaff, user } = useAuth();
+  const canUpload = usePermission('docs.documents.upload'); // Permission: docs.documents.upload — controlled via Role Manager
+  const canDelete = usePermission('docs.documents.delete'); // Permission: docs.documents.delete — controlled via Role Manager
   const { toast } = useToast();
 
   // ── recently viewed ─────────────────────────────────────────────────────────
@@ -395,9 +398,11 @@ export default function Documents() {
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            <Button size="sm" onClick={() => navigate('/docs/upload')}>
-              <FileText className="h-4 w-4 mr-1" />Upload
-            </Button>
+            {canUpload && (
+              <Button size="sm" onClick={() => navigate('/docs/upload')}>
+                <FileText className="h-4 w-4 mr-1" />Upload
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -617,7 +622,7 @@ export default function Documents() {
           title="No documents found"
           description={hasFilters ? 'Try adjusting your filters.' : 'Upload your first document to get started.'}
           action={
-            !hasFilters ? (
+            !hasFilters && canUpload ? (
               <Button size="sm" onClick={() => navigate('/docs/upload')}>Upload Document</Button>
             ) : undefined
           }
@@ -651,7 +656,7 @@ export default function Documents() {
                   showCustomer={isAdmin || isStaff}
                   onView={() => handleView(doc)}
                   onDownload={() => handleDownload(doc)}
-                  onDelete={(isAdmin || isStaff) ? () => handleDelete(doc) : undefined}
+                  onDelete={(isAdmin || isStaff) && canDelete ? () => handleDelete(doc) : undefined}
                   onEdit={(isAdmin || isStaff) ? () => setEditingDoc(doc) : undefined}
                   onPrivacyToggle={isAdmin ? () => handlePrivacyToggle(doc) : undefined}
                   onExtractText={(isAdmin || isStaff) && canExtractText(doc) ? () => handleExtractText(doc) : undefined}
@@ -715,7 +720,7 @@ export default function Documents() {
                       <ScanText className="h-3.5 w-3.5" />
                     </Button>
                   )}
-                  {(isAdmin || isStaff) && (
+                  {(isAdmin || isStaff) && canDelete && (
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(doc)} aria-label="Delete">
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>

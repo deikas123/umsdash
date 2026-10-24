@@ -5,7 +5,7 @@ import {
   FolderOpen, FolderLock, LogOut, Bell, ListTodo, Trash2, MessageSquare,
   Activity, BarChart3, CalendarClock, HardDrive, Flame, DatabaseBackup,
   AlertTriangle, FileWarning, KeyRound, Siren, Home, Trophy, ChevronDown,
-  Monitor, Zap, Calendar, UserCheck, TrendingUp, ShoppingBag, GraduationCap,
+  Monitor, Zap, Calendar, UserCheck, TrendingUp, ShoppingBag, GraduationCap, ShieldCheck,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import {
@@ -219,6 +219,12 @@ export function AppSidebar() {
             <SidebarMenu>
               {isAdmin && (
                 <NavItem item={{ title: 'User Hub', url: '/admin/users', icon: Users2 }} isActive={isActive('/admin/users')} />
+              )}
+              {isSuperAdmin && (
+                <NavItem item={{ title: 'Role Manager', url: '/admin/roles', icon: ShieldCheck }} isActive={isActive('/admin/roles')} />
+              )}
+              {isAdmin && (
+                <NavItem item={{ title: 'Reports Hub', url: '/admin/reports', icon: BarChart3 }} isActive={isActive('/admin/reports')} />
               )}
               <NavItem item={{ title: 'Home', url: '/', icon: Home }} isActive={location.pathname === '/'} />
               <NavItem item={{ title: 'App Store', url: '/apps', icon: ShoppingBag }} isActive={isActive('/apps')} />
