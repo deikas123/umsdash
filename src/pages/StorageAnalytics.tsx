@@ -1,12 +1,15 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { useStats } from '@/hooks/useStats';
-import { HardDrive, Database, Users, FolderOpen } from 'lucide-react';
+import { HardDrive, Database, Users, FolderOpen, TrendingUp } from 'lucide-react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
+import { motion } from 'framer-motion';
+import { PageHeader } from '@/components/PageHeader';
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -37,64 +40,101 @@ export default function StorageAnalytics() {
     fill: COLORS[i % COLORS.length],
   }));
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.08 } },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 16 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.35 } },
+  };
+
   return (
     <AppLayout title="Storage Analytics" description="Monitor storage consumption across the system">
-      <div className="space-y-6">
+      <motion.div
+        className="space-y-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <PageHeader
+          title="Storage Analytics"
+          description="Monitor storage consumption across the system"
+        />
+
         {/* Summary Cards */}
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-          <Card>
+        <motion.div variants={itemVariants} className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+          {/* Total Storage */}
+          <Card className="border-l-4 border-l-primary">
             <CardContent className="flex items-center gap-4 p-6">
-              <div className="rounded-lg bg-primary/10 p-3">
+              <div className="rounded-lg bg-primary/10 p-3 flex-shrink-0">
                 <HardDrive className="h-6 w-6 text-primary" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm text-muted-foreground">Total Storage</p>
-                <p className="text-2xl font-bold">
-                  {loading ? <Skeleton className="h-7 w-20" /> : formatBytes(stats.totalStorageBytes)}
-                </p>
+                {loading ? (
+                  <Skeleton className="h-7 w-24 mt-1" />
+                ) : (
+                  <p className="text-2xl font-bold truncate">{formatBytes(stats.totalStorageBytes)}</p>
+                )}
               </div>
             </CardContent>
           </Card>
-          <Card>
+
+          {/* Categories */}
+          <Card className="border-l-4 border-l-blue-500">
             <CardContent className="flex items-center gap-4 p-6">
-              <div className="rounded-lg bg-primary/10 p-3">
-                <FolderOpen className="h-6 w-6 text-primary" />
+              <div className="rounded-lg bg-blue-500/10 p-3 flex-shrink-0">
+                <FolderOpen className="h-6 w-6 text-blue-500" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Categories</p>
-                <p className="text-2xl font-bold">
-                  {loading ? <Skeleton className="h-7 w-10" /> : stats.storageByCategory.length}
-                </p>
+                {loading ? (
+                  <Skeleton className="h-7 w-12 mt-1" />
+                ) : (
+                  <p className="text-2xl font-bold">{stats.storageByCategory.length}</p>
+                )}
               </div>
             </CardContent>
           </Card>
-          <Card>
+
+          {/* Top Customers */}
+          <Card className="border-l-4 border-l-green-500">
             <CardContent className="flex items-center gap-4 p-6">
-              <div className="rounded-lg bg-primary/10 p-3">
-                <Users className="h-6 w-6 text-primary" />
+              <div className="rounded-lg bg-green-500/10 p-3 flex-shrink-0">
+                <Users className="h-6 w-6 text-green-500" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Top Customers</p>
-                <p className="text-2xl font-bold">
-                  {loading ? <Skeleton className="h-7 w-10" /> : stats.storageByCustomer.length}
-                </p>
+                {loading ? (
+                  <Skeleton className="h-7 w-12 mt-1" />
+                ) : (
+                  <p className="text-2xl font-bold">{stats.storageByCustomer.length}</p>
+                )}
               </div>
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
 
         {/* Charts */}
-        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
-          {/* Storage by Category Pie */}
+        <motion.div variants={itemVariants} className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+          {/* Storage by Category Donut */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Storage by Category</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Database className="h-5 w-5 text-primary" />
+                Storage by Category
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <Skeleton className="h-[300px] w-full" />
+                <Skeleton className="h-[300px] w-full rounded-lg" />
               ) : categoryData.length === 0 ? (
-                <p className="text-center py-12 text-muted-foreground">No storage data available</p>
+                <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground">
+                  <Database className="h-12 w-12 mb-3 opacity-30" />
+                  <p className="text-sm">No storage data available</p>
+                </div>
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
@@ -104,15 +144,15 @@ export default function StorageAnalytics() {
                       nameKey="name"
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      paddingAngle={2}
+                      innerRadius={70}
+                      outerRadius={110}
+                      paddingAngle={3}
                     >
                       {categoryData.map((entry, index) => (
                         <Cell key={index} fill={entry.fill} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: number) => formatBytes(value)} />
+                    <Tooltip formatter={(value: number) => [formatBytes(value), 'Storage']} />
                     <Legend formatter={(value) => <span className="text-xs">{value}</span>} />
                   </PieChart>
                 </ResponsiveContainer>
@@ -122,14 +162,20 @@ export default function StorageAnalytics() {
 
           {/* Storage by Customer Bar */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Top 10 Customers by Storage</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                Top 10 Customers by Storage
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <Skeleton className="h-[300px] w-full" />
+                <Skeleton className="h-[300px] w-full rounded-lg" />
               ) : customerData.length === 0 ? (
-                <p className="text-center py-12 text-muted-foreground">No customer storage data</p>
+                <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground">
+                  <Users className="h-12 w-12 mb-3 opacity-30" />
+                  <p className="text-sm">No customer storage data</p>
+                </div>
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={customerData} layout="vertical" margin={{ left: 20, right: 20 }}>
@@ -142,7 +188,7 @@ export default function StorageAnalytics() {
                       tick={{ fontSize: 10 }}
                       className="text-xs"
                     />
-                    <Tooltip formatter={(value: number) => formatBytes(value)} />
+                    <Tooltip formatter={(value: number) => [formatBytes(value), 'Storage']} />
                     <Bar dataKey="bytes" name="Storage" radius={[0, 4, 4, 0]}>
                       {customerData.map((entry, index) => (
                         <Cell key={index} fill={entry.fill} />
@@ -153,49 +199,72 @@ export default function StorageAnalytics() {
               )}
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
 
-        {/* Detailed Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Database className="h-5 w-5" />
-              Storage Breakdown
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-2">
-                {[1, 2, 3].map(i => <Skeleton key={i} className="h-10 w-full" />)}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {stats.storageByCategory.map((cat) => {
-                  const pct = stats.totalStorageBytes > 0
-                    ? Math.round((cat.bytes / stats.totalStorageBytes) * 100)
-                    : 0;
-                  return (
-                    <div key={cat.name} className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium truncate">{cat.name}</span>
-                        <span className="text-sm text-muted-foreground flex-shrink-0 ml-2">
-                          {formatBytes(cat.bytes)} ({pct}%)
-                        </span>
+        {/* Per-Bucket Usage Progress Bars */}
+        <motion.div variants={itemVariants}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <HardDrive className="h-5 w-5 text-primary" />
+                Storage Breakdown by Category
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="space-y-2">
+                      <div className="flex justify-between">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-4 w-20" />
                       </div>
-                      <div className="h-2 rounded-full bg-secondary overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-primary transition-all"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
+                      <Skeleton className="h-3 w-full rounded-full" />
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                  ))}
+                </div>
+              ) : stats.storageByCategory.length === 0 ? (
+                <p className="text-center py-8 text-sm text-muted-foreground">No categories found</p>
+              ) : (
+                <div className="space-y-4">
+                  {stats.storageByCategory.map((cat, i) => {
+                    const pct = stats.totalStorageBytes > 0
+                      ? Math.round((cat.bytes / stats.totalStorageBytes) * 100)
+                      : 0;
+                    const color = COLORS[i % COLORS.length];
+                    return (
+                      <div key={cat.name} className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: color }}
+                            />
+                            <span className="text-sm font-medium truncate">{cat.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <span className="text-sm text-muted-foreground">{formatBytes(cat.bytes)}</span>
+                            <Badge variant="secondary" className="text-xs tabular-nums">{pct}%</Badge>
+                          </div>
+                        </div>
+                        <div className="h-2.5 rounded-full bg-secondary overflow-hidden">
+                          <motion.div
+                            className="h-full rounded-full"
+                            style={{ backgroundColor: color }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={{ duration: 0.6, delay: i * 0.05, ease: 'easeOut' }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
     </AppLayout>
   );
 }

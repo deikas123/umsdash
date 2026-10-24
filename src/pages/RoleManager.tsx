@@ -47,6 +47,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Lock, Plus, Pencil, Trash2, CheckCircle2, X, ShieldCheck, Users } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { PageHeader } from '@/components/PageHeader';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -834,42 +836,42 @@ export default function RoleManager() {
       title="Role & Permission Manager"
       description="Define custom roles and control what each user can access"
     >
-      <div className="flex flex-col gap-1 mb-6">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="h-6 w-6 text-primary" />
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Role & Permission Manager</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">
-              Define custom roles and control what each user can access
-            </p>
-          </div>
-        </div>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+        className="space-y-4"
+      >
+        <PageHeader
+          title="Role & Permission Manager"
+          description="Define custom roles and control what each user can access"
+        />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="roles">Roles</TabsTrigger>
-          <TabsTrigger value="permissions">Permissions</TabsTrigger>
-          <TabsTrigger value="assignments">User Assignments</TabsTrigger>
-          <TabsTrigger value="audit">Permission Audit</TabsTrigger>
-        </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+            <TabsTrigger value="roles">Roles</TabsTrigger>
+            <TabsTrigger value="permissions">Permissions</TabsTrigger>
+            <TabsTrigger value="assignments">Assignments</TabsTrigger>
+            <TabsTrigger value="audit">Audit</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="roles">
-          <RolesTab onPermissionsTab={handlePermissionsTab} />
-        </TabsContent>
+          <TabsContent value="roles">
+            <RolesTab onPermissionsTab={handlePermissionsTab} />
+          </TabsContent>
 
-        <TabsContent value="permissions">
-          <PermissionsTab preselectedRole={permissionsRole} />
-        </TabsContent>
+          <TabsContent value="permissions">
+            <PermissionsTab preselectedRole={permissionsRole} />
+          </TabsContent>
 
-        <TabsContent value="assignments">
-          <UserRoleAssignmentsTab />
-        </TabsContent>
+          <TabsContent value="assignments">
+            <UserRoleAssignmentsTab />
+          </TabsContent>
 
-        <TabsContent value="audit">
-          <PermissionAuditTab />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="audit">
+            <PermissionAuditTab />
+          </TabsContent>
+        </Tabs>
+      </motion.div>
     </AppLayout>
   );
 }

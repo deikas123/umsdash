@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -22,19 +24,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { useCategories } from '@/hooks/useDocuments';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Pencil, Trash2, GripVertical, Loader2, FolderOpen } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Plus, Pencil, Trash2, Loader2, FolderOpen, Tag } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface CategoryForm {
@@ -229,88 +224,94 @@ export default function Categories() {
 
   return (
     <AppLayout title="Category Management" description="Manage document categories">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <FolderOpen className="h-5 w-5" />
-              Document Categories
-            </CardTitle>
-            <CardDescription>
-              Create and manage categories for organizing documents
-            </CardDescription>
-          </div>
-          <Button onClick={openAddDialog}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Category
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : categories.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <FolderOpen className="mx-auto h-12 w-12 mb-4 opacity-50" />
-              <p>No categories found. Create your first category to get started.</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">#</TableHead>
-                  <TableHead className="w-16">Color</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="hidden md:table-cell">Description</TableHead>
-                  <TableHead className="w-24 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categories.map((category) => (
-                  <TableRow key={category.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <GripVertical className="h-4 w-4" />
-                        {category.display_order}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div 
-                        className="w-6 h-6 rounded-full border-2 border-background shadow-sm" 
+      {/* Header action */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <Tag className="h-5 w-5 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">
+            {loading ? '...' : `${categories.length} categor${categories.length === 1 ? 'y' : 'ies'}`}
+          </span>
+        </div>
+        <Button onClick={openAddDialog}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Category
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-28" />)}
+        </div>
+      ) : categories.length === 0 ? (
+        <Card>
+          <CardContent className="py-16 text-center text-muted-foreground">
+            <FolderOpen className="mx-auto h-14 w-14 mb-4 opacity-30" />
+            <p className="font-medium text-base">No categories yet</p>
+            <p className="text-sm mt-1">Create your first category to start organizing documents.</p>
+            <Button className="mt-4" onClick={openAddDialog}>
+              <Plus className="h-4 w-4 mr-2" /> Add Category
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {categories.map((category, idx) => (
+            <motion.div
+              key={category.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.05, duration: 0.2 }}
+            >
+              <Card className="hover:shadow-md transition-shadow group">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* Color swatch */}
+                      <div
+                        className="w-10 h-10 rounded-xl flex-shrink-0 shadow-sm"
                         style={{ backgroundColor: category.color || '#3b82f6' }}
                       />
-                    </TableCell>
-                    <TableCell className="font-medium">{category.name}</TableCell>
-                    <TableCell className="hidden md:table-cell text-muted-foreground">
-                      {category.description || '—'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditDialog(category)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openDeleteDialog(category.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      <div className="min-w-0">
+                        <p className="font-semibold truncate">{category.name}</p>
+                        {category.description && (
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{category.description}</p>
+                        )}
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                    </div>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => openEditDialog(category)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => openDeleteDialog(category.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between">
+                    <Badge variant="outline" className="text-xs" style={{ borderColor: category.color || '#3b82f6', color: category.color || '#3b82f6' }}>
+                      Order #{category.display_order}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      <FolderOpen className="inline h-3 w-3 mr-1" />
+                      Documents
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      )}
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -364,8 +365,8 @@ export default function Categories() {
                     key={colorOption.value}
                     type="button"
                     className={`w-8 h-8 rounded-full border-2 transition-all ${
-                      form.color === colorOption.value 
-                        ? 'ring-2 ring-offset-2 ring-primary scale-110' 
+                      form.color === colorOption.value
+                        ? 'ring-2 ring-offset-2 ring-primary scale-110'
                         : 'border-transparent hover:scale-105'
                     }`}
                     style={{ backgroundColor: colorOption.value }}
@@ -373,6 +374,11 @@ export default function Categories() {
                     title={colorOption.name}
                   />
                 ))}
+              </div>
+              {/* Preview */}
+              <div className="flex items-center gap-3 mt-2 p-3 rounded-lg bg-muted/50">
+                <div className="w-8 h-8 rounded-lg" style={{ backgroundColor: form.color }} />
+                <span className="text-sm font-medium">{form.name || 'Category Name'}</span>
               </div>
             </div>
           </div>

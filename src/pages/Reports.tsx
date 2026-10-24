@@ -8,15 +8,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { exportToCSV, exportToPDF } from '@/lib/export-utils';
+import { motion } from 'framer-motion';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend, LineChart, Line, Area, AreaChart,
+  PieChart, Pie, Cell, Legend, AreaChart, Area,
 } from 'recharts';
 import {
   FileText, Users, ListTodo, MessageSquare, Download, TrendingUp,
   Calendar, BarChart3, PieChart as PieChartIcon, FileDown, ArrowRight,
 } from 'lucide-react';
-import { format, subDays, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { format, subDays } from 'date-fns';
 
 const COLORS = ['hsl(221, 83%, 53%)', 'hsl(142, 71%, 45%)', 'hsl(38, 92%, 50%)', 'hsl(0, 84%, 60%)', 'hsl(262, 83%, 58%)', 'hsl(174, 72%, 40%)'];
 
@@ -163,114 +164,116 @@ export default function Reports() {
 
   return (
     <AppLayout title="Reports & Analytics" description="System performance metrics and downloadable reports">
-      {/* Reports Hub upgrade banner */}
-      <div className="mb-4 flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-900 px-4 py-3 text-sm">
+      {/* Reports Hub banner */}
+      <div className="mb-5 flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-900 px-4 py-3 text-sm">
         <BarChart3 className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
         <div className="flex-1">
-          <span className="font-medium text-blue-900 dark:text-blue-200">
-            New: Reports Hub is now available.
-          </span>{' '}
-          <span className="text-blue-700 dark:text-blue-300">
-            Generate customized reports across all UMS Hub data, build custom queries, and export to CSV, PDF, or Excel.
-          </span>
+          <span className="font-medium text-blue-900 dark:text-blue-200">New: Reports Hub is now available.</span>{' '}
+          <span className="text-blue-700 dark:text-blue-300">Generate customized reports, build custom queries, and export to CSV, PDF, or Excel.</span>
         </div>
-        <Link
-          to="/admin/reports"
-          className="flex items-center gap-1 font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 whitespace-nowrap"
-        >
+        <Link to="/admin/reports" className="flex items-center gap-1 font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 whitespace-nowrap">
           Open Reports Hub <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
 
-      {/* Period Selector */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
-        <div className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-muted-foreground" />
-          <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Last 7 Days</SelectItem>
-              <SelectItem value="30">Last 30 Days</SelectItem>
-              <SelectItem value="90">Last 90 Days</SelectItem>
-              <SelectItem value="365">Last Year</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={exportDocReport}>
-            <FileDown className="h-4 w-4 mr-2" />
-            Documents PDF
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportTaskReport}>
-            <FileDown className="h-4 w-4 mr-2" />
-            Tasks PDF
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportSmsReport}>
-            <Download className="h-4 w-4 mr-2" />
-            SMS CSV
-          </Button>
-          <Button variant="default" size="sm" onClick={exportExecutiveSummary} disabled={loading}>
-            <FileDown className="h-4 w-4 mr-2" />
-            Executive Summary PDF
-          </Button>
+      {/* Header controls */}
+      <div className="flex flex-col gap-1 mb-6">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Analytics Overview</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">Data for the selected time period</p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Select value={period} onValueChange={setPeriod}>
+                <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">Last 7 Days</SelectItem>
+                  <SelectItem value="30">Last 30 Days</SelectItem>
+                  <SelectItem value="90">Last 90 Days</SelectItem>
+                  <SelectItem value="365">Last Year</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button variant="outline" size="sm" onClick={exportDocReport}>
+              <FileDown className="h-4 w-4 mr-2" />Documents PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportTaskReport}>
+              <FileDown className="h-4 w-4 mr-2" />Tasks PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportSmsReport}>
+              <Download className="h-4 w-4 mr-2" />SMS CSV
+            </Button>
+            <Button variant="default" size="sm" onClick={exportExecutiveSummary} disabled={loading}>
+              <FileDown className="h-4 w-4 mr-2" />Executive PDF
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Overview Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      {/* KPI cards */}
+      <motion.div
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+      >
         {loading ? (
           [1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24" />)
         ) : (
           <>
-            <Card>
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-900/30">
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-blue-100 dark:bg-blue-900/30">
                   <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{docStats.total}</p>
-                  <p className="text-xs text-muted-foreground">Documents</p>
+                  <p className="text-sm text-muted-foreground">Documents</p>
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-green-100 dark:bg-green-900/30">
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-green-100 dark:bg-green-900/30">
                   <ListTodo className="h-5 w-5 text-green-600 dark:text-green-400" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{taskStats.total}</p>
-                  <p className="text-xs text-muted-foreground">Tasks ({taskStats.completionRate}% done)</p>
+                  <p className="text-sm text-muted-foreground">Tasks
+                    <Badge variant="secondary" className="ml-1 text-xs">{taskStats.completionRate}% done</Badge>
+                  </p>
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-purple-100 dark:bg-purple-900/30">
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-purple-100 dark:bg-purple-900/30">
                   <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{userStats.total}</p>
-                  <p className="text-xs text-muted-foreground">Users</p>
+                  <p className="text-sm text-muted-foreground">Users</p>
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-amber-100 dark:bg-amber-900/30">
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-amber-100 dark:bg-amber-900/30">
                   <MessageSquare className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{smsStats.total}</p>
-                  <p className="text-xs text-muted-foreground">SMS ({smsStats.delivered} delivered)</p>
+                  <p className="text-sm text-muted-foreground">SMS
+                    <Badge variant="secondary" className="ml-1 text-xs">{smsStats.delivered} delivered</Badge>
+                  </p>
                 </div>
               </CardContent>
             </Card>
           </>
         )}
-      </div>
+      </motion.div>
 
       {loading ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -285,10 +288,14 @@ export default function Reports() {
                 <CardTitle className="text-base flex items-center gap-2">
                   <BarChart3 className="h-4 w-4" /> Documents by Category
                 </CardTitle>
+                <CardDescription>Distribution across document categories</CardDescription>
               </CardHeader>
               <CardContent>
                 {docStats.byCategory.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No data</p>
+                  <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                    <BarChart3 className="h-10 w-10 mb-2 opacity-30" />
+                    <p className="text-sm">No data for this period</p>
+                  </div>
                 ) : (
                   <ResponsiveContainer width="100%" height={250}>
                     <BarChart data={docStats.byCategory}>
@@ -308,10 +315,14 @@ export default function Reports() {
                 <CardTitle className="text-base flex items-center gap-2">
                   <PieChartIcon className="h-4 w-4" /> Documents by Status
                 </CardTitle>
+                <CardDescription>Status breakdown for the period</CardDescription>
               </CardHeader>
               <CardContent>
                 {docStats.byStatus.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No data</p>
+                  <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                    <PieChartIcon className="h-10 w-10 mb-2 opacity-30" />
+                    <p className="text-sm">No data for this period</p>
+                  </div>
                 ) : (
                   <ResponsiveContainer width="100%" height={250}>
                     <PieChart>
@@ -333,10 +344,14 @@ export default function Reports() {
               <CardTitle className="text-base flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" /> Upload Trend
               </CardTitle>
+              <CardDescription>Daily document uploads over the period</CardDescription>
             </CardHeader>
             <CardContent>
               {docStats.byDay.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No data</p>
+                <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                  <TrendingUp className="h-10 w-10 mb-2 opacity-30" />
+                  <p className="text-sm">No upload data for this period</p>
+                </div>
               ) : (
                 <ResponsiveContainer width="100%" height={200}>
                   <AreaChart data={docStats.byDay}>
@@ -361,7 +376,10 @@ export default function Reports() {
               </CardHeader>
               <CardContent>
                 {taskStats.byStatus.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No data</p>
+                  <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                    <ListTodo className="h-10 w-10 mb-2 opacity-30" />
+                    <p className="text-sm">No task data for this period</p>
+                  </div>
                 ) : (
                   <ResponsiveContainer width="100%" height={250}>
                     <PieChart>
@@ -384,7 +402,10 @@ export default function Reports() {
               </CardHeader>
               <CardContent>
                 {smsStats.byType.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No data</p>
+                  <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                    <MessageSquare className="h-10 w-10 mb-2 opacity-30" />
+                    <p className="text-sm">No SMS data for this period</p>
+                  </div>
                 ) : (
                   <ResponsiveContainer width="100%" height={250}>
                     <BarChart data={smsStats.byType} layout="vertical">
@@ -406,19 +427,27 @@ export default function Reports() {
               <CardTitle className="text-base flex items-center gap-2">
                 <Users className="h-4 w-4" /> Users by Role
               </CardTitle>
+              <CardDescription>Role distribution across the system</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {userStats.byRole.map((r: any, i: number) => (
-                  <div key={r.name} className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                    <div>
-                      <p className="font-semibold text-lg">{r.count}</p>
-                      <p className="text-sm text-muted-foreground">{r.name}s</p>
+              {userStats.byRole.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                  <Users className="h-10 w-10 mb-2 opacity-30" />
+                  <p className="text-sm">No user data available</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {userStats.byRole.map((r: any, i: number) => (
+                    <div key={r.name} className="flex items-center gap-3 p-4 rounded-lg bg-muted/50 hover:bg-muted/70 transition-colors">
+                      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                      <div>
+                        <p className="font-semibold text-lg">{r.count}</p>
+                        <p className="text-sm text-muted-foreground">{r.name}s</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </>

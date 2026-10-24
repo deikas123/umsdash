@@ -7,11 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Database, Download, Loader2, AlertTriangle, ShieldAlert, CheckCircle2, XCircle } from 'lucide-react';
+import { Database, Download, Loader2, AlertTriangle, ShieldAlert, CheckCircle2, XCircle, FileArchive, Clock } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import { PageHeader } from '@/components/PageHeader';
 
 const SUPER_ADMIN_EMAIL = 'amsterntechhub@gmail.com';
 
@@ -130,7 +133,6 @@ export default function DatabaseExport() {
 
       setResult(done);
 
-      // Auto-download
       const link = document.createElement('a');
       link.href = done.signed_url;
       link.download = done.filename;
@@ -155,16 +157,16 @@ export default function DatabaseExport() {
 
   return (
     <AppLayout>
-      <div className="space-y-6 max-w-4xl">
-        <div className="flex items-center gap-3">
-          <Database className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold">Database Export</h1>
-            <p className="text-muted-foreground">
-              Full backup: schema, data, relationships, storage files, edge functions, and an LLM-ready knowledge pack.
-            </p>
-          </div>
-        </div>
+      <motion.div
+        className="space-y-6 max-w-4xl"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+      >
+        <PageHeader
+          title="Database Export"
+          description="Full backup: schema, data, relationships, storage files, edge functions, and an LLM-ready knowledge pack."
+        />
 
         <Alert>
           <AlertTriangle className="h-4 w-4" />
@@ -176,16 +178,20 @@ export default function DatabaseExport() {
           </AlertDescription>
         </Alert>
 
+        {/* Build Export Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Build export</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <FileArchive className="h-5 w-5 text-primary" />
+              Build Export
+            </CardTitle>
             <CardDescription>
               Streams progress in real time. Every artifact is validated before
               the download link is issued.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-3 p-4 rounded-lg border bg-muted/30">
               <Checkbox
                 id="include-files"
                 checked={includeFiles}
@@ -193,61 +199,104 @@ export default function DatabaseExport() {
                 disabled={loading}
               />
               <div className="space-y-1">
-                <Label htmlFor="include-files" className="cursor-pointer">
+                <Label htmlFor="include-files" className="cursor-pointer font-medium">
                   Include storage files
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  Bundles every file from <code>documents</code>, <code>task-files</code>,
-                  and <code>avatars</code>. Disable for a faster, data-only export.
+                  Bundles every file from <code className="bg-muted px-1 rounded text-xs">documents</code>,{' '}
+                  <code className="bg-muted px-1 rounded text-xs">task-files</code>, and{' '}
+                  <code className="bg-muted px-1 rounded text-xs">avatars</code>.
+                  Disable for a faster, data-only export.
                 </p>
               </div>
             </div>
 
-            <div className="rounded-md border bg-muted/30 p-4 text-sm space-y-2">
-              <p className="font-medium">The ZIP contains</p>
-              <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                <li><code>schema.sql</code> — full DDL (tables, enums, FKs, indexes, functions, triggers, RLS)</li>
-                <li><code>data/&lt;table&gt;.sql</code> + <code>all-data.sql</code> + <code>full.sql</code></li>
-                <li><code>knowledge/relationships.jsonl</code> — FK graph</li>
-                <li><code>knowledge/documents.jsonl</code>, <code>task_files.jsonl</code>, <code>profiles.jsonl</code></li>
-                <li><code>edge_functions/</code> — every Deno function source + <code>config.toml</code></li>
-                <li><code>storage/</code> — raw files from every bucket</li>
-                <li><code>validation.json</code> + <code>SUMMARY.md</code> — integrity report</li>
-                <li><code>manifest.json</code>, <code>README.md</code>, <code>LLM_CONTEXT.md</code></li>
+            <div className="rounded-lg border bg-muted/30 p-4 text-sm space-y-3">
+              <p className="font-medium text-foreground">The ZIP contains</p>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-muted-foreground text-xs">
+                {[
+                  ['schema.sql', 'Full DDL: tables, enums, FKs, indexes, functions, triggers, RLS'],
+                  ['data/<table>.sql', 'Per-table SQL + all-data.sql + full.sql'],
+                  ['knowledge/relationships.jsonl', 'FK graph'],
+                  ['knowledge/documents.jsonl', 'Document + profile knowledge packs'],
+                  ['edge_functions/', 'Every Deno function source + config.toml'],
+                  ['storage/', 'Raw files from every bucket'],
+                  ['validation.json', 'Integrity report + SUMMARY.md'],
+                  ['LLM_CONTEXT.md', 'Manifest, README, and LLM context pack'],
+                ].map(([file, desc]) => (
+                  <li key={file} className="flex gap-2">
+                    <span className="text-primary">▸</span>
+                    <span><code className="font-mono">{file}</code> — {desc}</span>
+                  </li>
+                ))}
               </ul>
             </div>
 
-            <Button onClick={handleExport} disabled={loading} size="lg">
+            <Button
+              onClick={handleExport}
+              disabled={loading}
+              size="lg"
+              className="w-full sm:w-auto"
+            >
               {loading ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Building export…</>
               ) : (
-                <><Download className="mr-2 h-4 w-4" />Export database</>
+                <><Download className="mr-2 h-4 w-4" />Export Database</>
               )}
             </Button>
 
-            {progress && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium capitalize">{progress.phase.replace(/_/g, ' ')}</span>
-                  <span className="text-muted-foreground">{progress.pct}%</span>
-                </div>
-                <Progress value={progress.pct} />
-                <p className="text-sm text-muted-foreground">{progress.message}</p>
-                {log.length > 0 && (
-                  <ScrollArea className="h-40 rounded border bg-muted/20 p-2">
-                    <ul className="space-y-1 text-xs font-mono">
-                      {log.map((l, i) => (
-                        <li key={i} className="text-muted-foreground">
-                          <span className="text-primary">[{String(l.pct).padStart(3, ' ')}%]</span>{' '}
-                          <span className="uppercase text-foreground/70">{l.phase}</span>{' '}
-                          {l.message}
-                        </li>
-                      ))}
-                    </ul>
-                  </ScrollArea>
-                )}
-              </div>
-            )}
+            {/* Progress section */}
+            <AnimatePresence>
+              {progress && (
+                <motion.div
+                  key="progress"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-4 overflow-hidden"
+                >
+                  <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {loading && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                        <span className="font-semibold text-sm capitalize">
+                          {progress.phase.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      <Badge variant="secondary" className="text-lg font-bold tabular-nums px-3 py-1">
+                        {progress.pct}%
+                      </Badge>
+                    </div>
+                    <Progress value={progress.pct} className="h-3" />
+                    <p className="text-sm text-muted-foreground">{progress.message}</p>
+                  </div>
+
+                  {log.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Export log</span>
+                      </div>
+                      <ScrollArea className="h-44 rounded-lg border bg-black/5 dark:bg-white/5 p-3">
+                        <ul className="space-y-1 text-xs font-mono">
+                          {log.map((l, i) => (
+                            <li key={i} className="text-muted-foreground flex gap-2">
+                              <span className="text-primary font-bold tabular-nums w-10 flex-shrink-0">
+                                {String(l.pct).padStart(3, ' ')}%
+                              </span>
+                              <span className="uppercase text-foreground/60 w-24 flex-shrink-0 truncate">
+                                {l.phase}
+                              </span>
+                              <span className="flex-1">{l.message}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </ScrollArea>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {error && (
               <Alert variant="destructive">
@@ -259,77 +308,95 @@ export default function DatabaseExport() {
           </CardContent>
         </Card>
 
-        {result && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                {result.validation.ok ? (
-                  <><CheckCircle2 className="h-5 w-5 text-green-600" /> Validation passed</>
-                ) : (
-                  <><AlertTriangle className="h-5 w-5 text-yellow-600" /> Validation completed with warnings</>
-                )}
-              </CardTitle>
-              <CardDescription>
-                {result.filename} · {(result.size_bytes / 1024 / 1024).toFixed(2)} MB
-                · Download link valid 30 minutes
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Button asChild variant="default">
-                  <a href={result.signed_url} download={result.filename}>
-                    <Download className="mr-2 h-4 w-4" /> Download ZIP
-                  </a>
-                </Button>
-              </div>
+        {/* Result Card */}
+        <AnimatePresence>
+          {result && (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35 }}
+            >
+              <Card className={result.validation.ok ? 'border-green-500/50' : 'border-yellow-500/50'}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    {result.validation.ok ? (
+                      <><CheckCircle2 className="h-5 w-5 text-green-600" /> Validation passed</>
+                    ) : (
+                      <><AlertTriangle className="h-5 w-5 text-yellow-600" /> Completed with warnings</>
+                    )}
+                  </CardTitle>
+                  <CardDescription className="flex flex-wrap items-center gap-3">
+                    <span>{result.filename}</span>
+                    <Badge variant="secondary">{(result.size_bytes / 1024 / 1024).toFixed(2)} MB</Badge>
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      Link valid 30 minutes
+                    </span>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Button asChild variant="default" size="lg">
+                    <a href={result.signed_url} download={result.filename}>
+                      <Download className="mr-2 h-4 w-4" /> Download ZIP
+                    </a>
+                  </Button>
 
-              <div>
-                <p className="text-sm font-medium mb-2">Validation checks ({result.validation.checks.length})</p>
-                <ScrollArea className="h-64 rounded border">
-                  <table className="w-full text-xs">
-                    <thead className="bg-muted sticky top-0">
-                      <tr>
-                        <th className="text-left p-2">Item</th>
-                        <th className="text-left p-2">Expected</th>
-                        <th className="text-left p-2">Actual</th>
-                        <th className="text-left p-2 w-20">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {result.validation.checks.map((c, i) => (
-                        <tr key={i} className="border-t">
-                          <td className="p-2 font-mono">{c.item}</td>
-                          <td className="p-2 text-muted-foreground">{c.expected}</td>
-                          <td className="p-2 text-muted-foreground">{c.actual}</td>
-                          <td className="p-2">
-                            {c.ok ? (
-                              <Badge variant="outline" className="text-green-700 border-green-300">OK</Badge>
-                            ) : (
-                              <Badge variant="destructive">Fail</Badge>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </ScrollArea>
-              </div>
+                  <div>
+                    <p className="text-sm font-medium mb-2">
+                      Validation checks
+                      <Badge variant="secondary" className="ml-2">{result.validation.checks.length}</Badge>
+                    </p>
+                    <ScrollArea className="h-64 rounded-lg border">
+                      <table className="w-full text-xs">
+                        <thead className="bg-muted sticky top-0">
+                          <tr>
+                            <th className="text-left p-2">Item</th>
+                            <th className="text-left p-2">Expected</th>
+                            <th className="text-left p-2">Actual</th>
+                            <th className="text-left p-2 w-20">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {result.validation.checks.map((c, i) => (
+                            <tr key={i} className="border-t hover:bg-muted/30 transition-colors">
+                              <td className="p-2 font-mono">{c.item}</td>
+                              <td className="p-2 text-muted-foreground">{c.expected}</td>
+                              <td className="p-2 text-muted-foreground">{c.actual}</td>
+                              <td className="p-2">
+                                {c.ok ? (
+                                  <Badge variant="outline" className="text-green-700 border-green-300 bg-green-50 dark:bg-green-900/20 dark:text-green-400">
+                                    OK
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="destructive">Fail</Badge>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </ScrollArea>
+                  </div>
 
-              {result.validation.missing.length > 0 && (
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Missing items ({result.validation.missing.length})</AlertTitle>
-                  <AlertDescription>
-                    <ul className="list-disc list-inside text-xs max-h-40 overflow-auto">
-                      {result.validation.missing.map((m, i) => <li key={i}><code>{m}</code></li>)}
-                    </ul>
-                  </AlertDescription>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-        )}
-      </div>
+                  {result.validation.missing.length > 0 && (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertTitle>Missing items ({result.validation.missing.length})</AlertTitle>
+                      <AlertDescription>
+                        <ul className="list-disc list-inside text-xs max-h-40 overflow-auto mt-1 space-y-0.5">
+                          {result.validation.missing.map((m, i) => (
+                            <li key={i}><code>{m}</code></li>
+                          ))}
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
     </AppLayout>
   );
 }

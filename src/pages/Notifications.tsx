@@ -8,8 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquare, CheckCircle2, XCircle, Clock, Search, Send, RefreshCw, Phone } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { MessageSquare, CheckCircle2, XCircle, Clock, Search, Send, RefreshCw, Phone, X } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 
 interface SmsLog {
@@ -28,6 +30,7 @@ export default function Notifications() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [statusTab, setStatusTab] = useState<'all' | 'delivered' | 'failed'>('all');
   const [resending, setResending] = useState<string | null>(null);
   const [confirmResend, setConfirmResend] = useState<SmsLog | null>(null);
   const { toast } = useToast();
@@ -54,8 +57,12 @@ export default function Notifications() {
       log.message.toLowerCase().includes(search.toLowerCase());
     const matchesType = typeFilter === 'all' || log.sms_type === typeFilter;
     const matchesStatus = statusFilter === 'all' || log.status === statusFilter;
-    return matchesSearch && matchesType && matchesStatus;
+    const matchesTab = statusTab === 'all' || log.status === statusTab;
+    return matchesSearch && matchesType && matchesStatus && matchesTab;
   });
+
+  const hasFilters = search || typeFilter !== 'all' || statusFilter !== 'all';
+  const clearFilters = () => { setSearch(''); setTypeFilter('all'); setStatusFilter('all'); };
 
   const totalSent = logs.length;
   const delivered = logs.filter((l) => l.status === 'delivered').length;
@@ -113,7 +120,12 @@ export default function Notifications() {
     <AppLayout title="Notification Center" description="SMS delivery history and status tracking">
       <div className="space-y-6">
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
+        <motion.div
+          className="grid grid-cols-3 gap-3"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25 }}
+        >
           <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
             <CardContent className="flex items-center gap-3 p-4">
               <div className="rounded-full bg-primary/10 p-2.5">
@@ -147,6 +159,23 @@ export default function Notifications() {
               </div>
             </CardContent>
           </Card>
+        </motion.div>
+
+        {/* Status tabs */}
+        <div className="flex items-center gap-2 border-b pb-3">
+          {(['all', 'delivered', 'failed'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setStatusTab(tab)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                statusTab === tab
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+            >
+              {tab === 'all' ? `All (${logs.length})` : tab === 'delivered' ? `Delivered (${delivered})` : `Failed (${failed})`}
+            </button>
+          ))}
         </div>
 
         {/* Filters */}
@@ -173,12 +202,17 @@ export default function Notifications() {
               <SelectItem value="sent">Sent</SelectItem>
             </SelectContent>
           </Select>
+          {hasFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters}>
+              <X className="h-4 w-4 mr-1" /> Clear
+            </Button>
+          )}
         </div>
 
-        {/* Messages list - card-based for mobile responsiveness */}
+        {/* Messages list */}
         {isLoading ? (
-          <div className="flex justify-center py-10">
-            <Clock className="h-6 w-6 animate-spin text-muted-foreground" />
+          <div className="space-y-2">
+            {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-20 w-full" />)}
           </div>
         ) : filtered.length === 0 ? (
           <Card>
@@ -190,44 +224,57 @@ export default function Notifications() {
           </Card>
         ) : (
           <div className="space-y-2">
-            {filtered.map((log) => (
-              <Card key={log.id} className={`transition-all hover:shadow-sm ${log.status === 'failed' ? 'border-destructive/30 bg-destructive/5' : ''}`}>
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 mt-0.5">{statusIcon(log.status)}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <div className="flex items-center gap-1.5">
-                          <Phone className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-sm font-medium">{log.recipient_name || log.recipient_phone}</span>
+            {filtered.map((log, idx) => (
+              <motion.div
+                key={log.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.03, duration: 0.2 }}
+              >
+                <Card className={`transition-all hover:shadow-sm ${
+                  log.status === 'failed'
+                    ? 'border-destructive/40 bg-destructive/5'
+                    : log.status === 'delivered'
+                    ? 'border-emerald-200 dark:border-emerald-800'
+                    : ''
+                }`}>
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-0.5">{statusIcon(log.status)}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-sm font-medium">{log.recipient_name || log.recipient_phone}</span>
+                          </div>
+                          <Badge variant={log.status === 'delivered' ? 'default' : log.status === 'failed' ? 'destructive' : 'secondary'} className="text-[10px]">
+                            {log.status}
+                          </Badge>
+                          <Badge variant="outline" className="text-[10px]">{typeLabel(log.sms_type)}</Badge>
                         </div>
-                        <Badge variant={log.status === 'delivered' ? 'default' : log.status === 'failed' ? 'destructive' : 'secondary'} className="text-[10px]">
-                          {log.status}
-                        </Badge>
-                        <Badge variant="outline" className="text-[10px]">{typeLabel(log.sms_type)}</Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground line-clamp-2 mb-1">{log.message}</p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-muted-foreground" title={format(new Date(log.created_at), 'PPpp')}>
-                          {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
-                        </span>
-                        {log.status === 'failed' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs gap-1"
-                            disabled={resending === log.id}
-                            onClick={() => setConfirmResend(log)}
-                          >
-                            <RefreshCw className={`h-3 w-3 ${resending === log.id ? 'animate-spin' : ''}`} />
-                            Resend
-                          </Button>
-                        )}
+                        <p className="text-xs text-muted-foreground line-clamp-2 mb-1">{log.message}</p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-muted-foreground" title={format(new Date(log.created_at), 'PPpp')}>
+                            {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
+                          </span>
+                          {log.status === 'failed' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs gap-1"
+                              disabled={resending === log.id}
+                              onClick={() => setConfirmResend(log)}
+                            >
+                              <RefreshCw className={`h-3 w-3 ${resending === log.id ? 'animate-spin' : ''}`} />
+                              Resend
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </motion.div>
             ))}
           </div>
         )}

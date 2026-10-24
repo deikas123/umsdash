@@ -80,6 +80,8 @@ import {
   History,
   MoreVertical,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { PageHeader } from '@/components/PageHeader';
 
 const APPS: AppId[] = ['docs', 'ops'];
 const APP_LABELS: Record<AppId, string> = { docs: 'Docs', ops: 'Ops' };
@@ -544,6 +546,15 @@ export default function UserHub() {
 
   return (
     <AppLayout title="User Hub" description="Unified user management across all apps">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+      >
+      <PageHeader
+        title="User Hub"
+        description="Unified user management — roles, app access, departments, and bulk operations"
+      />
       <Tabs defaultValue="all" className="w-full">
         <TabsList className="mb-4 flex w-full flex-wrap justify-start">
           <TabsTrigger value="all"><UsersIcon className="mr-2 h-4 w-4" />All Users</TabsTrigger>
@@ -1211,6 +1222,7 @@ export default function UserHub() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </motion.div>
     </AppLayout>
   );
 }

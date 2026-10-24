@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -43,6 +44,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Plus, Pencil, Trash2, GraduationCap, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { PageHeader } from '@/components/PageHeader';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Json } from '@/integrations/supabase/types';
 
@@ -275,86 +278,133 @@ export default function TourManager() {
 
   return (
     <AppLayout title="Tour Manager" description="Manage onboarding tours for new users">
+      <motion.div
+        className="space-y-4"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+      >
+        <PageHeader
+          title="Tour Manager"
+          description="Create and manage guided tours shown to new users after login"
+          actions={
+            <Button onClick={openAddDialog}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Tour
+            </Button>
+          }
+        />
+
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <GraduationCap className="h-5 w-5" />
-              Onboarding Tours
-            </CardTitle>
-            <CardDescription>
-              Create and manage guided tours shown to new users after login
-            </CardDescription>
-          </div>
-          <Button onClick={openAddDialog}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Tour
-          </Button>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {isLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="p-4 space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-4 w-8" />
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                  <Skeleton className="h-8 w-20 ml-auto" />
+                </div>
+              ))}
             </div>
           ) : tours.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <GraduationCap className="mx-auto h-12 w-12 mb-4 opacity-50" />
-              <p>No tours found. Create your first onboarding tour to get started.</p>
+            <div className="text-center py-16 text-muted-foreground">
+              <GraduationCap className="mx-auto h-16 w-16 mb-4 opacity-30" />
+              <p className="text-lg font-medium mb-1">No tours yet</p>
+              <p className="text-sm">Create your first onboarding tour to guide new users.</p>
+              <Button onClick={openAddDialog} className="mt-4">
+                <Plus className="mr-2 h-4 w-4" />
+                Create First Tour
+              </Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-16">Order</TableHead>
-                  <TableHead className="w-40">Key</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="w-32">Target Role</TableHead>
-                  <TableHead className="w-24">Active</TableHead>
-                  <TableHead className="w-24 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tours.map((tour) => (
-                  <TableRow key={tour.id}>
-                    <TableCell className="text-muted-foreground">{tour.display_order}</TableCell>
-                    <TableCell className="font-mono text-xs">{tour.key}</TableCell>
-                    <TableCell className="font-medium">{tour.name}</TableCell>
-                    <TableCell>
-                      <Badge variant={getRoleBadgeVariant(tour.target_role)}>
-                        {tour.target_role ?? 'all'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={tour.is_active ? 'default' : 'secondary'}>
-                        {tour.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditDialog(tour)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openDeleteDialog(tour.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-16">Order</TableHead>
+                    <TableHead className="w-40">Key</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead className="w-32">Target Role</TableHead>
+                    <TableHead className="w-24">Status</TableHead>
+                    <TableHead className="w-32 text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {tours.map((tour, i) => (
+                    <motion.tr
+                      key={tour.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: i * 0.04 }}
+                      className="border-b transition-colors hover:bg-muted/50"
+                    >
+                      <TableCell className="text-muted-foreground font-mono">
+                        {tour.display_order}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {tour.key}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{tour.name}</p>
+                          {tour.description && (
+                            <p className="text-xs text-muted-foreground truncate max-w-xs">
+                              {tour.description}
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getRoleBadgeVariant(tour.target_role)}>
+                          {tour.target_role ?? 'all'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={
+                            tour.is_active
+                              ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400'
+                              : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800/40 dark:text-gray-400'
+                          }
+                        >
+                          {tour.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditDialog(tour)}
+                            className="h-7 px-2 gap-1 text-xs"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => openDeleteDialog(tour.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </motion.tr>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
+      </motion.div>
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>

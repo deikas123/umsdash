@@ -27,6 +27,8 @@ import { format, subDays } from 'date-fns';
 import { useReports, ReportFilters } from '@/hooks/useReports';
 import { exportToCSV, exportToPDF, exportToExcel } from '@/lib/export-utils';
 import { supabase } from '@/integrations/supabase/client';
+import { motion } from 'framer-motion';
+import { PageHeader } from '@/components/PageHeader';
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
@@ -1251,9 +1253,20 @@ export default function ReportsHub() {
 
   return (
     <AppLayout title="Reports Hub" description="Generate, customize and export reports across all UMS Hub data">
-      <div className="flex h-[calc(100vh-9rem)] gap-0 border rounded-xl overflow-hidden">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+        className="flex flex-col h-[calc(100vh-7rem)]"
+      >
+        <PageHeader
+          title="Reports Hub"
+          description="Generate, customize and export reports across all UMS Hub data"
+          className="mb-3 sm:mb-4 flex-shrink-0"
+        />
+      <div className="flex flex-1 min-h-0 border rounded-xl overflow-hidden">
         {/* Left sidebar */}
-        <aside className="w-[260px] flex-shrink-0 border-r bg-muted/30 overflow-y-auto">
+        <aside className="w-[240px] sm:w-[260px] flex-shrink-0 border-r bg-muted/30 overflow-y-auto">
           <div className="p-2">
             {REPORT_CATALOG.map(group => (
               <div key={group.id} className="mb-1">
@@ -1341,6 +1354,7 @@ export default function ReportsHub() {
           }
         </main>
       </div>
+      </motion.div>
     </AppLayout>
   );
 }

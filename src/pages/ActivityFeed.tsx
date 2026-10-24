@@ -19,6 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { exportToCSV, exportToPDF, activityLogExportColumns } from '@/lib/export-utils';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 import {
   Activity,
   FileText,
@@ -70,13 +71,34 @@ const actionIcons: Record<string, any> = {
   reminder: Bell,
 };
 
+// Timeline dot colors by action category
+const actionTimelineColors: Record<string, string> = {
+  create: 'bg-green-500',
+  update: 'bg-blue-500',
+  delete: 'bg-red-500',
+  login: 'bg-gray-400',
+  upload: 'bg-blue-500',
+  document_approved: 'bg-green-500',
+  document_archived: 'bg-gray-400',
+  document_pending: 'bg-blue-400',
+  password_reset: 'bg-amber-500',
+  chat: 'bg-purple-500',
+  task: 'bg-purple-500',
+  reminder: 'bg-purple-400',
+};
+
 const actionColors: Record<string, string> = {
-  upload: 'bg-primary/10 text-primary',
+  upload: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   document_approved: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   document_archived: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
   delete: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  create: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  create: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  update: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   password_reset_by_admin: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  login: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
+  chat: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  task: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  reminder: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
 };
 
 function getIcon(action: string) {
@@ -91,6 +113,13 @@ function getColor(action: string) {
     if (action.toLowerCase().includes(key)) return color;
   }
   return 'bg-muted text-muted-foreground';
+}
+
+function getDotColor(action: string) {
+  for (const [key, color] of Object.entries(actionTimelineColors)) {
+    if (action.toLowerCase().includes(key)) return color;
+  }
+  return 'bg-purple-500';
 }
 
 function formatAction(action: string): string {
@@ -385,39 +414,58 @@ export default function ActivityFeed() {
                 <div className="flex-1 h-px bg-border" />
                 <Badge variant="secondary" className="text-xs">{items.length}</Badge>
               </div>
-              <div className="space-y-2">
-                {items.map(log => {
-                  const Icon = getIcon(log.action);
-                  const color = getColor(log.action);
-                  const detail = log.details as any;
-                  return (
-                    <Card key={log.id} className="py-0 hover:shadow-md transition-shadow animate-slide-up">
-                      <CardContent className="p-3 flex items-start gap-3">
-                        <div className={`p-2 rounded-lg flex-shrink-0 ${color}`}>
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium text-sm">{log.user_name}</span>
-                            {roleBadge(log.user_role)}
-                            <span className="text-muted-foreground text-sm">{formatAction(log.action)}</span>
-                          </div>
-                          {detail && (
-                            <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                              {detail.document_title || detail.target_full_name || detail.task_title || detail.message || ''}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="outline" className="text-xs">{log.entity_type}</Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
-                            </span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+              {/* Timeline */}
+              <div className="relative pl-6">
+                {/* Vertical line */}
+                <div className="absolute left-2 top-0 bottom-0 w-px bg-border" />
+                <div className="space-y-3">
+                  {items.map((log, idx) => {
+                    const Icon = getIcon(log.action);
+                    const color = getColor(log.action);
+                    const dotColor = getDotColor(log.action);
+                    const detail = log.details as any;
+                    return (
+                      <motion.div
+                        key={log.id}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.025, duration: 0.2 }}
+                        className="relative"
+                      >
+                        {/* Timeline dot */}
+                        <div className={`absolute -left-[18px] top-3 w-2.5 h-2.5 rounded-full border-2 border-background ${dotColor}`} />
+                        <Card className="hover:shadow-md transition-shadow">
+                          <CardContent className="p-3 flex items-start gap-3">
+                            <div className={`p-2 rounded-lg flex-shrink-0 ${color}`}>
+                              <Icon className="h-4 w-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-medium text-sm">{log.user_name}</span>
+                                {roleBadge(log.user_role)}
+                                <span className="text-muted-foreground text-sm">{formatAction(log.action)}</span>
+                              </div>
+                              {detail && (
+                                <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                                  {detail.document_title || detail.target_full_name || detail.task_title || detail.message || ''}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline" className="text-xs">{log.entity_type}</Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
+                                </span>
+                                {log.ip_address && (
+                                  <span className="text-xs text-muted-foreground hidden sm:inline">{log.ip_address}</span>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           ))}
