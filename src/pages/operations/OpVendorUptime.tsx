@@ -23,6 +23,7 @@ import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, Cell, ReferenceLine,
 } from "recharts";
+import { SLACalculator } from "@/components/operations/SLACalculator";
 
 const SLA_TARGET = 99.5;
 
@@ -371,7 +372,8 @@ export default function OpVendorUptime() {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+
         <div className="card-shadow rounded-lg bg-card p-5">
           <h3 className="label-caps mb-4">Vendor Avg Uptime vs SLA</h3>
           {filteredSummary.length > 0 ? (
@@ -406,6 +408,7 @@ export default function OpVendorUptime() {
             </LineChart>
           </ResponsiveContainer>
         </div>
+        <SLACalculator />
       </div>
 
       {/* Vendor Detail Table */}

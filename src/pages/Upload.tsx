@@ -111,6 +111,13 @@ export default function Upload() {
   const [dateOpen, setDateOpen] = useState(false);
   const [preflightOpen, setPreflightOpen] = useState(false);
 
+  // Duplicate detection state
+  const [duplicatePrompt, setDuplicatePrompt] = useState<{
+    existingTitle: string;
+    existingDate: string;
+    resolve: (proceed: boolean) => void;
+  } | null>(null);
+
   // Set default category to "Registration Forms" when categories load
   useEffect(() => {
     if (categories.length > 0 && !defaultCategoryId) {
@@ -249,6 +256,32 @@ export default function Upload() {
     setPreflightOpen(true);
   };
 
+  const checkDuplicate = (fileItem: FileUploadItem): Promise<boolean> => {
+    return new Promise(async (resolve) => {
+      let query = supabase
+        .from('documents')
+        .select('title, created_at')
+        .eq('file_name', fileItem.file.name)
+        .eq('file_size', fileItem.file.size);
+      if (customerId) {
+        query = query.eq('customer_id', customerId);
+      }
+      const { data } = await query.limit(1).maybeSingle();
+      if (!data) {
+        resolve(true);
+        return;
+      }
+      setDuplicatePrompt({
+        existingTitle: (data as any).title || fileItem.file.name,
+        existingDate: format((data as any).created_at ? new Date((data as any).created_at) : new Date(), 'PPP'),
+        resolve: (proceed) => {
+          setDuplicatePrompt(null);
+          resolve(proceed);
+        },
+      });
+    });
+  };
+
   const runUpload = async () => {
     if (!user || !customerId) return;
     setPreflightOpen(false);
@@ -266,6 +299,16 @@ export default function Upload() {
       setFiles([...updatedFiles]);
 
       try {
+        // Duplicate detection: check before uploading
+        const proceed = await checkDuplicate(fileItem);
+        if (!proceed) {
+          updatedFiles[i] = { ...fileItem, status: 'error', error: 'Skipped (duplicate)' };
+          completed++;
+          setUploadProgress((completed / total) * 100);
+          setFiles([...updatedFiles]);
+          continue;
+        }
+
         const fileExt = fileItem.file.name.split('.').pop();
         const fileName = `${customerId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
@@ -718,6 +761,26 @@ export default function Upload() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Duplicate detection dialog */}
+      <AlertDialog open={duplicatePrompt !== null} onOpenChange={() => duplicatePrompt?.resolve(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Possible Duplicate</AlertDialogTitle>
+            <AlertDialogDescription>
+              {duplicatePrompt && (
+                <>
+                  Possible duplicate: &quot;{duplicatePrompt.existingTitle}&quot; (uploaded {duplicatePrompt.existingDate})
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => duplicatePrompt?.resolve(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => duplicatePrompt?.resolve(true)}>Upload Anyway</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </AppLayout>
 
   );

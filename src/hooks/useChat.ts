@@ -80,6 +80,26 @@ export function useChat() {
         mentions,
       });
       if (error) throw error;
+
+      // Send in-app notifications to mentioned users
+      if (mentions.length > 0) {
+        try {
+          await Promise.all(
+            mentions.map((mentionedUserId) =>
+              supabase.from('in_app_notifications').insert({
+                user_id: mentionedUserId,
+                title: 'You were mentioned in chat',
+                message: content.trim(),
+                type: 'mention',
+                link: '/docs/chat',
+                is_read: false,
+              })
+            )
+          );
+        } catch (notifError) {
+          console.error('Failed to send mention notifications:', notifError);
+        }
+      }
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }

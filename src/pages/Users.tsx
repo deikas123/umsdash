@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Link } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -70,6 +71,7 @@ interface UserWithRole {
   role?: AppRole;
   avatar_url?: string | null;
   must_reset_password?: boolean;
+  department?: string | null;
 }
 
 export default function Users() {
@@ -85,6 +87,16 @@ export default function Users() {
   const [bulkLoading, setBulkLoading] = useState(false);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
   const [pendingRole, setPendingRole] = useState<AppRole | null>(null);
+
+  // Bulk invite state
+  const [bulkInviteOpen, setBulkInviteOpen] = useState(false);
+  const [bulkInviteText, setBulkInviteText] = useState('');
+  const [bulkInviteRole, setBulkInviteRole] = useState<AppRole>('staff');
+  const [bulkInviteSubmitting, setBulkInviteSubmitting] = useState(false);
+  const [bulkInviteResults, setBulkInviteResults] = useState<Array<{ line: string; success: boolean; message: string }>>([]);
+
+  // Department filter state
+  const [departmentFilter, setDepartmentFilter] = useState('all');
 
   const toggleSelected = (id: string) => {
     setSelectedIds((prev) => {
@@ -295,6 +307,7 @@ export default function Users() {
         usersWithRoles.push({
           ...profile,
           role: roleData?.role as AppRole | undefined,
+          department: (profile as any).department ?? null,
         });
       }
 
@@ -317,9 +330,14 @@ export default function Users() {
 
   const filteredUsers = users.filter(
     (u) =>
-      u.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchTerm.toLowerCase())
+      (u.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchTerm.toLowerCase())) &&
+      (departmentFilter === 'all' || u.department === departmentFilter)
   );
+
+  const distinctDepartments = Array.from(
+    new Set(users.map((u) => u.department).filter((d): d is string => !!d))
+  ).sort();
 
   const sendCredentialsSms = async (phone: string, fullName: string, email: string, password: string) => {
     if (!phone) return;
@@ -331,6 +349,46 @@ export default function Users() {
     } catch (e) {
       console.error('Failed to send invitation SMS:', e);
     }
+  };
+
+  const handleBulkInvite = async () => {
+    if (!currentUser) return;
+    const lines = bulkInviteText.split('\n').map((l) => l.trim()).filter(Boolean);
+    if (lines.length === 0) return;
+    setBulkInviteSubmitting(true);
+    const results: Array<{ line: string; success: boolean; message: string }> = [];
+    for (const line of lines) {
+      const parts = line.split(',').map((p) => p.trim());
+      const [email, password, ...nameParts] = parts;
+      const full_name = nameParts.join(',').trim();
+      if (!email || !password || !full_name) {
+        results.push({ line, success: false, message: 'Invalid format — expected: email,password,full name' });
+        continue;
+      }
+      try {
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { full_name } },
+        });
+        if (signUpError) throw signUpError;
+        if (!authData.user) throw new Error('Failed to create auth user');
+        await supabase.from('profiles').insert({ user_id: authData.user.id, full_name, email });
+        await supabase.from('user_roles').insert({ user_id: authData.user.id, role: bulkInviteRole });
+        await supabase.from('audit_logs').insert({
+          user_id: currentUser.id,
+          action: 'user_created',
+          entity_type: 'user',
+          entity_id: authData.user.id,
+        });
+        results.push({ line, success: true, message: `${email} created successfully` });
+      } catch (err: any) {
+        results.push({ line, success: false, message: err?.message || 'Unknown error' });
+      }
+    }
+    setBulkInviteResults(results);
+    setBulkInviteSubmitting(false);
+    fetchUsers();
   };
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -503,7 +561,88 @@ export default function Users() {
           />
         </div>
 
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <div className="flex items-center gap-2">
+          {/* Department filter */}
+          <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+            <SelectTrigger className="h-10 w-44">
+              <SelectValue placeholder="All Departments" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Departments</SelectItem>
+              {distinctDepartments.map((d) => (
+                <SelectItem key={d} value={d}>{d}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Bulk Invite Dialog */}
+          <Dialog open={bulkInviteOpen} onOpenChange={(open) => { setBulkInviteOpen(open); if (!open) { setBulkInviteResults([]); setBulkInviteText(''); } }}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <UsersIcon className="h-4 w-4 mr-2" />
+                Bulk Invite
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Bulk Invite Users</DialogTitle>
+                <DialogDescription>
+                  Each line should be: <code className="text-xs bg-muted px-1 rounded">email,password,full name</code>
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Invites (one per line)</Label>
+                  <Textarea
+                    value={bulkInviteText}
+                    onChange={(e) => setBulkInviteText(e.target.value)}
+                    placeholder={`alice@example.com,pass123,Alice Smith\nbob@example.com,pass456,Bob Jones`}
+                    rows={6}
+                    disabled={bulkInviteSubmitting}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Role for all invites</Label>
+                  <Select value={bulkInviteRole} onValueChange={(v) => setBulkInviteRole(v as AppRole)} disabled={bulkInviteSubmitting}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="customer">Customer</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="user">User</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {bulkInviteResults.length > 0 && (
+                  <div className="max-h-48 overflow-auto rounded-md border p-2 space-y-1 text-xs">
+                    {bulkInviteResults.map((r, i) => (
+                      <div key={i} className={`flex items-start gap-2 ${r.success ? 'text-green-700 dark:text-green-400' : 'text-destructive'}`}>
+                        <span className="shrink-0">{r.success ? '✓' : '✗'}</span>
+                        <span className="break-all">{r.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex justify-end gap-3">
+                  <Button variant="outline" onClick={() => setBulkInviteOpen(false)} disabled={bulkInviteSubmitting}>
+                    Close
+                  </Button>
+                  <Button onClick={handleBulkInvite} disabled={bulkInviteSubmitting || !bulkInviteText.trim()}>
+                    {bulkInviteSubmitting ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending...</>
+                    ) : (
+                      <><Send className="mr-2 h-4 w-4" />Send Invites</>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -611,6 +750,7 @@ export default function Users() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {selectedIds.size > 0 && (
@@ -747,6 +887,7 @@ export default function Users() {
                   <TableHead>Email</TableHead>
                   <TableHead className="hidden md:table-cell">Phone</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead className="hidden md:table-cell">Department</TableHead>
                   <TableHead className="hidden md:table-cell">Created</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
@@ -781,6 +922,11 @@ export default function Users() {
                     <TableCell>
                       <Badge variant={getRoleBadgeVariant(u.role)} className="capitalize">
                         {u.role || 'No role'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <Badge variant="outline" className="text-xs font-normal">
+                        {u.department || '—'}
                       </Badge>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
