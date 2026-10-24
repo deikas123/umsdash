@@ -1,7 +1,10 @@
 import { useState } from 'react';
-import { Plus, Folder as FolderIcon, Loader2, ChevronRight, Home, FolderPlus } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Plus, Folder as FolderIcon, Loader2, ChevronRight, Home, FolderPlus, FolderOpen } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useFolders, type Folder } from '@/hooks/useFolders';
 import { FolderCard } from '@/components/folders/FolderCard';
 import { CreateFolderDialog } from '@/components/folders/CreateFolderDialog';
@@ -74,13 +77,45 @@ export default function Folders() {
   return (
     <AppLayout title="Private Folders" description="Manage your private document folders">
       <div className="space-y-6">
+        {/* ── Page header ──────────────────────────────────────────────────── */}
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Private Folders</h1>
+              <p className="text-muted-foreground text-sm mt-0.5">
+                Organize and manage your private document folders
+                {!loading && folders.length > 0 && (
+                  <span className="ml-2 text-xs">· {folders.filter(f => f.parent_id === null).length} folders</span>
+                )}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {canCreateHere && (
+                <Button onClick={() => setCreateDialogOpen(true)}>
+                  {currentFolder ? (
+                    <>
+                      <FolderPlus className="h-4 w-4 mr-2" />
+                      New Sub-folder
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      New Folder
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Breadcrumb */}
         {syncedPathStack.length > 0 && (
-          <nav className="flex items-center gap-1 text-sm flex-wrap">
+          <nav className="flex items-center gap-1 text-sm flex-wrap bg-muted/30 rounded-lg px-3 py-2">
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 gap-1 px-2"
+              className="h-7 gap-1 px-2"
               onClick={goToRoot}
             >
               <Home className="h-3.5 w-3.5" />
@@ -92,7 +127,7 @@ export default function Folders() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 px-2 font-medium"
+                  className="h-7 px-2 font-medium"
                   onClick={() => goToLevel(i)}
                   disabled={i === syncedPathStack.length - 1}
                 >
@@ -103,77 +138,80 @@ export default function Folders() {
           </nav>
         )}
 
-        {/* Header / actions */}
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder={currentFolder ? 'Search sub-folders...' : 'Search folders...'}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          {canCreateHere && (
-            <Button onClick={() => setCreateDialogOpen(true)}>
-              {currentFolder ? (
-                <>
-                  <FolderPlus className="h-4 w-4 mr-2" />
-                  New Sub-folder
-                </>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Folder
-                </>
-              )}
-            </Button>
-          )}
+        {/* Search */}
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder={currentFolder ? 'Search sub-folders...' : 'Search folders...'}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center p-12">
-            <Loader2 className="h-8 w-8 animate-spin" />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <Card key={i}>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <Skeleton className="h-10 w-10 rounded-lg" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/2" />
+                      <Skeleton className="h-3 w-1/3" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         ) : (
           <>
             {/* Sub-folders grid */}
             {currentFolder ? (
               <div className="space-y-4">
-                <h2 className="text-lg font-semibold">
-                  Sub-folders {filteredFolders.length > 0 && (
-                    <span className="text-sm text-muted-foreground font-normal">
-                      ({filteredFolders.length})
-                    </span>
-                  )}
+                <h2 className="text-base font-semibold text-muted-foreground">
+                  Sub-folders {filteredFolders.length > 0 && `(${filteredFolders.length})`}
                 </h2>
                 {filteredFolders.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center p-8 text-center border border-dashed rounded-lg">
-                    <FolderIcon className="h-10 w-10 text-muted-foreground/50 mb-3" />
-                    <p className="text-sm text-muted-foreground">
-                      No sub-folders yet
-                    </p>
-                    {canCreateHere && (
-                      <Button
-                        variant="link"
-                        size="sm"
-                        onClick={() => setCreateDialogOpen(true)}
-                      >
-                        Create a sub-folder
-                      </Button>
-                    )}
-                  </div>
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <FolderIcon className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                      <p className="font-medium">No sub-folders yet</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {canCreateHere ? 'Create a sub-folder to organize documents here.' : 'No sub-folders in this folder.'}
+                      </p>
+                      {canCreateHere && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-4"
+                          onClick={() => setCreateDialogOpen(true)}
+                        >
+                          <FolderPlus className="h-4 w-4 mr-2" />
+                          Create Sub-folder
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
                 ) : (
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {filteredFolders.map((folder) => (
-                      <FolderCard
+                    {filteredFolders.map((folder, i) => (
+                      <motion.div
                         key={folder.id}
-                        folder={folder}
-                        onClick={() => openFolder(folder)}
-                        onEdit={() => setEditFolder(folder)}
-                        onShare={() => setShareFolder(folder)}
-                        onDelete={() => deleteFolder(folder.id)}
-                      />
+                        initial={{ opacity: 0, scale: 0.97 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: i * 0.04 }}
+                      >
+                        <FolderCard
+                          folder={folder}
+                          onClick={() => openFolder(folder)}
+                          onEdit={() => setEditFolder(folder)}
+                          onShare={() => setShareFolder(folder)}
+                          onDelete={() => deleteFolder(folder.id)}
+                        />
+                      </motion.div>
                     ))}
                   </div>
                 )}
@@ -184,51 +222,67 @@ export default function Folders() {
                 </div>
               </div>
             ) : folders.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-12 text-center">
-                <FolderIcon className="h-16 w-16 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium">No folders yet</h3>
-                <p className="text-muted-foreground mt-1">
-                  {canCreateFolder
-                    ? 'Create your first private folder to organize documents.'
-                    : 'No folders have been shared with you yet.'}
-                </p>
-                {canCreateFolder && (
-                  <Button className="mt-4" onClick={() => setCreateDialogOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Folder
-                  </Button>
-                )}
-              </div>
+              <Card>
+                <CardContent className="py-16 text-center">
+                  <div className="mx-auto h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                    <FolderOpen className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold">No folders yet</h3>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    {canCreateFolder
+                      ? 'Create your first private folder to organize documents.'
+                      : 'No folders have been shared with you yet.'}
+                  </p>
+                  {canCreateFolder && (
+                    <Button className="mt-5" onClick={() => setCreateDialogOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Folder
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
             ) : (
               <>
                 {myFolders.length > 0 && (
-                  <div className="space-y-4">
-                    <h2 className="text-lg font-semibold">My Folders</h2>
+                  <div className="space-y-3">
+                    <h2 className="text-base font-semibold">My Folders <span className="text-sm text-muted-foreground font-normal">({myFolders.length})</span></h2>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {myFolders.map((folder) => (
-                        <FolderCard
+                      {myFolders.map((folder, i) => (
+                        <motion.div
                           key={folder.id}
-                          folder={folder}
-                          onClick={() => openFolder(folder)}
-                          onEdit={() => setEditFolder(folder)}
-                          onShare={() => setShareFolder(folder)}
-                          onDelete={() => deleteFolder(folder.id)}
-                        />
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.04 }}
+                        >
+                          <FolderCard
+                            folder={folder}
+                            onClick={() => openFolder(folder)}
+                            onEdit={() => setEditFolder(folder)}
+                            onShare={() => setShareFolder(folder)}
+                            onDelete={() => deleteFolder(folder.id)}
+                          />
+                        </motion.div>
                       ))}
                     </div>
                   </div>
                 )}
 
                 {sharedFolders.length > 0 && (
-                  <div className="space-y-4">
-                    <h2 className="text-lg font-semibold">Shared with Me</h2>
+                  <div className="space-y-3">
+                    <h2 className="text-base font-semibold">Shared with Me <span className="text-sm text-muted-foreground font-normal">({sharedFolders.length})</span></h2>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {sharedFolders.map((folder) => (
-                        <FolderCard
+                      {sharedFolders.map((folder, i) => (
+                        <motion.div
                           key={folder.id}
-                          folder={folder}
-                          onClick={() => openFolder(folder)}
-                        />
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.04 }}
+                        >
+                          <FolderCard
+                            folder={folder}
+                            onClick={() => openFolder(folder)}
+                          />
+                        </motion.div>
                       ))}
                     </div>
                   </div>

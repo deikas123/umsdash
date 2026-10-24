@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -134,85 +135,119 @@ export default function DocumentExpiry() {
 
   return (
     <AppLayout title="Document Expiry & Renewals" description="Track document expirations and manage renewals">
+      {/* ── Page header ──────────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-1 mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Document Expiry & Renewals</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">Track document expirations and manage renewals</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={fetchDocs}>
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Refresh
+            </Button>
+          </div>
+        </div>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setFilter('expired')}>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
-              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-red-600">{expired.length}</p>
-              <p className="text-xs text-muted-foreground">Expired</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setFilter('expiring')}>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
-              <CalendarClock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-amber-600">{expiringSoon.length}</p>
-              <p className="text-xs text-muted-foreground">Expiring Soon</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setFilter('valid')}>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
-              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-green-600">{documents.length - expired.length - expiringSoon.length - noExpiry.length}</p>
-              <p className="text-xs text-muted-foreground">Valid</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setFilter('no-expiry')}>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-muted">
-              <Clock className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{noExpiry.length}</p>
-              <p className="text-xs text-muted-foreground">No Expiry Set</p>
-            </div>
-          </CardContent>
-        </Card>
+        {[
+          { key: 'expired', label: 'Expired', count: expired.length, icon: AlertTriangle, color: 'red' },
+          { key: 'expiring', label: 'Expiring Soon', count: expiringSoon.length, icon: CalendarClock, color: 'amber' },
+          { key: 'valid', label: 'Valid', count: documents.length - expired.length - expiringSoon.length - noExpiry.length, icon: CheckCircle, color: 'green' },
+          { key: 'no-expiry', label: 'No Expiry Set', count: noExpiry.length, icon: Clock, color: 'slate' },
+        ].map((stat, i) => (
+          <motion.div
+            key={stat.key}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+          >
+            <Card
+              className={`cursor-pointer hover:shadow-md transition-all hover:-translate-y-0.5 ${filter === stat.key ? 'ring-2 ring-primary' : ''}`}
+              onClick={() => setFilter(filter === stat.key ? 'all' : stat.key)}
+            >
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className={`p-2.5 rounded-lg bg-${stat.color}-100 dark:bg-${stat.color}-900/30`}>
+                  <stat.icon className={`h-5 w-5 text-${stat.color}-600 dark:text-${stat.color}-400`} />
+                </div>
+                <div>
+                  <p className={`text-2xl font-bold text-${stat.color}-600 dark:text-${stat.color}-400`}>{stat.count}</p>
+                  <p className="text-xs text-muted-foreground">{stat.label}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search documents..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
-        </div>
-        <Select value={filter} onValueChange={setFilter}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Documents</SelectItem>
-            <SelectItem value="expired">Expired</SelectItem>
-            <SelectItem value="expiring">Expiring Soon (30d)</SelectItem>
-            <SelectItem value="valid">Valid</SelectItem>
-            <SelectItem value="no-expiry">No Expiry Set</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button variant="outline" size="icon" onClick={fetchDocs}>
-          <RefreshCw className="h-4 w-4" />
-        </Button>
-      </div>
+      <Card className="mb-4">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search documents..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
+            </div>
+            <Select value={filter} onValueChange={setFilter}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Documents</SelectItem>
+                <SelectItem value="expired">Expired</SelectItem>
+                <SelectItem value="expiring">Expiring Soon (30d)</SelectItem>
+                <SelectItem value="valid">Valid</SelectItem>
+                <SelectItem value="no-expiry">No Expiry Set</SelectItem>
+              </SelectContent>
+            </Select>
+            {(search || filter !== 'all') && (
+              <Button variant="outline" size="sm" onClick={() => { setSearch(''); setFilter('all'); }}>
+                Clear
+              </Button>
+            )}
+          </div>
+          {!loading && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Showing <strong>{filtered.length}</strong> of <strong>{documents.length}</strong> documents
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Table */}
       {loading ? (
-        <div className="space-y-3">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-14 w-full" />)}</div>
+        <Card>
+          <CardContent className="p-0">
+            <div className="space-y-0 divide-y">
+              {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="flex gap-4 px-4 py-3">
+                  <Skeleton className="h-4 flex-1" />
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-8 w-24" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       ) : filtered.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            <FileText className="mx-auto h-12 w-12 mb-4 opacity-30" />
-            <p className="text-lg font-medium">No documents found</p>
+          <CardContent className="py-16 text-center">
+            <FileText className="mx-auto h-14 w-14 mb-4 text-muted-foreground/30" />
+            <p className="text-lg font-semibold">No documents found</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {search || filter !== 'all' ? 'Try adjusting your search or filters.' : 'No documents with expiry dates yet.'}
+            </p>
+            {(search || filter !== 'all') && (
+              <Button variant="outline" size="sm" className="mt-4" onClick={() => { setSearch(''); setFilter('all'); }}>
+                Clear filters
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -222,39 +257,47 @@ export default function DocumentExpiry() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Document</TableHead>
-                    <TableHead className="hidden md:table-cell">Customer</TableHead>
-                    <TableHead className="hidden md:table-cell">Category</TableHead>
-                    <TableHead>Expiry Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="px-4 py-3 sticky top-0 bg-background">Document</TableHead>
+                    <TableHead className="hidden md:table-cell px-4 py-3 sticky top-0 bg-background">Customer</TableHead>
+                    <TableHead className="hidden md:table-cell px-4 py-3 sticky top-0 bg-background">Category</TableHead>
+                    <TableHead className="px-4 py-3 sticky top-0 bg-background">Expiry Date</TableHead>
+                    <TableHead className="px-4 py-3 sticky top-0 bg-background">Status</TableHead>
+                    <TableHead className="text-right px-4 py-3 sticky top-0 bg-background">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map(doc => {
+                  {filtered.map((doc, idx) => {
                     const expiry = getExpiryStatus(doc.expiry_date);
+                    const isExpired = doc.expiry_date && new Date(doc.expiry_date) < now;
+                    const daysLeft = doc.expiry_date ? differenceInDays(new Date(doc.expiry_date), now) : null;
+                    const isSoon = daysLeft !== null && daysLeft >= 0 && daysLeft <= 30;
+                    const rowClass = isExpired
+                      ? 'bg-red-50/50 dark:bg-red-950/10 hover:bg-red-50 dark:hover:bg-red-950/20'
+                      : isSoon
+                        ? 'bg-amber-50/50 dark:bg-amber-950/10 hover:bg-amber-50 dark:hover:bg-amber-950/20'
+                        : idx % 2 === 0 ? 'even:bg-muted/30 hover:bg-muted/50' : 'hover:bg-muted/50';
                     return (
-                      <TableRow key={doc.id}>
-                        <TableCell>
+                      <TableRow key={doc.id} className={rowClass}>
+                        <TableCell className="px-4 py-3">
                           <div>
                             <p className="font-medium text-sm">{doc.title}</p>
                             <p className="text-xs text-muted-foreground md:hidden">{doc.customer_name}</p>
                           </div>
                         </TableCell>
-                        <TableCell className="hidden md:table-cell text-sm">{doc.customer_name}</TableCell>
-                        <TableCell className="hidden md:table-cell">
+                        <TableCell className="hidden md:table-cell px-4 py-3 text-sm">{doc.customer_name}</TableCell>
+                        <TableCell className="hidden md:table-cell px-4 py-3">
                           <Badge variant="outline" className="text-xs">{doc.category_name}</Badge>
                         </TableCell>
-                        <TableCell className="text-sm">
+                        <TableCell className="px-4 py-3 text-sm">
                           {doc.expiry_date ? format(new Date(doc.expiry_date), 'MMM d, yyyy') : '—'}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="px-4 py-3">
                           <Badge variant={expiry.variant} className="text-xs gap-1">
                             <expiry.icon className="h-3 w-3" />
                             {expiry.label}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right px-4 py-3">
                           <Button
                             variant="outline"
                             size="sm"

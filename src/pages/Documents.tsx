@@ -56,7 +56,6 @@ import {
   Tag,
   ScanText,
   Filter,
-  HardDrive,
 } from 'lucide-react';
 import { downloadWithWatermark } from '@/lib/watermark-utils';
 import { format } from 'date-fns';
@@ -515,6 +514,39 @@ export default function Documents() {
           </div>
         </CardContent>
       </Card>
+
+      {/* ── Active filter chips + results count ─────────────────────────── */}
+      {(hasFilters || !loading) && (
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <span className="text-xs text-muted-foreground">
+            Showing <strong>{sortedDocuments.length}</strong> result{sortedDocuments.length !== 1 ? 's' : ''}
+          </span>
+          {searchTerm && (
+            <Badge variant="secondary" className="gap-1 cursor-pointer" onClick={() => setSearchTerm('')}>
+              Search: {searchTerm} <X className="h-3 w-3" />
+            </Badge>
+          )}
+          {categoryFilter !== 'all' && (
+            <Badge variant="secondary" className="gap-1 cursor-pointer" onClick={() => setCategoryFilter('all')}>
+              <Tag className="h-3 w-3" />
+              {categories.find(c => c.id === categoryFilter)?.name ?? categoryFilter}
+              <X className="h-3 w-3" />
+            </Badge>
+          )}
+          {statusFilter !== 'all' && (
+            <Badge variant="secondary" className="gap-1 cursor-pointer capitalize" onClick={() => setStatusFilter('all')}>
+              <Filter className="h-3 w-3" />
+              {statusFilter}
+              <X className="h-3 w-3" />
+            </Badge>
+          )}
+          {hasFilters && (
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={clearFilters}>
+              Clear all
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* ── Selection / bulk-action strip ───────────────────────────────────── */}
       {canBulkManage && sortedDocuments.length > 0 && (

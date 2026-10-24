@@ -29,10 +29,8 @@ import { Label } from '@/components/ui/label';
 import {
   FileText,
   Users,
-  Upload,
   Clock,
   TrendingUp,
-  TrendingDown,
   Plus,
   Search,
   HardDrive,
@@ -171,7 +169,6 @@ export default function Dashboard() {
     : 0;
 
   const weekTotal = weeklyUploads.reduce((s, d) => s + d.count, 0);
-  const prevWeekTotal = weekTotal; // placeholder — we only have current week
 
   return (
     <>

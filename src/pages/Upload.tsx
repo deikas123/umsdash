@@ -57,11 +57,7 @@ import { CameraCapture } from '@/components/upload/CameraCapture';
 import { CreateCustomerDialog } from '@/components/upload/CreateCustomerDialog';
 import { BulkCustomerUpload } from '@/components/upload/BulkCustomerUpload';
 import { 
-  Upload as UploadIcon, 
   File, 
-  FileImage,
-  FilePdf,
-  FileText,
   X, 
   Check, 
   ChevronsUpDown, 
@@ -74,8 +70,6 @@ import {
   CloudUpload,
   User,
   Tag,
-  ExternalLink,
-  ArrowRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
