@@ -10,6 +10,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { Badge } from '@/components/ui/badge';
 import { FileText, Activity, LogOut, ShoppingBag, LayoutGrid, Layers, List } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { WelcomeScreen } from '@/components/WelcomeScreen';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrgSettings } from '@/hooks/useOrgSettings';
@@ -32,6 +33,15 @@ export default function AppLauncher() {
   const [viewMode, setViewMode] = useState<'classic' | 'modern' | 'compact'>(
     () => (localStorage.getItem('umshub_launcher_view') as 'classic' | 'modern' | 'compact') || 'classic',
   );
+
+  const [showWelcome, setShowWelcome] = useState(
+    () => !sessionStorage.getItem('umshub_welcome_seen')
+  );
+
+  const handleWelcomeComplete = () => {
+    sessionStorage.setItem('umshub_welcome_seen', '1');
+    setShowWelcome(false);
+  };
 
   // B1 — live stats query.
   // NOTE: the spec named the streak table 'user_streaks', but this project's
@@ -140,6 +150,7 @@ export default function AppLauncher() {
 
   return (
     <div data-tour="app-launcher" className="min-h-screen bg-background">
+      {showWelcome && <WelcomeScreen onComplete={handleWelcomeComplete} />}
       {/* Top bar */}
       <header className="flex items-center justify-between px-6 py-4 border-b bg-card">
         <div className="flex items-center gap-3">
@@ -222,9 +233,11 @@ export default function AppLauncher() {
                 return (
                   <motion.div
                     key={app.id}
-                    initial={{ opacity: 0, y: 12 }}
+                    initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.25, delay: i * 0.06 }}
+                    transition={{ duration: 0.35, delay: i * 0.1, type: 'spring', stiffness: 120, damping: 14 }}
+                    whileHover={{ scale: 1.02, y: -4 }}
+                    style={{ cursor: 'pointer' }}
                   >
                     <Card
                       data-tour={app.dataTour}
