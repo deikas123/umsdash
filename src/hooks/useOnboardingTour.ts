@@ -11,7 +11,6 @@ import React, {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import TourController from '@/components/onboarding/TourController';
 import type { Database } from '@/integrations/supabase/types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -267,10 +266,7 @@ export function OnboardingTourProvider({ children }: { children: ReactNode }) {
   return React.createElement(
     OnboardingTourContext.Provider,
     { value },
-    React.createElement(React.Fragment, null,
-      children,
-      React.createElement(TourController, null),
-    ),
+    children,
   );
 }
 

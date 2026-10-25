@@ -17,6 +17,7 @@ import { AppBreadcrumb } from './Breadcrumb';
 import { MobileNav } from './MobileNav';
 import { QuickActions } from '@/components/QuickActions';
 import { WhatsNew } from '@/components/WhatsNew';
+import { TourController } from '@/components/onboarding/TourController';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -43,6 +44,7 @@ export function AppLayout({ children, title, description }: AppLayoutProps) {
 
   return (
     <SidebarProvider>
+      <TourController />
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <SidebarInset className="flex-1 flex flex-col">
