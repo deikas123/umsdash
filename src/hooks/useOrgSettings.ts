@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 export interface OrgSettings {
   org_logo_url: string;
   announcement: { text: string; color: string; active: boolean };
-  maintenance_mode: boolean;
+  maintenance_mode: { active: boolean; message: string };
   oncall_schedule: Record<string, string>;
   doc_templates: Array<{ id: string; name: string; category: string; description: string }>;
 }
@@ -12,7 +12,7 @@ export interface OrgSettings {
 const DEFAULTS: OrgSettings = {
   org_logo_url: '',
   announcement: { text: '', color: 'blue', active: false },
-  maintenance_mode: false,
+  maintenance_mode: { active: false, message: 'System is under maintenance.' },
   oncall_schedule: {},
   doc_templates: [],
 };
@@ -27,7 +27,7 @@ async function fetchSettings(): Promise<OrgSettings> {
   return {
     org_logo_url: (map['org_logo_url'] as string) ?? '',
     announcement: (map['announcement'] as OrgSettings['announcement']) ?? DEFAULTS.announcement,
-    maintenance_mode: (map['maintenance_mode'] as boolean) ?? false,
+    maintenance_mode: (map['maintenance_mode'] as OrgSettings['maintenance_mode']) ?? DEFAULTS.maintenance_mode,
     oncall_schedule: (map['oncall_schedule'] as OrgSettings['oncall_schedule']) ?? {},
     doc_templates: (map['doc_templates'] as OrgSettings['doc_templates']) ?? [],
   };

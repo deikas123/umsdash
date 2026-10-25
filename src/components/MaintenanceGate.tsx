@@ -10,7 +10,7 @@ export function MaintenanceGate({ children }: Props) {
   const { isAdmin } = useAuth();
 
   // Admins always bypass maintenance mode; wait for settings to load
-  if (loading || isAdmin || !settings.maintenance_mode) {
+  if (loading || isAdmin || !settings.maintenance_mode?.active) {
     return <>{children}</>;
   }
 
@@ -22,7 +22,7 @@ export function MaintenanceGate({ children }: Props) {
         </div>
         <h1 className="text-2xl font-bold">Maintenance in Progress</h1>
         <p className="text-muted-foreground">
-          UMS Hub is currently undergoing scheduled maintenance. We'll be back shortly. Please check back later.
+          {settings.maintenance_mode?.message || 'UMS Hub is currently undergoing scheduled maintenance. We\'ll be back shortly.'}
         </p>
         <p className="text-xs text-muted-foreground">If you need immediate assistance, contact your system administrator.</p>
       </div>
