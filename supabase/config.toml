@@ -23,3 +23,18 @@ verify_jwt = false
 
 [functions.admin-update-email]
 verify_jwt = false
+
+[functions.welcome-sms]
+verify_jwt = false
+
+[functions.hr-notify-sms]
+verify_jwt = false
+
+[functions.weekly-digest]
+verify_jwt = false
+
+[functions.hr-check-expiring-docs]
+verify_jwt = false
+
+[functions.hr-send-pulse-reminders]
+verify_jwt = false

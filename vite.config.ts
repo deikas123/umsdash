@@ -1,10 +1,32 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode, command }) => {
+  const env = loadEnv(mode, process.cwd(), "VITE_");
+  const missingEnv: string[] = [];
+
+  if (command === "build") {
+    if (!env.VITE_SUPABASE_URL?.trim()) {
+      missingEnv.push("VITE_SUPABASE_URL");
+    }
+    if (
+      !env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() &&
+      !env.VITE_SUPABASE_ANON_KEY?.trim()
+    ) {
+      missingEnv.push("VITE_SUPABASE_PUBLISHABLE_KEY or VITE_SUPABASE_ANON_KEY");
+    }
+    if (missingEnv.length > 0) {
+      throw new Error(
+        `Missing required environment variable(s): ${missingEnv.join(", ")}. ` +
+          "Set them in the deployment environment before building the app.",
+      );
+    }
+  }
+
+  return {
   server: {
     host: "::",
     port: 8080,
@@ -85,4 +107,5 @@ export default defineConfig(({ mode }) => ({
       external: (id: string) => id.startsWith("core-js/"),
     },
   },
-}));
+  };
+});

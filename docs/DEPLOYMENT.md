@@ -201,6 +201,16 @@ Create `netlify.toml`:
   status = 200
 ```
 
+In Netlify, open **Site configuration → Environment variables** and add:
+
+- `VITE_SUPABASE_URL` — the Supabase project URL
+- `VITE_SUPABASE_PUBLISHABLE_KEY` — the project's publishable/anon key
+
+Alternatively, set `VITE_SUPABASE_ANON_KEY` instead of
+`VITE_SUPABASE_PUBLISHABLE_KEY`. These values must be available to the build;
+adding them only at runtime will not work because Vite embeds them during
+`npm run build`. Trigger a new deploy after saving the variables.
+
 ### Nginx (VPS)
 
 ```nginx
