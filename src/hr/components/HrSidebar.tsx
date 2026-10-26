@@ -1,7 +1,7 @@
-﻿import { NavLink, useLocation } from 'react-router-dom';
+﻿import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, DollarSign, CalendarDays, Building2,
-  FileText, Settings, ChevronLeft, ChevronRight, LogOut, Wallet, Shield, ClipboardList, UserCircle, Contact, Clock, Megaphone, ListChecks, MessageSquare, ClipboardCheck, Lightbulb,
+  FileText, Settings, ChevronLeft, ChevronRight, LogOut, Wallet, Shield, ClipboardList, UserCircle, Contact, Clock, Megaphone, ListChecks, MessageSquare, ClipboardCheck, Lightbulb, ArrowLeft,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -42,6 +42,7 @@ const roleLabels: Record<HrRole, string> = {
 export default function HrSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const { role, user, signOut } = useAuth();
+  const navigate = useNavigate();
   const currentRole: HrRole = role === 'hr_manager' ? 'hr' : ((role as HrRole) ?? 'staff');
   const location = useLocation();
   const { data: unreadMessages = 0 } = useUnreadMessageCount();
@@ -51,20 +52,33 @@ export default function HrSidebar() {
     !participated.has(s.id) && ((s as any).reminder_channel === 'inapp' || (s as any).reminder_channel === 'both')
   ).length;
 
+  const SUPER_ADMIN_EMAIL = 'amsterntechhub@gmail.com';
+  const isSuperAdmin = user?.email?.toLowerCase() === SUPER_ADMIN_EMAIL;
+
   const visibleItems = navItems.filter(item =>
-    item.roles.includes(currentRole)
+    isSuperAdmin || item.roles.includes(currentRole)
   );
 
   return (
     <aside className={`fixed left-0 top-0 h-screen bg-sidebar text-sidebar-foreground flex flex-col transition-all duration-300 z-50 ${collapsed ? 'w-16' : 'w-64'}`}>
-      {/* Logo */}
+      {/* Logo + Back to UMS Hub */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-sidebar-border">
-        <img src={umsLogo} alt="UMS Kenya" className="h-8 w-auto" />
+        <img src={umsLogo} alt="UMS Kenya" className="h-8 w-auto flex-shrink-0" />
         {!collapsed && (
-          <div className="flex flex-col">
+          <div className="flex flex-col flex-1 min-w-0">
             <span className="text-sm font-bold text-sidebar-primary-foreground">UMS Kenya</span>
             <span className="text-xs text-sidebar-muted">HR System</span>
           </div>
+        )}
+        {!collapsed && (
+          <button
+            onClick={() => navigate('/')}
+            title="Back to UMS Hub"
+            className="flex-shrink-0 flex items-center gap-1 text-[10px] text-sidebar-muted hover:text-sidebar-foreground transition-colors px-1.5 py-1 rounded hover:bg-sidebar-accent"
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Hub
+          </button>
         )}
       </div>
 
@@ -72,7 +86,7 @@ export default function HrSidebar() {
       {!collapsed && (
         <div className="px-3 py-3 border-b border-sidebar-border">
           <span className="text-xs px-2 py-1 rounded-full bg-sidebar-primary/20 text-sidebar-primary">
-            {roleLabels[currentRole]}
+            {isSuperAdmin ? 'Super Admin' : roleLabels[currentRole]}
           </span>
         </div>
       )}

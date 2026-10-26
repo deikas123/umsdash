@@ -1,0 +1,396 @@
+openapi: 3.1.0
+info:
+  title: UMS Hub Incidents API
+  version: 1.0.0
+  description: |
+    Server-to-server REST API for reading incident data from UMS Hub.
+    Authenticate with an API key generated in the UMS Hub admin panel.
+  contact:
+    email: amsterntechhub@gmail.com
+
+servers:
+  - url: https://mmnpopwzfjyfasvzzatg.supabase.co/functions/v1/incidents-api
+    description: Production
+
+security:
+  - ApiKeyHeader: []
+
+components:
+  securitySchemes:
+    ApiKeyHeader:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: API key generated from UMS Hub › Admin › API Keys
+
+  schemas:
+    Incident:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        incident_number:
+          type: string
+          example: UMS-INC-048
+        department:
+          type: string
+          nullable: true
+          example: Sales
+        incident_type:
+          type: string
+          nullable: true
+          example: Theft / Suspected Theft
+        severity:
+          type: string
+          nullable: true
+          enum:
+            - Level 1 – Minor
+            - Level 2 – Moderate
+            - Level 3 – Major
+            - Level 4 – Critical
+          example: Level 2 – Moderate
+        urgency:
+          type: string
+          nullable: true
+          enum: [Low, Medium, High, Immediate]
+        status:
+          type: string
+          enum: [draft, open, in_progress, resolved, closed]
+          example: open
+        reported_by:
+          type: string
+          nullable: true
+          example: Denis Mwai
+        date_of_incident:
+          type: string
+          format: date
+          nullable: true
+          example: "2026-10-22"
+        description:
+          type: string
+          nullable: true
+        capa_status:
+          type: string
+          nullable: true
+          enum: [open, done]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    IncidentDetail:
+      allOf:
+        - $ref: '#/components/schemas/Incident'
+        - type: object
+          properties:
+            location:
+              type: string
+              nullable: true
+            witnesses:
+              type: string
+              nullable: true
+            persons_involved:
+              type: string
+              nullable: true
+            item_description:
+              type: string
+              nullable: true
+            item_quantity:
+              type: integer
+              nullable: true
+            estimated_value:
+              type: number
+              nullable: true
+            problem_statement:
+              type: string
+              nullable: true
+            why_1:
+              type: string
+              nullable: true
+            why_2:
+              type: string
+              nullable: true
+            why_3:
+              type: string
+              nullable: true
+            why_4:
+              type: string
+              nullable: true
+            why_5:
+              type: string
+              nullable: true
+            capa_action:
+              type: string
+              nullable: true
+            capa_owner:
+              type: string
+              nullable: true
+            capa_deadline:
+              type: string
+              format: date
+              nullable: true
+
+    PaginationMeta:
+      type: object
+      properties:
+        total:
+          type: integer
+          example: 48
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        pages:
+          type: integer
+          example: 3
+
+    EventMeta:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 12
+        cursor:
+          type: string
+          format: date-time
+          description: Pass as cursor in the next request to get only newer events
+          example: "2026-10-22T09:15:32.000Z"
+        has_more:
+          type: boolean
+          example: false
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Unauthorized. Provide a valid API key in the x-api-key header.
+
+paths:
+  /incidents:
+    get:
+      operationId: listIncidents
+      summary: List incidents
+      description: Returns a paginated list of incidents. Supports filtering by status, severity, department, and date range.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: Page number (1-based)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+          description: Results per page (max 100)
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, open, in_progress, resolved, closed]
+          description: Filter by status
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: ["Level 1", "Level 2", "Level 3", "Level 4"]
+          description: Filter by severity prefix (e.g. "Level 3" matches "Level 3 – Major")
+        - name: department
+          in: query
+          schema:
+            type: string
+          description: Filter by exact department name
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Return incidents created at or after this ISO timestamp
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Return incidents created at or before this ISO timestamp
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Incident'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+              example:
+                data:
+                  - id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    incident_number: "UMS-INC-048"
+                    department: "Sales"
+                    incident_type: "Theft / Suspected Theft"
+                    severity: "Level 2 – Moderate"
+                    urgency: "High"
+                    status: "open"
+                    reported_by: "Denis Mwai"
+                    date_of_incident: "2026-10-22"
+                    description: "Laptop reported missing from sales office."
+                    capa_status: "open"
+                    created_at: "2026-10-22T07:00:00.000Z"
+                    updated_at: "2026-10-22T07:00:00.000Z"
+                meta:
+                  total: 48
+                  page: 1
+                  limit: 20
+                  pages: 3
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /incidents/{id}:
+    get:
+      operationId: getIncident
+      summary: Get a specific incident
+      description: Returns full details of a single incident including 5-Why RCA and CAPA fields.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Incident UUID
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/IncidentDetail'
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /incident-events:
+    get:
+      operationId: getIncidentEvents
+      summary: Incremental incident event feed
+      description: |
+        Returns incidents that were created or updated after a given timestamp.
+        Use this endpoint to synchronize your external system without missing updates.
+
+        **Polling pattern:**
+        1. On first call, pass `since` = your desired start date.
+        2. Save the `cursor` value from the response.
+        3. On subsequent calls, pass `cursor` instead of `since`.
+        4. Repeat until `has_more` is false, then wait and poll again.
+      parameters:
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: ISO timestamp — return all incidents updated after this time. Use on first call.
+          example: "2026-10-01T00:00:00.000Z"
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Cursor from previous response — use instead of `since` for subsequent calls.
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 500
+          description: Max events per page (max 500)
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        incident_number:
+                          type: string
+                        status:
+                          type: string
+                        severity:
+                          type: string
+                          nullable: true
+                        department:
+                          type: string
+                          nullable: true
+                        updated_at:
+                          type: string
+                          format: date-time
+                        created_at:
+                          type: string
+                          format: date-time
+                  meta:
+                    $ref: '#/components/schemas/EventMeta'
+              example:
+                data:
+                  - id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    incident_number: "UMS-INC-048"
+                    status: "resolved"
+                    severity: "Level 2 – Moderate"
+                    department: "Sales"
+                    updated_at: "2026-10-22T09:15:32.000Z"
+                    created_at: "2026-10-22T07:00:00.000Z"
+                meta:
+                  count: 1
+                  cursor: "2026-10-22T09:15:32.000Z"
+                  has_more: false
+        "400":
+          description: Missing since or cursor parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'

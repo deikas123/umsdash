@@ -21,8 +21,12 @@ import Surveys from '@/hr/pages/Surveys';
 import Messages from '@/hr/pages/Messages';
 import NotFound from '@/hr/pages/NotFound';
 
+const SUPER_ADMIN_EMAIL = 'amsterntechhub@gmail.com';
+
 function HrRoleGuard({ roles, children }: { roles: string[]; children: React.ReactNode }) {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
+  // Super admin can access everything
+  if (user?.email?.toLowerCase() === SUPER_ADMIN_EMAIL) return <>{children}</>;
   const currentRole = role === 'hr_manager' ? 'hr' : (role ?? 'staff');
   if (!roles.includes(currentRole)) return <Navigate to="/hr/profile" replace />;
   return <>{children}</>;

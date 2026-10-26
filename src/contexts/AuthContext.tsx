@@ -153,6 +153,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCustomerId(null);
   };
 
+  const SUPER_ADMIN_EMAIL = 'amsterntechhub@gmail.com';
+  const isSuperAdmin = (user?.email ?? '').toLowerCase() === SUPER_ADMIN_EMAIL;
+
   const value: AuthContextType = {
     user,
     session,
@@ -162,13 +165,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     signIn,
     signOut,
-    isAdmin: role === 'admin',
+    isAdmin: role === 'admin' || isSuperAdmin,
     isStaff: role === 'staff',
     isCustomer: role === 'customer',
-    isGM: role === 'gm',
-    isHrManager: role === 'hr_manager',
-    isHOD: role === 'hod',
-    isHrUser: role === 'gm' || role === 'hr_manager' || role === 'hod' || role === 'staff',
+    isGM: role === 'gm' || isSuperAdmin,
+    isHrManager: role === 'hr_manager' || isSuperAdmin,
+    isHOD: role === 'hod' || isSuperAdmin,
+    // Super admin can access HR app too
+    isHrUser: role === 'gm' || role === 'hr_manager' || role === 'hod' || role === 'staff' || isSuperAdmin,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
