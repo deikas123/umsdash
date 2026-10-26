@@ -1820,6 +1820,132 @@ export type Database = {
           },
         ]
       }
+      hr_departments: {
+        Row: { id: string; name: string; description: string | null; hod_user_id: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; name: string; description?: string | null; hod_user_id?: string | null; created_at?: string; updated_at?: string };
+        Update: { id?: string; name?: string; description?: string | null; hod_user_id?: string | null; updated_at?: string };
+        Relationships: [];
+      };
+      hr_employees: {
+        Row: { id: string; user_id: string | null; staff_number: string; first_name: string; last_name: string; email: string; id_number: string; kra_pin: string; nssf_no: string; nhif_no: string; phone: string; department_id: string | null; designation: string; basic_pay: number; house_allowance: number; transport_allowance: number; other_allowance: number; bank_name: string; bank_branch: string; account_number: string; bank_code: string; join_date: string; status: string; annual_leave_days: number; used_leave_days: number; date_of_birth: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id?: string | null; staff_number: string; first_name: string; last_name: string; email: string; id_number?: string; kra_pin?: string; nssf_no?: string; nhif_no?: string; phone?: string; department_id?: string | null; designation?: string; basic_pay?: number; house_allowance?: number; transport_allowance?: number; other_allowance?: number; bank_name?: string; bank_branch?: string; account_number?: string; bank_code?: string; join_date?: string; status?: string; annual_leave_days?: number; used_leave_days?: number; date_of_birth?: string | null; created_at?: string; updated_at?: string };
+        Update: { id?: string; user_id?: string | null; staff_number?: string; first_name?: string; last_name?: string; email?: string; id_number?: string; kra_pin?: string; nssf_no?: string; nhif_no?: string; phone?: string; department_id?: string | null; designation?: string; basic_pay?: number; house_allowance?: number; transport_allowance?: number; other_allowance?: number; bank_name?: string; bank_branch?: string; account_number?: string; bank_code?: string; join_date?: string; status?: string; annual_leave_days?: number; used_leave_days?: number; date_of_birth?: string | null; updated_at?: string };
+        Relationships: [];
+      };
+      hr_leave_requests: {
+        Row: { id: string; employee_id: string; leave_type: string; start_date: string; end_date: string; days: number; reason: string; status: string; hod_approval: Record<string, unknown> | null; hr_approval: Record<string, unknown> | null; gm_approval: Record<string, unknown> | null; document_url: string | null; contact_phone: string | null; contact_email: string | null; next_of_kin: string | null; next_of_kin_phone: string | null; reliever_name: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; employee_id: string; leave_type: string; start_date: string; end_date: string; days: number; reason?: string; status?: string; hod_approval?: Record<string, unknown> | null; hr_approval?: Record<string, unknown> | null; gm_approval?: Record<string, unknown> | null; document_url?: string | null; contact_phone?: string | null; contact_email?: string | null; next_of_kin?: string | null; next_of_kin_phone?: string | null; reliever_name?: string | null };
+        Update: { id?: string; employee_id?: string; leave_type?: string; start_date?: string; end_date?: string; days?: number; reason?: string; status?: string; hod_approval?: Record<string, unknown> | null; hr_approval?: Record<string, unknown> | null; gm_approval?: Record<string, unknown> | null; document_url?: string | null; updated_at?: string };
+        Relationships: [];
+      };
+      hr_payroll_records: {
+        Row: { id: string; employee_id: string; month: string; basic_pay: number; house_allowance: number; transport_allowance: number; other_allowance: number; overtime: number; bonus: number; leave_pay: number; gross_pay: number; pensionable_pay: number; employer_nssf: number; employee_nssf: number; taxable_pay: number; tax_payable: number; insurance_relief: number; personal_relief: number; paye: number; shif: number; housing_levy: number; loan_deduction: number; insurance_deduction: number; other_deduction: number; total_deductions: number; net_pay: number; created_at: string };
+        Insert: { id?: string; employee_id: string; month: string; basic_pay?: number; house_allowance?: number; transport_allowance?: number; other_allowance?: number; overtime?: number; bonus?: number; leave_pay?: number; gross_pay?: number; pensionable_pay?: number; employer_nssf?: number; employee_nssf?: number; taxable_pay?: number; tax_payable?: number; insurance_relief?: number; personal_relief?: number; paye?: number; shif?: number; housing_levy?: number; loan_deduction?: number; insurance_deduction?: number; other_deduction?: number; total_deductions?: number; net_pay?: number };
+        Update: { id?: string; employee_id?: string; month?: string; gross_pay?: number; net_pay?: number; total_deductions?: number; paye?: number; shif?: number; housing_levy?: number; loan_deduction?: number };
+        Relationships: [];
+      };
+      hr_loans: {
+        Row: { id: string; employee_id: string; loan_type: string; amount: number; balance: number; monthly_deduction: number; status: string; start_date: string | null; end_date: string | null; deduction_start_date: string | null; description: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; employee_id: string; loan_type?: string; amount: number; balance: number; monthly_deduction?: number; status?: string; start_date?: string | null; end_date?: string | null; deduction_start_date?: string | null; description?: string | null };
+        Update: { id?: string; employee_id?: string; loan_type?: string; amount?: number; balance?: number; monthly_deduction?: number; status?: string; start_date?: string | null; end_date?: string | null; deduction_start_date?: string | null; description?: string | null; updated_at?: string };
+        Relationships: [];
+      };
+      hr_loan_payments: {
+        Row: { id: string; loan_id: string; amount: number; payment_date: string; notes: string | null; created_at: string };
+        Insert: { id?: string; loan_id: string; amount: number; payment_date?: string; notes?: string | null };
+        Update: { id?: string; loan_id?: string; amount?: number; payment_date?: string; notes?: string | null };
+        Relationships: [];
+      };
+      hr_attendance: {
+        Row: { id: string; employee_id: string; date: string; clock_in: string | null; clock_out: string | null; status: string; notes: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; employee_id: string; date?: string; clock_in?: string | null; clock_out?: string | null; status?: string; notes?: string | null };
+        Update: { id?: string; employee_id?: string; date?: string; clock_in?: string | null; clock_out?: string | null; status?: string; notes?: string | null; updated_at?: string };
+        Relationships: [];
+      };
+      hr_overtime_requests: {
+        Row: { id: string; employee_id: string; work_date: string; hours: number; rate_type: string; reason: string; status: string; approver_id: string | null; approver_notes: string | null; approved_at: string | null; payroll_month: string; created_at: string; updated_at: string };
+        Insert: { id?: string; employee_id: string; work_date: string; hours: number; rate_type?: string; reason?: string; status?: string; approver_id?: string | null; approver_notes?: string | null; approved_at?: string | null; payroll_month?: string };
+        Update: { id?: string; employee_id?: string; work_date?: string; hours?: number; rate_type?: string; reason?: string; status?: string; approver_id?: string | null; approver_notes?: string | null; approved_at?: string | null; updated_at?: string };
+        Relationships: [];
+      };
+      hr_public_holidays: {
+        Row: { id: string; date: string; name: string; is_recurring: boolean; created_at: string };
+        Insert: { id?: string; date: string; name: string; is_recurring?: boolean };
+        Update: { id?: string; date?: string; name?: string; is_recurring?: boolean };
+        Relationships: [];
+      };
+      hr_company_settings: {
+        Row: { id: string; key: string; value: string; created_at: string; updated_at: string };
+        Insert: { id?: string; key: string; value?: string };
+        Update: { id?: string; key?: string; value?: string; updated_at?: string };
+        Relationships: [];
+      };
+      hr_announcements: {
+        Row: { id: string; title: string; body: string; audience: string; audience_value: string | null; pinned: boolean; published_at: string; expires_at: string | null; created_by: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; title: string; body: string; audience?: string; audience_value?: string | null; pinned?: boolean; published_at?: string; expires_at?: string | null; created_by?: string | null };
+        Update: { id?: string; title?: string; body?: string; audience?: string; audience_value?: string | null; pinned?: boolean; expires_at?: string | null; updated_at?: string };
+        Relationships: [];
+      };
+      hr_announcement_reads: {
+        Row: { id: string; announcement_id: string; user_id: string; read_at: string };
+        Insert: { id?: string; announcement_id: string; user_id: string; read_at?: string };
+        Update: { id?: string; announcement_id?: string; user_id?: string; read_at?: string };
+        Relationships: [];
+      };
+      hr_suggestions: {
+        Row: { id: string; submitter_user_id: string; category: string; subject: string; body: string; status: string; gm_notes: string | null; reviewed_by: string | null; reviewed_at: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; submitter_user_id: string; category?: string; subject: string; body: string; status?: string };
+        Update: { id?: string; category?: string; subject?: string; body?: string; status?: string; gm_notes?: string | null; reviewed_by?: string | null; reviewed_at?: string | null; updated_at?: string };
+        Relationships: [];
+      };
+      hr_surveys: {
+        Row: { id: string; title: string; description: string | null; questions: unknown; status: string; starts_at: string; ends_at: string | null; reminder_channel: string; reminder_day_of_month: number | null; reminder_interval_days: number | null; last_reminder_at: string | null; created_by: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; title: string; description?: string | null; questions?: unknown; status?: string; starts_at?: string; ends_at?: string | null; reminder_channel?: string; created_by?: string | null };
+        Update: { id?: string; title?: string; description?: string | null; questions?: unknown; status?: string; starts_at?: string; ends_at?: string | null; updated_at?: string };
+        Relationships: [];
+      };
+      hr_survey_responses: {
+        Row: { id: string; survey_id: string; answers: unknown; submitted_at: string };
+        Insert: { id?: string; survey_id: string; answers?: unknown; submitted_at?: string };
+        Update: { id?: string; survey_id?: string; answers?: unknown };
+        Relationships: [];
+      };
+      hr_survey_participation: {
+        Row: { id: string; survey_id: string; user_id: string; submitted_at: string };
+        Insert: { id?: string; survey_id: string; user_id: string; submitted_at?: string };
+        Update: { id?: string; survey_id?: string; user_id?: string };
+        Relationships: [];
+      };
+      hr_message_threads: {
+        Row: { id: string; user_a: string; user_b: string; last_message_at: string; created_at: string };
+        Insert: { id?: string; user_a: string; user_b: string; last_message_at?: string };
+        Update: { id?: string; user_a?: string; user_b?: string; last_message_at?: string };
+        Relationships: [];
+      };
+      hr_messages: {
+        Row: { id: string; thread_id: string; sender_id: string; body: string; read_at: string | null; created_at: string };
+        Insert: { id?: string; thread_id: string; sender_id: string; body: string; read_at?: string | null };
+        Update: { id?: string; thread_id?: string; sender_id?: string; body?: string; read_at?: string | null };
+        Relationships: [];
+      };
+      hr_checklist_templates: {
+        Row: { id: string; type: string; name: string; items: unknown; created_at: string; updated_at: string };
+        Insert: { id?: string; type: string; name: string; items?: unknown };
+        Update: { id?: string; type?: string; name?: string; items?: unknown; updated_at?: string };
+        Relationships: [];
+      };
+      hr_employee_checklists: {
+        Row: { id: string; employee_id: string; template_id: string | null; type: string; status: string; items_state: unknown; started_at: string; completed_at: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; employee_id: string; template_id?: string | null; type: string; status?: string; items_state?: unknown; started_at?: string; completed_at?: string | null };
+        Update: { id?: string; employee_id?: string; template_id?: string | null; type?: string; status?: string; items_state?: unknown; completed_at?: string | null; updated_at?: string };
+        Relationships: [];
+      };
+      hr_employee_documents: {
+        Row: { id: string; employee_id: string; document_type: string; title: string; file_url: string; issue_date: string | null; expiry_date: string | null; notes: string | null; uploaded_by: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; employee_id: string; document_type: string; title: string; file_url: string; issue_date?: string | null; expiry_date?: string | null; notes?: string | null; uploaded_by?: string | null };
+        Update: { id?: string; employee_id?: string; document_type?: string; title?: string; file_url?: string; issue_date?: string | null; expiry_date?: string | null; notes?: string | null; updated_at?: string };
+        Relationships: [];
+      };
     }
     Views: {
       user_activity_summary: {

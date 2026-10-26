@@ -211,3 +211,19 @@
 [data-density="spacious"] .space-y-4 > * + * { margin-top: 1.25rem; }
 [data-density="spacious"] .space-y-6 > * + * { margin-top: 1.75rem; }
 [data-density="spacious"] table td, [data-density="spacious"] table th { padding: 1rem 1.5rem; }
+
+/* ── HR Hub utility classes ── */
+@layer utilities {
+  .stat-card {
+    @apply bg-card rounded-lg border p-5 shadow-sm transition-shadow hover:shadow-md;
+  }
+  .page-header {
+    @apply mb-6;
+  }
+  .page-title {
+    @apply text-2xl font-bold text-foreground;
+  }
+  .page-subtitle {
+    @apply text-sm text-muted-foreground mt-1;
+  }
+}
