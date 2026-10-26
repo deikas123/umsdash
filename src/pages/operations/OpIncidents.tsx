@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Search, Eye, Pencil, Siren, ClipboardList } from "lucide-react";
+import { Plus, Search, Eye, Pencil, Siren, ClipboardList, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import ExportMenu from "@/components/operations/ExportMenu";
@@ -185,6 +185,22 @@ export default function OpIncidents() {
       setCreateTaskDialog({ open: false, incident: null });
       setTaskTitle("");
       setTaskPriority("normal");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const resolveMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase
+        .from("incidents")
+        .update({ status })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, { status }) => {
+      queryClient.invalidateQueries({ queryKey: ["incidents"] });
+      setPreviewId(null);
+      toast.success(`Incident marked as ${status}.`);
     },
     onError: (e) => toast.error(e.message),
   });
@@ -387,6 +403,12 @@ export default function OpIncidents() {
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-[4px]" onClick={() => setPreviewId(inc.id)}><Eye className="h-3.5 w-3.5" /></Button>
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-[4px]" onClick={() => handleEdit(inc)}><Pencil className="h-3.5 w-3.5" /></Button>
+                      {inc.status !== "resolved" && inc.status !== "closed" && (
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-[4px] text-green-600" title="Mark as Resolved" onClick={() => resolveMutation.mutate({ id: inc.id, status: "resolved" })} disabled={resolveMutation.isPending}><CheckCircle2 className="h-3.5 w-3.5" /></Button>
+                      )}
+                      {inc.status === "resolved" && (
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-[4px] text-muted-foreground" title="Mark as Closed" onClick={() => resolveMutation.mutate({ id: inc.id, status: "closed" })} disabled={resolveMutation.isPending}><CheckCircle2 className="h-3.5 w-3.5" /></Button>
+                      )}
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-[4px] text-accent" title="Create Task" onClick={() => { setCreateTaskDialog({ open: true, incident: inc }); setTaskTitle(inc.incident_number ? `${inc.incident_number}: ${inc.incident_type || "Incident"}` : (inc.incident_type || "Incident")); setTaskPriority("normal"); }}><ClipboardList className="h-3.5 w-3.5" /></Button>
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-[4px] text-warning" title="Escalate" onClick={() => { setEscalateIncDialog({ open: true, sourceId: inc.id, defaultTitle: `Incident ${inc.incident_number}: ${inc.incident_type || ""}` }); setEscalateIncTitle(`Incident ${inc.incident_number}: ${inc.incident_type || ""}`); setEscalateIncNote(""); }}><Siren className="h-3.5 w-3.5" /></Button>
                     </div>
@@ -445,6 +467,21 @@ export default function OpIncidents() {
                 <Button variant="outline" size="sm" className="rounded-[4px]" onClick={() => { setPreviewId(null); handleEdit(previewIncident); }}>
                   <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
                 </Button>
+                {previewIncident.status !== "resolved" && previewIncident.status !== "closed" && (
+                  <Button size="sm" className="rounded-[4px] bg-green-600 hover:bg-green-700 text-white" onClick={() => resolveMutation.mutate({ id: previewIncident.id, status: "resolved" })} disabled={resolveMutation.isPending}>
+                    <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Mark Resolved
+                  </Button>
+                )}
+                {previewIncident.status === "resolved" && (
+                  <Button size="sm" variant="outline" className="rounded-[4px]" onClick={() => resolveMutation.mutate({ id: previewIncident.id, status: "closed" })} disabled={resolveMutation.isPending}>
+                    <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Mark Closed
+                  </Button>
+                )}
+                {(previewIncident.status === "resolved" || previewIncident.status === "closed") && (
+                  <Button size="sm" variant="outline" className="rounded-[4px]" onClick={() => resolveMutation.mutate({ id: previewIncident.id, status: "open" })} disabled={resolveMutation.isPending}>
+                    Reopen
+                  </Button>
+                )}
               </div>
             </div>
           )}
