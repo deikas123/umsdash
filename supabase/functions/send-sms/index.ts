@@ -7,7 +7,16 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SMS_API_URL = "https://sms.textsms.co.ke/api/services/sendsms/";
+// HostPinnacle SMS Gateway
+const SMS_API_URL = "https://smsportal.hostpinnacle.co.ke/SMSApi/send";
+
+/** Normalize Kenyan phone number to 254XXXXXXXXX format */
+function normalizePhone(phone: string): string {
+  let m = phone.replace(/\s+/g, "").replace(/[^0-9+]/g, "");
+  if (m.startsWith("+")) m = m.substring(1);
+  if (m.startsWith("0")) m = "254" + m.substring(1);
+  return m;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -31,7 +40,6 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Verify the user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -40,12 +48,14 @@ serve(async (req) => {
       });
     }
 
-    const apikey = Deno.env.get("TEXTSMS_API_KEY");
-    const partnerID = Deno.env.get("TEXTSMS_PARTNER_ID");
-    const shortcode = Deno.env.get("TEXTSMS_SHORTCODE");
+    // HostPinnacle credentials
+    const apiKey = Deno.env.get("SMS_API_KEY");
+    const userId = Deno.env.get("SMS_USER_ID");
+    const password = Deno.env.get("SMS_PASSWORD");
+    const senderId = Deno.env.get("SMS_SENDER_ID") || "UMSKENYA";
 
-    if (!apikey || !partnerID || !shortcode) {
-      throw new Error("SMS credentials not configured");
+    if (!apiKey || !userId || !password) {
+      throw new Error("SMS credentials not configured. Set SMS_API_KEY, SMS_USER_ID, SMS_PASSWORD in Supabase secrets.");
     }
 
     const { mobile, message, type, recipientName } = await req.json();
@@ -57,33 +67,38 @@ serve(async (req) => {
       );
     }
 
-    // Normalize phone number to 254 format
-    let normalizedMobile = mobile.replace(/\s+/g, "").replace(/[^0-9+]/g, "");
-    if (normalizedMobile.startsWith("+")) {
-      normalizedMobile = normalizedMobile.substring(1);
-    }
-    if (normalizedMobile.startsWith("0")) {
-      normalizedMobile = "254" + normalizedMobile.substring(1);
-    }
-
+    const normalizedMobile = normalizePhone(mobile);
     console.log(`Sending SMS to ${normalizedMobile}: ${message} (type: ${type || "general"})`);
+
+    // HostPinnacle POST request
+    const params = new URLSearchParams({
+      userid: userId,
+      password: password,
+      mobile: normalizedMobile,
+      msg: message,
+      senderid: senderId,
+      msgType: "text",
+      duplicatecheck: "true",
+      output: "json",
+      sendMethod: "quick",
+    });
 
     const smsResponse = await fetch(SMS_API_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        apikey,
-        partnerID,
-        message,
-        shortcode,
-        mobile: normalizedMobile,
-      }),
+      headers: {
+        "apikey": apiKey,
+        "cache-control": "no-cache",
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body: params.toString(),
     });
 
     const result = await smsResponse.json();
     console.log("SMS API response:", JSON.stringify(result));
 
-    // Log the SMS using service role to bypass RLS for sent_by
+    const success = result?.status === "S" || result?.status === "success" || smsResponse.ok;
+
+    // Log using service role to bypass RLS
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
     await adminClient.from("sms_logs").insert({
       sent_by: user.id,
@@ -91,7 +106,7 @@ serve(async (req) => {
       recipient_name: recipientName || null,
       message,
       sms_type: type || "general",
-      status: result?.["response-code"] === "0200" || result?.success ? "delivered" : "failed",
+      status: success ? "delivered" : "failed",
       api_response: result,
     });
 

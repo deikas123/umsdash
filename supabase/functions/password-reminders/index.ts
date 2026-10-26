@@ -17,9 +17,11 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const KEY = Deno.env.get("TEXTSMS_API_KEY");
-    const PARTNER = Deno.env.get("TEXTSMS_PARTNER_ID");
-    if (!KEY || !PARTNER) throw new Error("SMS provider is not configured");
+    const KEY = Deno.env.get("SMS_API_KEY");
+    const SMS_USER_ID = Deno.env.get("SMS_USER_ID");
+    const SMS_PASSWORD = Deno.env.get("SMS_PASSWORD");
+    const SENDER_ID = Deno.env.get("SMS_SENDER_ID") || "UMSKENYA";
+    if (!KEY || !SMS_USER_ID || !SMS_PASSWORD) throw new Error("SMS credentials not configured");
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -73,9 +75,21 @@ Deno.serve(async (req) => {
       for (const mobile of phones) {
         let status = "failed"; let resp: unknown = null;
         try {
-          const r = await fetch("https://sms.textsms.co.ke/api/services/sendsms/", {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ apikey: KEY, partnerID: PARTNER, message, shortcode: "UMS PREPAID", mobile }),
+          const smsParams = new URLSearchParams({
+            userid: SMS_USER_ID,
+            password: SMS_PASSWORD,
+            mobile,
+            msg: message,
+            senderid: SENDER_ID,
+            msgType: "text",
+            duplicatecheck: "true",
+            output: "json",
+            sendMethod: "quick",
+          });
+          const r = await fetch("https://smsportal.hostpinnacle.co.ke/SMSApi/send", {
+            method: "POST",
+            headers: { "apikey": KEY, "cache-control": "no-cache", "content-type": "application/x-www-form-urlencoded" },
+            body: smsParams.toString(),
           });
           resp = await r.json().catch(() => null);
           status = r.ok ? "sent" : "failed";

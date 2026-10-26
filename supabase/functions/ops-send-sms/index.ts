@@ -5,6 +5,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const SMS_API_URL = "https://smsportal.hostpinnacle.co.ke/SMSApi/send";
+
+function normalizePhone(phone: string): string {
+  let m = phone.replace(/\s+/g, "").replace(/^\+/, "");
+  if (m.startsWith("0")) m = "254" + m.slice(1);
+  return m;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -33,11 +41,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    const TEXTSMS_API_KEY = Deno.env.get("TEXTSMS_API_KEY");
-    if (!TEXTSMS_API_KEY) throw new Error("TEXTSMS_API_KEY is not configured");
+    // HostPinnacle credentials
+    const apiKey = Deno.env.get("SMS_API_KEY");
+    const userId = Deno.env.get("SMS_USER_ID");
+    const password = Deno.env.get("SMS_PASSWORD");
+    const senderId = Deno.env.get("SMS_SENDER_ID") || "UMSKENYA";
 
-    const TEXTSMS_PARTNER_ID = Deno.env.get("TEXTSMS_PARTNER_ID");
-    if (!TEXTSMS_PARTNER_ID) throw new Error("TEXTSMS_PARTNER_ID is not configured");
+    if (!apiKey || !userId || !password) throw new Error("SMS credentials not configured");
 
     const { phone, message, related_table, related_id } = await req.json();
 
@@ -47,25 +57,33 @@ Deno.serve(async (req) => {
       });
     }
 
-    let mobile = phone.replace(/\s+/g, "").replace(/^\+/, "");
-    if (mobile.startsWith("0")) mobile = "254" + mobile.slice(1);
+    const mobile = normalizePhone(phone);
 
-    const smsResponse = await fetch("https://sms.textsms.co.ke/api/services/sendsms/", {
+    const params = new URLSearchParams({
+      userid: userId,
+      password: password,
+      mobile,
+      msg: message,
+      senderid: senderId,
+      msgType: "text",
+      duplicatecheck: "true",
+      output: "json",
+      sendMethod: "quick",
+    });
+
+    const smsResponse = await fetch(SMS_API_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        apikey: TEXTSMS_API_KEY,
-        partnerID: TEXTSMS_PARTNER_ID,
-        message,
-        shortcode: "UMS PREPAID",
-        mobile,
-      }),
+      headers: {
+        "apikey": apiKey,
+        "cache-control": "no-cache",
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body: params.toString(),
     });
 
     const smsData = await smsResponse.json();
-    const success = smsResponse.ok;
+    const success = smsData?.status === "S" || smsData?.status === "success" || smsResponse.ok;
 
-    // Log the SMS
     await adminClient.from("sms_logs").insert({
       recipient_phone: mobile,
       message,
@@ -77,7 +95,7 @@ Deno.serve(async (req) => {
     });
 
     if (!success) {
-      throw new Error(`TextSMS API failed [${smsResponse.status}]: ${JSON.stringify(smsData)}`);
+      throw new Error(`SMS API failed [${smsResponse.status}]: ${JSON.stringify(smsData)}`);
     }
 
     return new Response(JSON.stringify({ success: true, data: smsData }), {

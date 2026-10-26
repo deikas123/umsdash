@@ -35,10 +35,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    const TEXTSMS_API_KEY = Deno.env.get("TEXTSMS_API_KEY");
-    if (!TEXTSMS_API_KEY) throw new Error("TEXTSMS_API_KEY is not configured");
-    const TEXTSMS_PARTNER_ID = Deno.env.get("TEXTSMS_PARTNER_ID");
-    if (!TEXTSMS_PARTNER_ID) throw new Error("TEXTSMS_PARTNER_ID is not configured");
+    const apiKey = Deno.env.get("SMS_API_KEY");
+    const smsUserId = Deno.env.get("SMS_USER_ID");
+    const smsPassword = Deno.env.get("SMS_PASSWORD");
+    const senderId = Deno.env.get("SMS_SENDER_ID") || "UMSKENYA";
+    if (!apiKey || !smsUserId || !smsPassword) throw new Error("SMS credentials not configured");
 
     const adminClient = createClient(supabaseUrl, serviceKey);
     const { type, data } = await req.json();
@@ -118,17 +119,22 @@ Deno.serve(async (req) => {
       if (mobile.startsWith("0")) mobile = "254" + mobile.slice(1);
 
       try {
-        const smsResponse = await fetch("https://sms.textsms.co.ke/api/services/sendsms/", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            apikey: TEXTSMS_API_KEY,
-            partnerID: TEXTSMS_PARTNER_ID,
-            message,
-            shortcode: "UMS PREPAID",
+        const smsPrams = new URLSearchParams({
+            userid: smsUserId,
+            password: smsPassword,
             mobile,
-          }),
-        });
+            msg: message,
+            senderid: senderId,
+            msgType: "text",
+            duplicatecheck: "true",
+            output: "json",
+            sendMethod: "quick",
+          });
+          const smsResponse = await fetch("https://smsportal.hostpinnacle.co.ke/SMSApi/send", {
+            method: "POST",
+            headers: { "apikey": apiKey, "cache-control": "no-cache", "content-type": "application/x-www-form-urlencoded" },
+            body: smsPrams.toString(),
+          });
 
         const smsData = await smsResponse.json();
         const success = smsResponse.ok;
