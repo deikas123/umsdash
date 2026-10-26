@@ -23,6 +23,10 @@ export interface UserHubUser {
   current_streak: number | null;
   total_xp: number | null;
   level_name: number | null;
+  designation: string | null;
+  staff_number: string | null;
+  hr_employee_id: string | null;
+  hr_role?: string | null;
 }
 
 export interface UserAppAccessRow {

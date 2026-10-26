@@ -6,6 +6,7 @@ import {
   Activity, BarChart3, CalendarClock, HardDrive, Flame, DatabaseBackup,
   AlertTriangle, FileWarning, KeyRound, Siren, Home, Trophy, ChevronDown,
   Monitor, Zap, Calendar, UserCheck, TrendingUp, ShoppingBag, GraduationCap, ShieldCheck,
+  DollarSign, CreditCard, Lightbulb, Building2, UserCircle, Clock, List,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import {
@@ -63,7 +64,6 @@ const opsNavItems = [
   { title: 'SMS Logs', url: '/ops/sms-logs', icon: MessageSquare },
   { title: 'Escalations', url: '/ops/escalations', icon: Siren },
   { title: 'On-Call Schedule', url: '/ops/oncall', icon: UserCheck },
-  { title: 'Users', url: '/ops/users', icon: Users },
 ];
 
 // Administration — admin-only doc items
@@ -116,13 +116,33 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAdmin, isStaff, isCustomer, profile, user, signOut } = useAuth();
+  const { isAdmin, isStaff, isCustomer, isHrUser, profile, user, signOut } = useAuth();
   const { pendingTasksCount, pendingRemindersCount, pendingDeletionsCount } = useNotificationCounts();
   const { settings } = useOrgSettings();
   const isSuperAdmin = (user?.email ?? profile?.email ?? '').toLowerCase() === SUPER_ADMIN_EMAIL;
   const visibleAdminItems = adminDocItems.filter(i => !i.superAdminOnly || isSuperAdmin);
   const collapsed = state === 'collapsed';
   const logoSrc = settings.org_logo_url || umsLogo;
+
+  const hrNavItems = [
+    { title: 'HR Dashboard',  url: '/hr',               icon: LayoutDashboard },
+    { title: 'Employees',     url: '/hr/employees',     icon: Users },
+    { title: 'Leave',         url: '/hr/leave',         icon: CalendarClock },
+    { title: 'Payroll',       url: '/hr/payroll',       icon: DollarSign },
+    { title: 'Attendance',    url: '/hr/attendance',    icon: UserCheck },
+    { title: 'Overtime',      url: '/hr/overtime',      icon: Clock },
+    { title: 'Loans',         url: '/hr/loans',         icon: CreditCard },
+    { title: 'Announcements', url: '/hr/announcements', icon: Bell },
+    { title: 'Messages',      url: '/hr/messages',      icon: MessageSquare },
+    { title: 'Surveys',       url: '/hr/surveys',       icon: ClipboardList },
+    { title: 'Suggestions',   url: '/hr/suggestions',   icon: Lightbulb },
+    { title: 'Departments',   url: '/hr/departments',   icon: Building2 },
+    { title: 'Checklists',    url: '/hr/checklists',    icon: List },
+    { title: 'Reports',       url: '/hr/reports',       icon: BarChart3 },
+    { title: 'Directory',     url: '/hr/directory',     icon: Users2 },
+    { title: 'My Portal',     url: '/hr/profile',       icon: UserCircle },
+    { title: 'Settings',      url: '/hr/settings',      icon: Settings },
+  ];
 
   const [docsOpen, setDocsOpen] = useState<boolean>(() => {
     try { return localStorage.getItem('umshub_sidebar_docs_open') !== 'false'; } catch { return true; }
@@ -132,6 +152,9 @@ export function AppSidebar() {
   });
   const [adminOpen, setAdminOpen] = useState<boolean>(() => {
     try { return localStorage.getItem('umshub_sidebar_admin_open') !== 'false'; } catch { return true; }
+  });
+  const [hrOpen, setHrOpen] = useState<boolean>(() => {
+    try { return localStorage.getItem('umshub_sidebar_hr_open') !== 'false'; } catch { return true; }
   });
 
   const handleDocsToggle = (open: boolean) => {
@@ -145,6 +168,10 @@ export function AppSidebar() {
   const handleAdminToggle = (open: boolean) => {
     setAdminOpen(open);
     try { localStorage.setItem('umshub_sidebar_admin_open', String(open)); } catch (_e) { /* storage unavailable */ }
+  };
+  const handleHrToggle = (open: boolean) => {
+    setHrOpen(open);
+    try { localStorage.setItem('umshub_sidebar_hr_open', String(open)); } catch (_e) { /* */ }
   };
 
   // Restore the sidebar scroll position across navigations so selecting a page
@@ -165,12 +192,16 @@ export function AppSidebar() {
   useEffect(() => {
     if (location.pathname.startsWith('/docs')) localStorage.setItem('umshub_last_docs_page', location.pathname);
     else if (location.pathname.startsWith('/ops')) localStorage.setItem('umshub_last_ops_page', location.pathname);
+    else if (location.pathname.startsWith('/hr')) localStorage.setItem('umshub_last_hr_page', location.pathname);
   }, [location.pathname]);
 
-  const currentApp = location.pathname.startsWith('/ops') ? 'ops' : location.pathname.startsWith('/docs') ? 'docs' : 'home';
-  const switchToApp = (app: 'docs' | 'ops') => {
+  const currentApp = location.pathname.startsWith('/ops') ? 'ops'
+    : location.pathname.startsWith('/hr') ? 'hr'
+    : location.pathname.startsWith('/docs') ? 'docs'
+    : 'home';
+  const switchToApp = (app: 'docs' | 'ops' | 'hr') => {
     const last = localStorage.getItem(`umshub_last_${app}_page`);
-    navigate(last || (app === 'docs' ? '/docs' : '/ops'));
+    navigate(last || (app === 'docs' ? '/docs' : app === 'ops' ? '/ops' : '/hr'));
   };
 
   const isActive = (path: string) => location.pathname === path || (path !== '/' && location.pathname.startsWith(path + '/'));
@@ -207,6 +238,12 @@ export function AppSidebar() {
             className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-medium transition-all ${currentApp === 'ops' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
             <Activity className="h-3 w-3" /> Ops
           </button>
+          {isHrUser && (
+            <button onClick={() => switchToApp('hr')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-medium transition-all ${currentApp === 'hr' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+              <Users2 className="h-3 w-3" /> HR
+            </button>
+          )}
         </div>
       )}
 
@@ -283,6 +320,29 @@ export function AppSidebar() {
           </Collapsible>
         )}
 
+        {/* HR Hub — hr app only, HR users */}
+        {isHrUser && currentApp === 'hr' && (
+          <Collapsible open={hrOpen} onOpenChange={handleHrToggle}>
+            <SidebarGroup>
+              <SidebarGroupLabel asChild>
+                <CollapsibleTrigger className="flex w-full items-center justify-between">
+                  HR Hub
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${hrOpen ? '' : '-rotate-90'}`} />
+                </CollapsibleTrigger>
+              </SidebarGroupLabel>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {hrNavItems.map(item => (
+                      <NavItem key={item.url} item={item} isActive={isActive(item.url)} />
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </SidebarGroup>
+          </Collapsible>
+        )}
+
         {/* Administration — docs / home app, admin only */}
         {isAdmin && (currentApp === 'docs' || currentApp === 'home') && (
           <Collapsible open={adminOpen} onOpenChange={handleAdminToggle}>
@@ -320,6 +380,12 @@ export function AppSidebar() {
               <div className="flex flex-col min-w-0">
                 <span className="font-medium text-sidebar-foreground truncate">{profile.full_name}</span>
                 <span className="text-xs text-sidebar-foreground/70 truncate">{profile.email}</span>
+                {profile?.designation && (
+                  <span className="text-xs text-sidebar-foreground/60 truncate">{profile.designation}</span>
+                )}
+                {profile?.hr_department && (
+                  <span className="text-xs text-sidebar-foreground/50 truncate">{profile.hr_department}</span>
+                )}
               </div>
             </div>
           )}

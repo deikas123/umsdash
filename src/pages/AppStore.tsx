@@ -33,8 +33,8 @@ const APP_REGISTRY = [
     description: 'Employee records, leave management, payroll integration, and performance reviews.',
     icon: Users,
     color: 'from-violet-600 to-violet-800',
-    status: 'coming_soon' as const,
-    href: null,
+    status: 'installed' as const,
+    href: '/hr',
     features: ['Leave tracking', 'Performance reviews', 'Payroll export', 'Onboarding'],
   },
   {

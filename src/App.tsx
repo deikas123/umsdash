@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +13,8 @@ import { useInactivityTimeout } from "@/hooks/useInactivityTimeout";
 import { useNotifications } from "@/hooks/useNotifications";
 import { OnboardingTourProvider } from "@/hooks/useOnboardingTour";
 import ChunkErrorBoundary from "@/components/operations/ChunkErrorBoundary";
+
+const HrApp = lazy(() => import('./hr/HrRoot'));
 
 // Launcher
 import AppLauncher from "./pages/AppLauncher";
@@ -210,6 +213,22 @@ const AppRoutes = () => (
         <Route path="sms-logs" element={<ProtectedRoute allowedRoles={['admin']}><OpSmsLogs /></ProtectedRoute>} />
         <Route path="users" element={<ProtectedRoute allowedRoles={['admin']}><OpUserManagement /></ProtectedRoute>} />
       </Route>
+
+      {/* ── HR Hub (/hr/*) ── */}
+      <Route
+        path="/hr/*"
+        element={
+          <ProtectedRoute>
+            <Suspense fallback={
+              <div className="min-h-screen flex items-center justify-center">
+                <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            }>
+              <HrApp />
+            </Suspense>
+          </ProtectedRoute>
+        }
+      />
 
       {/* ── User Hub (/admin/users) ── */}
       <Route

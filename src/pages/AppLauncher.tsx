@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Activity, LogOut, ShoppingBag, LayoutGrid, Layers, List } from 'lucide-react';
+import { FileText, Activity, LogOut, ShoppingBag, LayoutGrid, Layers, List, Users2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
 import { useQuery } from '@tanstack/react-query';
@@ -102,6 +102,16 @@ export default function AppLauncher() {
       dataTour: 'ops-hub-card',
     },
     {
+      id: 'hr',
+      title: 'HR Hub',
+      description: 'Manage employees, payroll, leave, attendance, and HR operations.',
+      icon: Users2,
+      href: '/hr',
+      color: 'from-orange-600 to-orange-800',
+      visible: !isCustomer,
+      dataTour: 'hr-hub-card',
+    },
+    {
       id: 'apps',
       title: 'App Store',
       description: 'Browse available and upcoming UMS Hub applications.',
@@ -129,7 +139,7 @@ export default function AppLauncher() {
   // Launching an app records a recency timestamp so the modern view can feature
   // the app the user used most recently.
   const launchApp = (appId: string, href: string) => {
-    if (appId === 'docs' || appId === 'ops') {
+    if (appId === 'docs' || appId === 'ops' || appId === 'hr') {
       try { localStorage.setItem(`umshub_last_${appId}_page_ts`, String(Date.now())); } catch { /* storage unavailable */ }
     }
     navigate(href);
@@ -137,7 +147,7 @@ export default function AppLauncher() {
   // Resume an app at the last visited page (falls back to the app root).
   const continueApp = (appId: string, rootHref: string) => {
     const last = getLastPage(appId);
-    if (appId === 'docs' || appId === 'ops') {
+    if (appId === 'docs' || appId === 'ops' || appId === 'hr') {
       try { localStorage.setItem(`umshub_last_${appId}_page_ts`, String(Date.now())); } catch { /* storage unavailable */ }
     }
     navigate(last || rootHref);
@@ -431,19 +441,23 @@ function getPageLabel(path: string): string {
 function getLastPage(appId: string): string | null {
   if (appId === 'docs') return localStorage.getItem('umshub_last_docs_page');
   if (appId === 'ops') return localStorage.getItem('umshub_last_ops_page');
+  if (appId === 'hr') return localStorage.getItem('umshub_last_hr_page');
   return null;
 }
 
 /** Most recently launched app (Docs by default). Recency uses companion
  * timestamp keys written when launching an app from this launcher. */
-function getFeaturedAppId(): 'docs' | 'ops' {
+function getFeaturedAppId(): string {
   const docsTs = Number(localStorage.getItem('umshub_last_docs_page_ts') ?? 0);
-  const opsTs = Number(localStorage.getItem('umshub_last_ops_page_ts') ?? 0);
+  const opsTs  = Number(localStorage.getItem('umshub_last_ops_page_ts')  ?? 0);
+  const hrTs   = Number(localStorage.getItem('umshub_last_hr_page_ts')   ?? 0);
+  if (hrTs >= docsTs && hrTs >= opsTs) return 'hr';
   return opsTs > docsTs ? 'ops' : 'docs';
 }
 
 function appStatLabel(app: { id: string }, s: LauncherStats): string | null {
   if (app.id === 'docs') return `${s.docsCount.toLocaleString()} documents`;
   if (app.id === 'ops') return `${s.incidentsCount} open incidents`;
+  if (app.id === 'hr') return null;
   return null;
 }

@@ -199,6 +199,7 @@ export default function UserHub() {
     must_reset_password: boolean;
     docs: boolean;
     ops: boolean;
+    hr_role: string;
   } | null>(null);
 
   const openEdit = (u: UserHubUser) => {
@@ -211,6 +212,7 @@ export default function UserHub() {
       must_reset_password: u.must_reset_password,
       docs: hasAccess(u.user_id, 'docs'),
       ops: hasAccess(u.user_id, 'ops'),
+      hr_role: u.hr_role ?? 'none',
     });
     setEditOpen(true);
   };
@@ -231,6 +233,13 @@ export default function UserHub() {
       }
       if (editForm.ops !== hasAccess(editTarget.user_id, 'ops')) {
         await updateAppAccess(editTarget.user_id, 'ops', editForm.ops);
+      }
+      // HR role upsert
+      if (editForm.hr_role && editForm.hr_role !== 'none') {
+        await supabase.from('user_roles').delete().eq('user_id', editTarget.user_id).in('role', ['gm', 'hr_manager', 'hod']);
+        await supabase.from('user_roles').insert({ user_id: editTarget.user_id, role: editForm.hr_role as any });
+      } else if (editForm.hr_role === 'none') {
+        await supabase.from('user_roles').delete().eq('user_id', editTarget.user_id).in('role', ['gm', 'hr_manager', 'hod']);
       }
       toast({ title: 'User updated', description: `${editForm.full_name} saved.` });
       setEditOpen(false);
@@ -628,6 +637,8 @@ export default function UserHub() {
                         <TableHead>Email</TableHead>
                         <TableHead>Role</TableHead>
                         <TableHead className="hidden md:table-cell">Department</TableHead>
+                        <TableHead className="hidden lg:table-cell">Designation</TableHead>
+                        <TableHead className="hidden lg:table-cell">Staff No.</TableHead>
                         <TableHead className="hidden lg:table-cell">App Access</TableHead>
                         <TableHead className="hidden md:table-cell">Last Active</TableHead>
                         <TableHead className="hidden lg:table-cell">Docs</TableHead>
@@ -660,6 +671,12 @@ export default function UserHub() {
                             {u.department ? (
                               <Badge variant="outline" className="text-xs font-normal">{u.department}</Badge>
                             ) : '—'}
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell">
+                            {u.designation ? <span className="text-xs text-muted-foreground">{u.designation}</span> : '—'}
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell">
+                            {u.staff_number ? <Badge variant="outline" className="text-xs font-mono">{u.staff_number}</Badge> : '—'}
                           </TableCell>
                           <TableCell className="hidden lg:table-cell">
                             <div className="flex items-center gap-2">
@@ -1126,6 +1143,19 @@ export default function UserHub() {
                   checked={editForm.must_reset_password}
                   onCheckedChange={(checked) => setEditForm({ ...editForm, must_reset_password: Boolean(checked) })}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>HR Role</Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={editForm.hr_role ?? 'none'}
+                  onChange={(e) => setEditForm((f) => f ? { ...f, hr_role: e.target.value } : f)}
+                >
+                  <option value="none">No HR Role</option>
+                  <option value="gm">GM</option>
+                  <option value="hr_manager">HR Manager</option>
+                  <option value="hod">HOD</option>
+                </select>
               </div>
               <div className="flex justify-end gap-3">
                 <Button variant="outline" onClick={() => setEditOpen(false)} disabled={editSaving}>Cancel</Button>
