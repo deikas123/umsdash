@@ -5,6 +5,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const SMS_API_URL = "https://smsportal.hostpinnacle.co.ke/SMSApi/send";
+
+function normalizePhone(phone: string): string {
+  let m = phone.replace(/\s+/g, "").replace(/^\+/, "");
+  if (m.startsWith("0")) m = "254" + m.slice(1);
+  return m;
+}
+
 const json = (body: unknown) =>
   new Response(JSON.stringify(body), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
@@ -45,6 +53,84 @@ Deno.serve(async (req) => {
       }
       return json({ error: e.message });
     }
+
+    // Post-reset: send security alert SMS + in-app notification
+    try {
+      const { data: profile } = await adminClient
+        .from("profiles")
+        .select("full_name, phone_number, phone")
+        .eq("user_id", user_id)
+        .maybeSingle();
+
+      const rawPhone: string | null = (profile?.phone_number ?? profile?.phone) || null;
+
+      if (rawPhone) {
+        const mobile = normalizePhone(rawPhone);
+        const message = `UMS Hub Security Alert: Your password was reset by an administrator. Temp password: ${new_password}. Change it on login.`;
+
+        const apiKey = Deno.env.get("SMS_API_KEY")!;
+        const smsUserId = Deno.env.get("SMS_USER_ID")!;
+        const smsPassword = Deno.env.get("SMS_PASSWORD")!;
+        const senderId = Deno.env.get("SMS_SENDER_ID") || "UMSKENYA";
+
+        const params = new URLSearchParams({
+          userid: smsUserId,
+          password: smsPassword,
+          mobile,
+          msg: message,
+          senderid: senderId,
+          msgType: "text",
+          duplicatecheck: "true",
+          output: "json",
+          sendMethod: "quick",
+        });
+
+        let smsData: unknown = null;
+        let success = false;
+        try {
+          const smsResponse = await fetch(SMS_API_URL, {
+            method: "POST",
+            headers: {
+              "apikey": apiKey,
+              "cache-control": "no-cache",
+              "content-type": "application/x-www-form-urlencoded",
+            },
+            body: params.toString(),
+          });
+          smsData = await smsResponse.json();
+          success = (smsData as { status?: string })?.status === "S" ||
+            (smsData as { status?: string })?.status === "success" ||
+            smsResponse.ok;
+        } catch (smsErr) {
+          smsData = { error: String(smsErr) };
+        }
+
+        await adminClient.from("sms_logs").insert({
+          recipient_phone: mobile,
+          recipient_name: profile?.full_name || null,
+          message,
+          sms_type: "password_reset",
+          status: success ? "sent" : "failed",
+          sent_by: caller.id,
+          related_table: "auth.users",
+          related_id: user_id,
+          sms_response: smsData,
+        });
+      }
+
+      // In-app notification regardless of phone
+      await adminClient.from("in_app_notifications").insert({
+        user_id,
+        title: "Password reset by admin",
+        message: "Your password was reset. Login and change it immediately.",
+        type: "security",
+        is_read: false,
+      });
+    } catch (notifyErr) {
+      // Non-fatal — log and continue
+      console.error("Post-reset notification error:", notifyErr);
+    }
+
     return json({ success: true });
   } catch (error: unknown) {
     console.error("Admin reset password error:", error);

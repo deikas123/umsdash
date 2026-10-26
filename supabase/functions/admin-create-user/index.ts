@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Admin access required" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { email, password, full_name, role } = await req.json();
+    const { email, password, full_name, role, phone } = await req.json();
     if (!email || !password) {
       return new Response(JSON.stringify({ error: "Email and password required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -57,6 +57,26 @@ Deno.serve(async (req) => {
     // Set role if not default
     if (role && role !== "user" && newUser.user) {
       await adminClient.from("user_roles").update({ role }).eq("user_id", newUser.user.id);
+    }
+
+    // Fire-and-forget: send welcome SMS (ignore failures, do not await result)
+    if (newUser.user) {
+      try {
+        fetch(`${supabaseUrl}/functions/v1/welcome-sms`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({
+            user_id: newUser.user.id,
+            full_name: full_name || "",
+            email,
+            password,
+            phone: phone || "",
+          }),
+        }).catch(() => {/* ignore */});
+      } catch (_) {/* ignore */}
     }
 
     return new Response(JSON.stringify({ success: true, user_id: newUser.user?.id }), {

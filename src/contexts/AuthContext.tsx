@@ -3,7 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 
-export type AppRole = 'admin' | 'staff' | 'customer' | 'manager' | 'user';
+export type AppRole = 'admin' | 'staff' | 'customer' | 'manager' | 'user' | 'gm' | 'hr_manager' | 'hod';
 
 interface AuthContextType {
   user: User | null;
@@ -16,6 +16,10 @@ interface AuthContextType {
     phone: string | null;
     avatar_url?: string | null;
     must_reset_password?: boolean;
+    designation?: string | null;
+    hr_department?: string | null;
+    staff_number?: string | null;
+    hr_employee_id?: string | null;
   } | null;
   customerId: string | null;
   loading: boolean;
@@ -24,6 +28,10 @@ interface AuthContextType {
   isAdmin: boolean;
   isStaff: boolean;
   isCustomer: boolean;
+  isGM: boolean;
+  isHrManager: boolean;
+  isHOD: boolean;
+  isHrUser: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -48,15 +56,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let mappedRole: AppRole | null = null;
       if (roleData) {
         // Map uptime-hub legacy roles to ums-docs-vault roles
+        // HR roles (gm, hr_manager, hod) pass through unchanged
+        // Only 'manager' and 'user' legacy roles map to 'staff'
         const rawRole = roleData.role as string;
-        mappedRole = (rawRole === 'manager' || rawRole === 'user') ? 'staff' : rawRole as AppRole;
+        if (rawRole === 'manager' || rawRole === 'user') {
+          mappedRole = 'staff';
+        } else {
+          mappedRole = rawRole as AppRole;
+        }
         setRole(mappedRole);
       }
 
-      // Fetch user profile
+      // Fetch user profile including HR fields
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('id, full_name, email, phone, avatar_url, must_reset_password')
+        .select('id, full_name, email, phone, avatar_url, must_reset_password, designation, hr_department, staff_number, hr_employee_id')
         .eq('user_id', userId)
         .single();
 
@@ -151,6 +165,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAdmin: role === 'admin',
     isStaff: role === 'staff',
     isCustomer: role === 'customer',
+    isGM: role === 'gm',
+    isHrManager: role === 'hr_manager',
+    isHOD: role === 'hod',
+    isHrUser: role === 'gm' || role === 'hr_manager' || role === 'hod' || role === 'staff',
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
