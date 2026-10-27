@@ -1,4 +1,4 @@
-﻿import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables, TablesInsert } from '@/hr/integrations/supabase/types';
 
@@ -19,7 +19,7 @@ export function useOvertimeRequests(filters?: { month?: string; status?: string 
     queryFn: async () => {
       let q = supabase
         .from('hr_overtime_requests')
-        .select('*, employees(first_name, last_name, staff_number, phone, department_id, departments(name))')
+        .select('*, employees(first_name, last_name, staff_number, phone, department_id, hr_departments(name))')
         .order('work_date', { ascending: false });
       if (filters?.month) q = q.eq('payroll_month', filters.month);
       if (filters?.status) q = q.eq('status', filters.status as any);

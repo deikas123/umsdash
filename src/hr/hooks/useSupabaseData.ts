@@ -1,4 +1,4 @@
-﻿import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables, TablesInsert, TablesUpdate } from '@/hr/integrations/supabase/types';
 
@@ -49,7 +49,7 @@ export function useEmployees() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('hr_employees')
-        .select('*, departments(name)')
+        .select('*, hr_departments(name)')
         .order('staff_number');
       if (error) throw error;
       return data as DbEmployee[];
@@ -61,7 +61,7 @@ export function useCreateEmployee() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (emp: TablesInsert<'employees'>) => {
-      const { data, error } = await supabase.from('hr_employees').insert(emp).select('*, departments(name)').single();
+      const { data, error } = await supabase.from('hr_employees').insert(emp).select('*, hr_departments(name)').single();
       if (error) throw error;
       return data;
     },
@@ -73,7 +73,7 @@ export function useUpdateEmployee() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: TablesUpdate<'employees'> & { id: string }) => {
-      const { data, error } = await supabase.from('hr_employees').update(updates).eq('id', id).select('*, departments(name)').single();
+      const { data, error } = await supabase.from('hr_employees').update(updates).eq('id', id).select('*, hr_departments(name)').single();
       if (error) throw error;
       return data;
     },
@@ -103,7 +103,7 @@ export function useLeaveRequests() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('hr_leave_requests')
-        .select('*, employees(first_name, last_name, departments(name))')
+        .select('*, hr_employees(first_name, last_name, hr_departments(name))')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as DbLeaveRequest[];
@@ -146,7 +146,7 @@ export function usePayrollRecords(month?: string) {
     queryFn: async () => {
       let query = supabase
         .from('hr_payroll_records')
-        .select('*, employees(first_name, last_name, staff_number)')
+        .select('*, hr_employees(first_name, last_name, staff_number)')
         .order('created_at', { ascending: false });
       if (month) query = query.eq('month', month);
       const { data, error } = await query;
@@ -197,7 +197,7 @@ export function useLoans() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('hr_loans')
-        .select('*, employees(first_name, last_name, staff_number)')
+        .select('*, hr_employees(first_name, last_name, staff_number)')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as DbLoan[];
@@ -325,3 +325,7 @@ export function useMyProfile() {
     },
   });
 }
+
+
+
+

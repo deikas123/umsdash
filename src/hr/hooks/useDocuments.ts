@@ -1,4 +1,4 @@
-﻿import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables, TablesInsert } from '@/hr/integrations/supabase/types';
 
@@ -12,7 +12,7 @@ export function useEmployeeDocuments(employeeId?: string) {
     queryFn: async () => {
       let q = supabase
         .from('hr_employee_documents')
-        .select('*, employees(first_name, last_name, staff_number, phone)')
+        .select('*, hr_employees(first_name, last_name, staff_number, phone)')
         .order('created_at', { ascending: false });
       if (employeeId) q = q.eq('employee_id', employeeId);
       const { data, error } = await q;

@@ -1,4 +1,4 @@
-ï»¿import { Users, DollarSign, CalendarDays, TrendingUp, Clock, CheckCircle2, UserCheck, UserX, AlertTriangle, Briefcase, CreditCard, Calendar } from 'lucide-react';
+import { Users, DollarSign, CalendarDays, TrendingUp, Clock, CheckCircle2, UserCheck, UserX, AlertTriangle, Briefcase, CreditCard, Calendar } from 'lucide-react';
 import { useEmployees, useLeaveRequests, useDepartments } from '@/hr/hooks/useSupabaseData';
 import { computeKenyanPayroll, Employee } from '@/hr/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -60,7 +60,7 @@ function useMyEmployeeData() {
       const empId = profile.employee_id;
 
       const [empRes, leavesRes, loansRes, attRes, payRes] = await Promise.all([
-        supabase.from('hr_employees').select('*, departments(name)').eq('id', empId).single(),
+        supabase.from('hr_employees').select('*, hr_departments(name)').eq('id', empId).single(),
         supabase.from('hr_leave_requests').select('*').eq('employee_id', empId).order('created_at', { ascending: false }).limit(5),
         supabase.from('hr_loans').select('*').eq('employee_id', empId).in('status', ['active', 'pending']),
         supabase.from('hr_attendance').select('status, date').eq('employee_id', empId).gte('date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)).order('date', { ascending: false }),
@@ -106,7 +106,7 @@ function StaffDashboard() {
     <div>
       <div className="page-header">
         <h1 className="page-title">Welcome, {emp.first_name}!</h1>
-        <p className="page-subtitle">{emp.designation} â€” {(emp as any).departments?.name || 'Unassigned'}</p>
+        <p className="page-subtitle">{emp.designation} — {(emp as any).departments?.name || 'Unassigned'}</p>
       </div>
 
       {/* Personal stat cards */}
@@ -116,7 +116,7 @@ function StaffDashboard() {
             <div>
               <p className="text-sm text-muted-foreground">Last Net Pay</p>
               <p className="text-2xl font-bold text-foreground mt-1">
-                {data.lastPayslip ? `KES ${Number(data.lastPayslip.net_pay).toLocaleString()}` : 'â€”'}
+                {data.lastPayslip ? `KES ${Number(data.lastPayslip.net_pay).toLocaleString()}` : '—'}
               </p>
             </div>
             <div className="h-12 w-12 rounded-lg bg-success/10 flex items-center justify-center">
@@ -164,7 +164,7 @@ function StaffDashboard() {
               <Briefcase className="h-6 w-6 text-accent-foreground" />
             </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-3">{attCounts.late} late Â· {attCounts.absent} absent</p>
+          <p className="text-xs text-muted-foreground mt-3">{attCounts.late} late · {attCounts.absent} absent</p>
         </div>
       </div>
 
@@ -181,7 +181,7 @@ function StaffDashboard() {
               <div key={leave.id} className="flex items-center justify-between p-3 rounded-md bg-muted/50">
                 <div>
                   <p className="text-sm font-medium text-foreground">{leaveTypeLabels[leave.leave_type] || leave.leave_type}</p>
-                  <p className="text-xs text-muted-foreground">{leave.start_date} â†’ {leave.end_date} Â· {leave.days} days</p>
+                  <p className="text-xs text-muted-foreground">{leave.start_date} ? {leave.end_date} · {leave.days} days</p>
                 </div>
                 <span className={`text-xs px-2 py-1 rounded-full border ${statusColors[leave.status]}`}>{statusLabels[leave.status]}</span>
               </div>
@@ -414,12 +414,12 @@ function AdminDashboard() {
           </div>
           <div className="p-4 space-y-3">
             {leaveRequests.slice(0, 5).map(leave => {
-              const empName = leave.employees ? `${leave.employees.first_name} ${leave.employees.last_name}` : 'â€”';
+              const empName = leave.employees ? `${leave.employees.first_name} ${leave.employees.last_name}` : '—';
               return (
                 <div key={leave.id} className="flex items-center justify-between p-3 rounded-md bg-muted/50">
                   <div>
                     <p className="text-sm font-medium text-foreground">{empName}</p>
-                    <p className="text-xs text-muted-foreground">{leaveTypeLabels[leave.leave_type] || leave.leave_type} Â· {leave.days} days</p>
+                    <p className="text-xs text-muted-foreground">{leaveTypeLabels[leave.leave_type] || leave.leave_type} · {leave.days} days</p>
                   </div>
                   <span className={`text-xs px-2 py-1 rounded-full border ${statusColors[leave.status]}`}>{statusLabels[leave.status]}</span>
                 </div>
@@ -513,3 +513,6 @@ export default function Dashboard() {
 
   return <AdminDashboard />;
 }
+
+
+

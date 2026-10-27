@@ -1,4 +1,4 @@
-﻿import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 export type DbAttendance = {
@@ -20,7 +20,7 @@ export function useAttendance(date?: string) {
     queryFn: async () => {
       let query = supabase
         .from('hr_attendance' as any)
-        .select('*, employees(first_name, last_name, staff_number)')
+        .select('*, hr_employees(first_name, last_name, staff_number)')
         .order('created_at', { ascending: false });
       if (date) query = query.eq('date', date);
       const { data, error } = await query;
@@ -56,3 +56,4 @@ export function useUpdateAttendance() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['attendance'] }),
   });
 }
+

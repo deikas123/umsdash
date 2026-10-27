@@ -1,4 +1,4 @@
-﻿import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/hr/integrations/supabase/types';
 
@@ -28,7 +28,7 @@ export function useEmployeeChecklists() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('hr_employee_checklists')
-        .select('*, employees(first_name, last_name, staff_number, departments(name)), checklist_templates(name, items)')
+        .select('*, employees(first_name, last_name, staff_number, hr_departments(name)), hr_checklist_templates(name, items)')
         .order('started_at', { ascending: false });
       if (error) throw error;
       return data as DbEmployeeChecklist[];
