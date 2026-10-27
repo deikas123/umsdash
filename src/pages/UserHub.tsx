@@ -316,13 +316,13 @@ export default function UserHub() {
     try {
       if (deptEditing) {
         const { error } = await supabase
-          .from('departments')
+          .from('hr_departments')
           .update({ name: deptName.trim(), color: deptColor })
           .eq('id', deptEditing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
-          .from('departments')
+          .from('hr_departments')
           .insert({ name: deptName.trim(), color: deptColor });
         if (error) throw error;
       }
@@ -343,7 +343,7 @@ export default function UserHub() {
   const deleteDept = async () => {
     if (!deptToDelete) return;
     try {
-      const { error } = await supabase.from('departments').delete().eq('id', deptToDelete.id);
+      const { error } = await supabase.from('hr_departments').delete().eq('id', deptToDelete.id);
       if (error) throw error;
       toast({ title: 'Department deleted', description: deptToDelete.name });
       setDeptToDelete(null);

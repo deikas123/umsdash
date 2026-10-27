@@ -89,7 +89,7 @@ export function useUserHub() {
     enabled: !!user,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('departments')
+        .from('hr_departments')
         .select('id, name, color, created_at')
         .order('name', { ascending: true });
       if (error) throw error;
@@ -120,7 +120,10 @@ export function useUserHub() {
     const profileUpdate: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (patch.full_name !== undefined) profileUpdate.full_name = patch.full_name;
     if (patch.phone !== undefined) profileUpdate.phone = patch.phone;
-    if (patch.department !== undefined) profileUpdate.department = patch.department;
+    if (patch.department !== undefined) {
+      profileUpdate.department = patch.department;
+      profileUpdate.hr_department = patch.department; // keep hr_department in sync
+    }
     if (patch.must_reset_password !== undefined) profileUpdate.must_reset_password = patch.must_reset_password;
 
     const { error: profErr } = await supabase.from('profiles').update(profileUpdate).eq('user_id', userId);
