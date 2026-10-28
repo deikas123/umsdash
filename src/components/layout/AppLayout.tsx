@@ -45,13 +45,13 @@ export function AppLayout({ children, title, description }: AppLayoutProps) {
   return (
     <SidebarProvider>
       <TourController />
-      <div className="min-h-screen flex w-full">
+      <div className="h-screen flex w-full overflow-hidden">
         <AppSidebar />
-        <SidebarInset className="flex-1 flex flex-col">
+        <SidebarInset className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Announcement Banner */}
           <AnnouncementBanner />
           {/* Header */}
-          <header className="sticky top-0 z-10 flex h-12 sm:h-14 items-center gap-2 sm:gap-4 border-b bg-background px-3 sm:px-4 lg:px-6">
+          <header className="flex-shrink-0 sticky top-0 z-10 flex h-12 sm:h-14 items-center gap-2 sm:gap-4 border-b bg-background px-3 sm:px-4 lg:px-6">
             <SidebarTrigger className="-ml-1" />
             <div className="flex-1 flex items-center justify-between min-w-0">
               <div className="min-w-0">
@@ -97,7 +97,7 @@ export function AppLayout({ children, title, description }: AppLayoutProps) {
           {/* Password Expiry Banner */}
           <PasswordExpiryBanner />
 
-          {/* Main Content with page transition */}
+          {/* Main Content — scrollable within the frame */}
           <AnimatePresence mode="wait" initial={false}>
             <motion.main
               key={location.pathname}
@@ -105,7 +105,7 @@ export function AppLayout({ children, title, description }: AppLayoutProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.15, ease: 'easeOut' }}
-              className="flex-1 p-3 sm:p-4 lg:p-6 overflow-auto pb-14 md:pb-0"
+              className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 lg:p-6 pb-16 md:pb-6"
             >
               {children}
             </motion.main>
