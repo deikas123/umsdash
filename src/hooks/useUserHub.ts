@@ -117,17 +117,19 @@ export function useUserHub() {
 
   /** Update a user's profile fields and/or role. */
   async function updateUser(userId: string, patch: UpdateUserInput): Promise<void> {
-    const profileUpdate: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    const profileUpdate: Record<string, unknown> = {};
     if (patch.full_name !== undefined) profileUpdate.full_name = patch.full_name;
     if (patch.phone !== undefined) profileUpdate.phone = patch.phone;
     if (patch.department !== undefined) {
       profileUpdate.department = patch.department;
-      profileUpdate.hr_department = patch.department; // keep hr_department in sync
+      profileUpdate.hr_department = patch.department;
     }
     if (patch.must_reset_password !== undefined) profileUpdate.must_reset_password = patch.must_reset_password;
 
-    const { error: profErr } = await supabase.from('profiles').update(profileUpdate).eq('user_id', userId);
-    if (profErr) throw profErr;
+    if (Object.keys(profileUpdate).length > 0) {
+      const { error: profErr } = await supabase.from('profiles').update(profileUpdate).eq('user_id', userId);
+      if (profErr) throw profErr;
+    }
 
     if (patch.role !== undefined) {
       const { data: existing } = await supabase

@@ -247,7 +247,7 @@ export default function UserHub() {
     } catch (err) {
       toast({
         title: 'Update failed',
-        description: err instanceof Error ? err.message : 'Unknown error',
+        description: err instanceof Error ? err.message : (err as any)?.message ?? (err as any)?.details ?? JSON.stringify(err),
         variant: 'destructive',
       });
     } finally {
