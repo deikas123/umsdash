@@ -630,19 +630,19 @@ export default function UserHub() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <Table>
+                  <Table className="min-w-[900px]">
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead className="hidden md:table-cell">Department</TableHead>
-                        <TableHead className="hidden lg:table-cell">Designation</TableHead>
-                        <TableHead className="hidden lg:table-cell">Staff No.</TableHead>
-                        <TableHead className="hidden lg:table-cell">App Access</TableHead>
-                        <TableHead className="hidden md:table-cell">Last Active</TableHead>
-                        <TableHead className="hidden lg:table-cell">Docs</TableHead>
-                        <TableHead className="hidden lg:table-cell">Streak</TableHead>
+                        <TableHead className="w-48">Name</TableHead>
+                        <TableHead className="w-52">Email</TableHead>
+                        <TableHead className="w-24">Role</TableHead>
+                        <TableHead className="hidden md:table-cell w-36">Department</TableHead>
+                        <TableHead className="hidden lg:table-cell w-36">Designation</TableHead>
+                        <TableHead className="hidden lg:table-cell w-24">Staff No.</TableHead>
+                        <TableHead className="hidden lg:table-cell w-24">App Access</TableHead>
+                        <TableHead className="hidden md:table-cell w-28">Last Active</TableHead>
+                        <TableHead className="hidden lg:table-cell w-16">Docs</TableHead>
+                        <TableHead className="hidden lg:table-cell w-16">Streak</TableHead>
                         <TableHead className="w-12"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -661,7 +661,7 @@ export default function UserHub() {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell>{u.email}</TableCell>
+                          <TableCell className="max-w-[200px] truncate text-sm">{u.email}</TableCell>
                           <TableCell>
                             <Badge variant={getRoleBadgeVariant(u.role)} className="capitalize">
                               {u.role ?? 'none'}
