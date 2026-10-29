@@ -212,7 +212,7 @@ export default function UserHub() {
       must_reset_password: u.must_reset_password,
       docs: hasAccess(u.user_id, 'docs'),
       ops: hasAccess(u.user_id, 'ops'),
-      hr_role: u.hr_role ?? 'none',
+      hr_role: ['gm', 'hr_manager', 'hod'].includes(u.role ?? '') ? (u.role ?? 'none') : 'none',
     });
     setEditOpen(true);
   };
@@ -221,25 +221,24 @@ export default function UserHub() {
     if (!editTarget || !editForm) return;
     setEditSaving(true);
     try {
+      // HR role: if set, it replaces the main role. If removed, fall back to the selected base role.
+      const finalRole = (editForm.hr_role && editForm.hr_role !== 'none')
+        ? editForm.hr_role as any
+        : editForm.role;
+
       await updateUser(editTarget.user_id, {
         full_name: editForm.full_name,
         phone: editForm.phone || null,
-        role: editForm.role,
+        role: finalRole,
         department: editForm.department === NONE_DEPT ? null : editForm.department,
         must_reset_password: editForm.must_reset_password,
       });
+      // App access
       if (editForm.docs !== hasAccess(editTarget.user_id, 'docs')) {
         await updateAppAccess(editTarget.user_id, 'docs', editForm.docs);
       }
       if (editForm.ops !== hasAccess(editTarget.user_id, 'ops')) {
         await updateAppAccess(editTarget.user_id, 'ops', editForm.ops);
-      }
-      // HR role upsert
-      if (editForm.hr_role && editForm.hr_role !== 'none') {
-        await supabase.from('user_roles').delete().eq('user_id', editTarget.user_id).in('role', ['gm', 'hr_manager', 'hod']);
-        await supabase.from('user_roles').insert({ user_id: editTarget.user_id, role: editForm.hr_role as any });
-      } else if (editForm.hr_role === 'none') {
-        await supabase.from('user_roles').delete().eq('user_id', editTarget.user_id).in('role', ['gm', 'hr_manager', 'hod']);
       }
       toast({ title: 'User updated', description: `${editForm.full_name} saved.` });
       setEditOpen(false);
@@ -1145,17 +1144,22 @@ export default function UserHub() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>HR Role</Label>
+                <Label>HR Role <span className="text-xs text-muted-foreground">(replaces base role)</span></Label>
                 <select
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   value={editForm.hr_role ?? 'none'}
                   onChange={(e) => setEditForm((f) => f ? { ...f, hr_role: e.target.value } : f)}
                 >
                   <option value="none">No HR Role</option>
-                  <option value="gm">GM</option>
+                  <option value="gm">GM — General Manager</option>
                   <option value="hr_manager">HR Manager</option>
-                  <option value="hod">HOD</option>
+                  <option value="hod">HOD — Head of Department</option>
                 </select>
+                {editForm.hr_role && editForm.hr_role !== 'none' && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    ⚠ This user's role will be set to <strong>{editForm.hr_role}</strong>, replacing their current base role.
+                  </p>
+                )}
               </div>
               <div className="flex justify-end gap-3">
                 <Button variant="outline" onClick={() => setEditOpen(false)} disabled={editSaving}>Cancel</Button>
