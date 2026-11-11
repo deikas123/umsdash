@@ -15,6 +15,7 @@ import { OnboardingTourProvider } from "@/hooks/useOnboardingTour";
 import ChunkErrorBoundary from "@/components/operations/ChunkErrorBoundary";
 
 const HrApp = lazy(() => import('./hr/HrRoot'));
+const ItApp = lazy(() => import('./it/ItRoot'));
 
 // Launcher
 import AppLauncher from "./pages/AppLauncher";
@@ -225,6 +226,22 @@ const AppRoutes = () => (
               </div>
             }>
               <HrApp />
+            </Suspense>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ── IT Command Centre (/it/*) ── */}
+      <Route
+        path="/it/*"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'staff']}>
+            <Suspense fallback={
+              <div className="min-h-screen flex items-center justify-center">
+                <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            }>
+              <ItApp />
             </Suspense>
           </ProtectedRoute>
         }

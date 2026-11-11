@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Activity, LogOut, ShoppingBag, LayoutGrid, Layers, List, Users2 } from 'lucide-react';
+import { FileText, Activity, LogOut, ShoppingBag, LayoutGrid, Layers, List, Users2, Terminal } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
 import { useQuery } from '@tanstack/react-query';
@@ -112,6 +112,16 @@ export default function AppLauncher() {
       dataTour: 'hr-hub-card',
     },
     {
+      id: 'it',
+      title: 'IT Command Centre',
+      description: 'Centralised endpoint, identity, security and IT operations management.',
+      icon: Terminal,
+      href: '/it',
+      color: 'from-sky-600 to-cyan-800',
+      visible: !isCustomer,
+      dataTour: 'it-command-centre-card',
+    },
+    {
       id: 'apps',
       title: 'App Store',
       description: 'Browse available and upcoming UMS Hub applications.',
@@ -139,7 +149,7 @@ export default function AppLauncher() {
   // Launching an app records a recency timestamp so the modern view can feature
   // the app the user used most recently.
   const launchApp = (appId: string, href: string) => {
-    if (appId === 'docs' || appId === 'ops' || appId === 'hr') {
+    if (appId === 'docs' || appId === 'ops' || appId === 'hr' || appId === 'it') {
       try { localStorage.setItem(`umshub_last_${appId}_page_ts`, String(Date.now())); } catch { /* storage unavailable */ }
     }
     navigate(href);
@@ -147,7 +157,7 @@ export default function AppLauncher() {
   // Resume an app at the last visited page (falls back to the app root).
   const continueApp = (appId: string, rootHref: string) => {
     const last = getLastPage(appId);
-    if (appId === 'docs' || appId === 'ops' || appId === 'hr') {
+    if (appId === 'docs' || appId === 'ops' || appId === 'hr' || appId === 'it') {
       try { localStorage.setItem(`umshub_last_${appId}_page_ts`, String(Date.now())); } catch { /* storage unavailable */ }
     }
     navigate(last || rootHref);
@@ -442,6 +452,7 @@ function getLastPage(appId: string): string | null {
   if (appId === 'docs') return localStorage.getItem('umshub_last_docs_page');
   if (appId === 'ops') return localStorage.getItem('umshub_last_ops_page');
   if (appId === 'hr') return localStorage.getItem('umshub_last_hr_page');
+  if (appId === 'it') return localStorage.getItem('umshub_last_it_page');
   return null;
 }
 
@@ -451,7 +462,10 @@ function getFeaturedAppId(): string {
   const docsTs = Number(localStorage.getItem('umshub_last_docs_page_ts') ?? 0);
   const opsTs  = Number(localStorage.getItem('umshub_last_ops_page_ts')  ?? 0);
   const hrTs   = Number(localStorage.getItem('umshub_last_hr_page_ts')   ?? 0);
-  if (hrTs >= docsTs && hrTs >= opsTs) return 'hr';
+  const itTs   = Number(localStorage.getItem('umshub_last_it_page_ts')   ?? 0);
+  const max = Math.max(docsTs, opsTs, hrTs, itTs);
+  if (max === itTs && itTs > 0) return 'it';
+  if (max === hrTs && hrTs > 0) return 'hr';
   return opsTs > docsTs ? 'ops' : 'docs';
 }
 
@@ -459,5 +473,6 @@ function appStatLabel(app: { id: string }, s: LauncherStats): string | null {
   if (app.id === 'docs') return `${s.docsCount.toLocaleString()} documents`;
   if (app.id === 'ops') return `${s.incidentsCount} open incidents`;
   if (app.id === 'hr') return null;
+  if (app.id === 'it') return 'Endpoint · Identity · Security';
   return null;
 }
