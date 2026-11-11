@@ -286,16 +286,46 @@ export function useUserRoles() {
   });
 }
 
+/** Returns all roles for a single user as an array. */
+export function useUserRolesByUser(userId?: string) {
+  return useQuery({
+    queryKey: ['user_roles', userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('*')
+        .eq('user_id', userId!);
+      if (error) throw error;
+      return (data ?? []) as DbUserRole[];
+    },
+  });
+}
+
 export function useUpdateUserRole() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
-      // Upsert: delete existing then insert new
-      await supabase.from('user_roles').delete().eq('user_id', userId);
+      // Insert the role if it doesn't already exist for this user
       const { error } = await supabase.from('user_roles').insert({
         user_id: userId,
         role: role as any,
       });
+      if (error && error.code !== '23505') throw error; // ignore duplicate
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['user_roles'] }),
+  });
+}
+
+export function useRemoveUserRole() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
+      const { error } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId)
+        .eq('role', role as any);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['user_roles'] }),

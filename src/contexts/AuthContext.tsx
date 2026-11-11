@@ -1,14 +1,20 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
 
-export type AppRole = 'admin' | 'staff' | 'customer' | 'manager' | 'user' | 'gm' | 'hr_manager' | 'hod';
+export type AppRole =
+  | 'admin' | 'staff' | 'customer' | 'manager' | 'user'
+  | 'gm' | 'hr_manager' | 'hod'
+  | 'it_admin' | 'it_staff';
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  /** Primary role — the highest-privilege role for backwards compat.
+   *  Use `roles` to check all roles a user has. */
   role: AppRole | null;
+  /** All roles assigned to this user. */
+  roles: AppRole[];
   profile: {
     id: string;
     full_name: string;
@@ -32,13 +38,38 @@ interface AuthContextType {
   isHrManager: boolean;
   isHOD: boolean;
   isHrUser: boolean;
+  isItAdmin: boolean;
+  isItStaff: boolean;
+  /** Check if the user has a specific role. */
+  hasRole: (r: AppRole) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/** Role priority — used to pick the "primary" role for backwards compat. */
+const ROLE_PRIORITY: AppRole[] = [
+  'admin', 'gm', 'hr_manager', 'it_admin', 'hod', 'it_staff', 'staff', 'customer', 'manager', 'user',
+];
+
+function pickPrimaryRole(rawRoles: string[]): AppRole | null {
+  // Normalise legacy roles
+  const mapped = rawRoles.map(r => {
+    if (r === 'manager' || r === 'user') return 'staff' as AppRole;
+    return r as AppRole;
+  });
+  // Return the highest-priority role
+  for (const r of ROLE_PRIORITY) {
+    if (mapped.includes(r)) return r;
+  }
+  return mapped[0] ?? null;
+}
+
+const SUPER_ADMIN_EMAIL = 'amsterntechhub@gmail.com';
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [roles, setRoles] = useState<AppRole[]>([]);
   const [role, setRole] = useState<AppRole | null>(null);
   const [profile, setProfile] = useState<AuthContextType['profile']>(null);
   const [customerId, setCustomerId] = useState<string | null>(null);
@@ -46,49 +77,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserData = async (userId: string) => {
     try {
-      // Fetch user role
-      const { data: roleData } = await supabase
+      // Fetch ALL roles for this user
+      const { data: roleRows } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', userId)
-        .single();
+        .eq('user_id', userId);
 
-      let mappedRole: AppRole | null = null;
-      if (roleData) {
-        // Map uptime-hub legacy roles to ums-docs-vault roles
-        // HR roles (gm, hr_manager, hod) pass through unchanged
-        // Only 'manager' and 'user' legacy roles map to 'staff'
-        const rawRole = roleData.role as string;
-        if (rawRole === 'manager' || rawRole === 'user') {
-          mappedRole = 'staff';
-        } else {
-          mappedRole = rawRole as AppRole;
-        }
-        setRole(mappedRole);
-      }
+      const rawRoles = (roleRows ?? []).map((r: any) => r.role as string);
+      const mappedRoles: AppRole[] = rawRoles.map(r =>
+        r === 'manager' || r === 'user' ? 'staff' : r as AppRole
+      );
+      const primaryRole = pickPrimaryRole(rawRoles);
 
-      // Fetch user profile including HR fields
+      setRoles(mappedRoles);
+      setRole(primaryRole);
+
+      // Fetch profile
       const { data: profileData } = await supabase
         .from('profiles')
         .select('id, full_name, email, phone, avatar_url, must_reset_password, designation, hr_department, staff_number, hr_employee_id')
         .eq('user_id', userId)
         .single();
 
-      if (profileData) {
-        setProfile(profileData);
-      }
+      if (profileData) setProfile(profileData);
 
-      // If customer (use mapped role, not raw DB value), fetch customer ID
-      if (mappedRole === 'customer') {
+      // Customer ID
+      if (primaryRole === 'customer') {
         const { data: customerData } = await supabase
           .from('customers')
           .select('id')
           .eq('user_id', userId)
           .single();
-
-        if (customerData) {
-          setCustomerId(customerData.id);
-        }
+        if (customerData) setCustomerId(customerData.id);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -96,38 +116,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
 
-        // Defer data fetching to avoid deadlock
         if (session?.user) {
-          setTimeout(() => {
-            fetchUserData(session.user.id);
-          }, 0);
+          setTimeout(() => { fetchUserData(session.user.id); }, 0);
         } else {
+          setRoles([]);
           setRole(null);
           setProfile(null);
           setCustomerId(null);
         }
 
-        if (event === 'SIGNED_OUT') {
-          setLoading(false);
-        }
+        if (event === 'SIGNED_OUT') setLoading(false);
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-
       if (session?.user) {
-        fetchUserData(session.user.id).finally(() => {
-          setLoading(false);
-        });
+        fetchUserData(session.user.id).finally(() => setLoading(false));
       } else {
         setLoading(false);
       }
@@ -137,10 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error };
   };
 
@@ -148,31 +156,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
+    setRoles([]);
     setRole(null);
     setProfile(null);
     setCustomerId(null);
   };
 
-  const SUPER_ADMIN_EMAIL = 'amsterntechhub@gmail.com';
   const isSuperAdmin = (user?.email ?? '').toLowerCase() === SUPER_ADMIN_EMAIL;
+
+  const hasRole = (r: AppRole) => isSuperAdmin || roles.includes(r);
 
   const value: AuthContextType = {
     user,
     session,
     role,
+    roles,
     profile,
     customerId,
     loading,
     signIn,
     signOut,
-    isAdmin: role === 'admin' || isSuperAdmin,
-    isStaff: role === 'staff',
-    isCustomer: role === 'customer',
-    isGM: role === 'gm' || isSuperAdmin,
-    isHrManager: role === 'hr_manager' || isSuperAdmin,
-    isHOD: role === 'hod' || isSuperAdmin,
-    // Super admin can access HR app too
-    isHrUser: role === 'gm' || role === 'hr_manager' || role === 'hod' || role === 'staff' || isSuperAdmin,
+    hasRole,
+    isAdmin:     hasRole('admin')      || isSuperAdmin,
+    isStaff:     hasRole('staff'),
+    isCustomer:  hasRole('customer'),
+    isGM:        hasRole('gm')         || isSuperAdmin,
+    isHrManager: hasRole('hr_manager') || isSuperAdmin,
+    isHOD:       hasRole('hod')        || isSuperAdmin,
+    isHrUser:    isSuperAdmin || roles.some(r => ['gm','hr_manager','hod','staff'].includes(r)),
+    isItAdmin:   hasRole('it_admin')   || isSuperAdmin,
+    isItStaff:   hasRole('it_staff')   || hasRole('it_admin') || isSuperAdmin,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -180,8 +193,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 }
