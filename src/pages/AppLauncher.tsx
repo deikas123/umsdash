@@ -34,10 +34,13 @@ const item = {
 };
 
 export default function AppLauncher() {
-  const { profile, role, roles, isCustomer, signOut, user } = useAuth();
+  const { profile, role, roles, isCustomer, signOut, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { settings } = useOrgSettings();
   const logoSrc = settings.org_logo_url || umsLogo;
+
+  // Clear legacy view-mode key so stale 'modern'/'compact' doesn't confuse anything
+  try { localStorage.removeItem('umshub_launcher_view'); } catch {}
 
   const [showWelcome, setShowWelcome] = useState(
     () => !sessionStorage.getItem('umshub_welcome_seen')
@@ -79,6 +82,9 @@ export default function AppLauncher() {
     },
   });
 
+  // Only hide non-docs apps if we KNOW the user is a customer (never hide during loading)
+  const hideNonDocs = !authLoading && isCustomer;
+
   const apps = [
     {
       id: 'docs',
@@ -100,7 +106,7 @@ export default function AppLauncher() {
       gradient: 'from-emerald-500 via-emerald-600 to-teal-700',
       accent: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
       stat: `${s.incidentsCount} open incidents`,
-      visible: !isCustomer,
+      visible: !hideNonDocs,
     },
     {
       id: 'hr',
@@ -110,8 +116,8 @@ export default function AppLauncher() {
       href: '/hr',
       gradient: 'from-orange-500 via-orange-600 to-amber-700',
       accent: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
-      stat: `${s.customersCount.toLocaleString()} customers`,
-      visible: !isCustomer,
+      stat: null,
+      visible: !hideNonDocs,
     },
     {
       id: 'it',
@@ -122,7 +128,7 @@ export default function AppLauncher() {
       gradient: 'from-sky-500 via-cyan-600 to-cyan-700',
       accent: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
       stat: 'IT management',
-      visible: !isCustomer,
+      visible: !hideNonDocs,
     },
     {
       id: 'apps',
@@ -133,7 +139,7 @@ export default function AppLauncher() {
       gradient: 'from-violet-500 via-purple-600 to-purple-700',
       accent: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
       stat: 'Coming soon',
-      visible: !isCustomer,
+      visible: !hideNonDocs,
     },
   ].filter(a => a.visible);
 

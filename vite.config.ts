@@ -80,6 +80,10 @@ export default defineConfig(({ mode, command }) => {
       workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // Bump this version to force all clients to reload the new SW immediately
+        additionalManifestEntries: [],
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
