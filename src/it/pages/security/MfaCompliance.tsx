@@ -75,7 +75,7 @@ export default function MfaCompliance() {
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>Update MFA Record</DialogTitle></DialogHeader>
           <div className="space-y-3 mt-4">
-            <div><Label className="text-xs">Employee</Label><Select value={form.employee_id} onValueChange={v=>setForm(f=>({...f,employee_id:v}))}><SelectTrigger><SelectValue placeholder="Select"/></SelectTrigger><SelectContent>{employees.map(e=><SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>)}</SelectContent></Select></div>
+            <div><Label className="text-xs">Employee</Label><Select value={form.employee_id} onValueChange={v=>setForm(f=>({...f,employee_id:v}))}><SelectTrigger><SelectValue placeholder="Select"/></SelectTrigger><SelectContent>{employees.map(e=><SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>)}</SelectContent></Select></div>
             <div><Label className="text-xs">Enrolled</Label><Select value={form.enrolled?'yes':'no'} onValueChange={v=>setForm(f=>({...f,enrolled:v==='yes'}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="yes">Yes</SelectItem><SelectItem value="no">No</SelectItem></SelectContent></Select></div>
             <div><Label className="text-xs">Method (e.g. Authenticator App, SMS)</Label><Input value={form.method} onChange={e=>setForm(f=>({...f,method:e.target.value}))}/></div>
           </div>

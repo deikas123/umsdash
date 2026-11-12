@@ -1,14 +1,15 @@
 // src/pages/AppLauncher.tsx
-// Unified app launcher — shown at "/" after authentication.
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Activity, LogOut, ShoppingBag, LayoutGrid, Layers, List, Users2, Terminal } from 'lucide-react';
+import {
+  FileText, Activity, LogOut, ShoppingBag, Users2, Terminal,
+  ArrowRight, Bell, ChevronRight,
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
 import { useQuery } from '@tanstack/react-query';
@@ -23,30 +24,29 @@ type LauncherStats = {
   streak: number;
 };
 
+const container = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.07 } },
+};
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 160, damping: 18 } },
+};
+
 export default function AppLauncher() {
-  const { profile, role, isCustomer, signOut, user } = useAuth();
+  const { profile, role, roles, isCustomer, signOut, user } = useAuth();
   const navigate = useNavigate();
   const { settings } = useOrgSettings();
   const logoSrc = settings.org_logo_url || umsLogo;
 
-  // B2 — view mode toggle, persisted to localStorage.
-  const [viewMode, setViewMode] = useState<'classic' | 'modern' | 'compact'>(
-    () => (localStorage.getItem('umshub_launcher_view') as 'classic' | 'modern' | 'compact') || 'classic',
-  );
-
   const [showWelcome, setShowWelcome] = useState(
     () => !sessionStorage.getItem('umshub_welcome_seen')
   );
-
   const handleWelcomeComplete = () => {
     sessionStorage.setItem('umshub_welcome_seen', '1');
     setShowWelcome(false);
   };
 
-  // B1 — live stats query.
-  // NOTE: the spec named the streak table 'user_streaks', but this project's
-  // typed Supabase client only knows the 'upload_streaks' table (column
-  // 'current_streak'), so we query that to keep the build green.
   const { data: stats } = useQuery<LauncherStats>({
     queryKey: ['launcher-stats'],
     queryFn: async () => {
@@ -67,7 +67,6 @@ export default function AppLauncher() {
   });
   const s: LauncherStats = stats ?? { docsCount: 0, customersCount: 0, incidentsCount: 0, streak: 0 };
 
-  // Recent activity — fetched once (up to 10) and shared across all three views.
   const { data: recentNotifs = [] } = useQuery({
     queryKey: ['launcher-notifications'],
     queryFn: async () => {
@@ -75,7 +74,7 @@ export default function AppLauncher() {
         .from('in_app_notifications')
         .select('id, title, message, created_at, is_read')
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(5);
       return data ?? [];
     },
   });
@@ -84,395 +83,312 @@ export default function AppLauncher() {
     {
       id: 'docs',
       title: 'Document Vault',
-      description: 'Manage customer documents, folders, tasks, and reminders.',
+      description: 'Customer documents, folders, tasks, reminders and document expiry tracking.',
       icon: FileText,
       href: '/docs',
-      color: 'from-blue-600 to-blue-800',
+      gradient: 'from-blue-500 via-blue-600 to-blue-700',
+      accent: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+      stat: `${s.docsCount.toLocaleString()} documents`,
       visible: true,
-      dataTour: 'docs-vault-card',
     },
     {
       id: 'ops',
       title: 'Operations Hub',
-      description: 'Track vendor issues, incidents, passwords, and escalations.',
+      description: 'Vendor issues, incidents, passwords, escalations and on-call scheduling.',
       icon: Activity,
       href: '/ops',
-      color: 'from-emerald-600 to-emerald-800',
+      gradient: 'from-emerald-500 via-emerald-600 to-teal-700',
+      accent: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+      stat: `${s.incidentsCount} open incidents`,
       visible: !isCustomer,
-      dataTour: 'ops-hub-card',
     },
     {
       id: 'hr',
       title: 'HR Hub',
-      description: 'Manage employees, payroll, leave, attendance, and HR operations.',
+      description: 'Employees, payroll, leave, attendance, loans, announcements and surveys.',
       icon: Users2,
       href: '/hr',
-      color: 'from-orange-600 to-orange-800',
+      gradient: 'from-orange-500 via-orange-600 to-amber-700',
+      accent: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+      stat: `${s.customersCount.toLocaleString()} customers`,
       visible: !isCustomer,
-      dataTour: 'hr-hub-card',
     },
     {
       id: 'it',
       title: 'IT Command Centre',
-      description: 'Centralised endpoint, identity, security and IT operations management.',
+      description: 'Endpoints, identity, security, helpdesk, infrastructure and compliance.',
       icon: Terminal,
       href: '/it',
-      color: 'from-sky-600 to-cyan-800',
+      gradient: 'from-sky-500 via-cyan-600 to-cyan-700',
+      accent: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
+      stat: 'IT management',
       visible: !isCustomer,
-      dataTour: 'it-command-centre-card',
     },
     {
       id: 'apps',
       title: 'App Store',
-      description: 'Browse available and upcoming UMS Hub applications.',
+      description: 'Browse available and upcoming UMS Hub applications and integrations.',
       icon: ShoppingBag,
       href: '/apps',
-      color: 'from-violet-600 to-violet-800',
+      gradient: 'from-violet-500 via-purple-600 to-purple-700',
+      accent: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+      stat: 'Coming soon',
       visible: !isCustomer,
-      dataTour: 'app-store-card',
     },
-  ];
-
-  const visibleApps = apps.filter((a) => a.visible);
-
-  // B4 — featured app = the most recently launched app (Docs by default).
-  // Recency is tracked via timestamp companion keys written on launch.
-  const featuredId = getFeaturedAppId();
-  const featured = visibleApps.find((a) => a.id === featuredId) ?? visibleApps[0];
-  const otherApps = featured ? visibleApps.filter((a) => a.id !== featured.id) : visibleApps;
+  ].filter(a => a.visible);
 
   const initials = profile
     ? profile.full_name.split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase()
-    : '';
-  const greetingEmoji = getGreetingEmoji();
+    : (user?.email ?? '??').slice(0, 2).toUpperCase();
 
-  // Launching an app records a recency timestamp so the modern view can feature
-  // the app the user used most recently.
+  const greeting = (() => {
+    const h = new Date().getHours();
+    if (h < 12) return { text: 'Good morning', emoji: '☀️' };
+    if (h < 17) return { text: 'Good afternoon', emoji: '🌤️' };
+    return { text: 'Good evening', emoji: '🌙' };
+  })();
+
+  const firstName = profile?.full_name?.split(' ')[0] ?? user?.email?.split('@')[0] ?? 'there';
+
+  const allRoles = roles.length > 0 ? roles : (role ? [role] : []);
+
   const launchApp = (appId: string, href: string) => {
-    if (appId === 'docs' || appId === 'ops' || appId === 'hr' || appId === 'it') {
-      try { localStorage.setItem(`umshub_last_${appId}_page_ts`, String(Date.now())); } catch { /* storage unavailable */ }
-    }
+    try { localStorage.setItem(`umshub_last_${appId}_page_ts`, String(Date.now())); } catch {}
     navigate(href);
-  };
-  // Resume an app at the last visited page (falls back to the app root).
-  const continueApp = (appId: string, rootHref: string) => {
-    const last = getLastPage(appId);
-    if (appId === 'docs' || appId === 'ops' || appId === 'hr' || appId === 'it') {
-      try { localStorage.setItem(`umshub_last_${appId}_page_ts`, String(Date.now())); } catch { /* storage unavailable */ }
-    }
-    navigate(last || rootHref);
-  };
-
-  const setMode = (mode: 'classic' | 'modern' | 'compact') => {
-    setViewMode(mode);
-    try { localStorage.setItem('umshub_launcher_view', mode); } catch { /* storage unavailable */ }
   };
 
   return (
-    <div data-tour="app-launcher" className="h-screen overflow-y-auto bg-background flex flex-col">
+    <div data-tour="app-launcher" className="min-h-screen bg-background">
       {showWelcome && <WelcomeScreen onComplete={handleWelcomeComplete} />}
-      {/* Top bar */}
-      <header className="flex items-center justify-between px-6 py-4 border-b bg-card">
-        <div className="flex items-center gap-3">
-          <img src={logoSrc} alt="UMS Hub" className="h-8 w-auto object-contain" />
-          <div>
-            <h1 className="font-bold text-lg leading-none">UMS Hub</h1>
-            <p className="text-xs text-muted-foreground">Unified Management Platform</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          {/* B2 — view mode toggle */}
-          <div className="flex items-center gap-0.5 border rounded-md p-0.5">
-            {(['classic', 'modern', 'compact'] as const).map((mode) => (
-              <button
-                key={mode}
-                onClick={() => setMode(mode)}
-                className={`p-1.5 rounded transition-colors ${viewMode === mode ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                title={mode.charAt(0).toUpperCase() + mode.slice(1)}
-              >
-                {mode === 'classic' ? <LayoutGrid className="h-3.5 w-3.5" /> : mode === 'modern' ? <Layers className="h-3.5 w-3.5" /> : <List className="h-3.5 w-3.5" />}
-              </button>
-            ))}
-          </div>
-          <ThemeToggle />
-          {role && <Badge variant="outline" className="capitalize">{role}</Badge>}
-          {profile && (
-            <div data-tour="user-avatar" className="flex items-center gap-2 tour-target">
-              <span className="text-sm text-muted-foreground hidden sm:block">{profile.full_name}</span>
-              <Avatar className="h-8 w-8">
-                {profile.avatar_url && <AvatarImage src={profile.avatar_url} />}
-                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-              </Avatar>
+
+      {/* ── Top navigation bar ── */}
+      <header className="sticky top-0 z-40 border-b bg-card/80 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+          {/* Logo */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <img src={logoSrc} alt="UMS Hub" className="h-7 w-auto object-contain" />
+            <div className="hidden sm:block">
+              <p className="text-sm font-bold leading-none">UMS Hub</p>
+              <p className="text-[10px] text-muted-foreground">Unified Management Platform</p>
             </div>
-          )}
-          <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
-            <LogOut className="h-4 w-4" />
-          </Button>
+          </div>
+
+          {/* Right controls */}
+          <div className="flex items-center gap-2">
+            {/* Role badges */}
+            <div className="hidden md:flex items-center gap-1">
+              {allRoles.slice(0, 3).map(r => (
+                <Badge key={r} variant="secondary" className="text-[10px] capitalize px-1.5 py-0.5">{r.replace('_', ' ')}</Badge>
+              ))}
+            </div>
+            {/* Notifications dot */}
+            {recentNotifs.some((n: any) => !n.is_read) && (
+              <div className="relative">
+                <Bell className="h-4 w-4 text-muted-foreground" />
+                <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive" />
+              </div>
+            )}
+            <ThemeToggle />
+            {profile && (
+              <div data-tour="user-avatar" className="flex items-center gap-2 pl-1 border-l">
+                <span className="text-sm text-muted-foreground hidden sm:block truncate max-w-[140px]">{profile.full_name}</span>
+                <Avatar className="h-7 w-7">
+                  {profile.avatar_url && <AvatarImage src={profile.avatar_url} />}
+                  <AvatarFallback className="text-[10px] font-bold">{initials}</AvatarFallback>
+                </Avatar>
+              </div>
+            )}
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={signOut} title="Sign out">
+              <LogOut className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-6 py-10 max-w-5xl">
-        {/* B3 — Classic view (improved) */}
-        {viewMode === 'classic' && (
-          <>
-            {/* Hero */}
-            <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-background to-accent/10 border p-6 sm:p-8 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-              <div>
-                <h2 className="text-2xl font-semibold">
-                  {greetingEmoji} Good {getGreeting()}, {profile?.full_name?.split(' ')[0] ?? 'there'}
-                </h2>
-                <p className="text-muted-foreground mt-1">Choose an application to get started.</p>
-                <div className="flex flex-wrap gap-6 mt-4">
-                  <div>
-                    <span className="text-2xl font-bold">{s.docsCount.toLocaleString()}</span>
-                    <span className="block text-xs text-muted-foreground">Documents</span>
-                  </div>
-                  <div>
-                    <span className="text-2xl font-bold">{s.customersCount.toLocaleString()}</span>
-                    <span className="block text-xs text-muted-foreground">Customers</span>
-                  </div>
-                  <div>
-                    <span className="text-2xl font-bold">{s.streak} 🔥</span>
-                    <span className="block text-xs text-muted-foreground">Day Streak</span>
-                  </div>
-                </div>
-              </div>
-              {profile && (
-                <Avatar className="h-16 w-16">
-                  {profile.avatar_url && <AvatarImage src={profile.avatar_url} />}
-                  <AvatarFallback className="text-lg">{initials}</AvatarFallback>
-                </Avatar>
-              )}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+
+        {/* ── Hero banner ── */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-accent mb-8 p-6 sm:p-8 text-primary-foreground"
+        >
+          {/* Decorative circles */}
+          <div className="absolute -top-10 -right-10 h-48 w-48 rounded-full bg-white/5" />
+          <div className="absolute -bottom-6 -right-6 h-32 w-32 rounded-full bg-white/5" />
+          <div className="absolute top-4 right-32 h-20 w-20 rounded-full bg-white/5" />
+
+          <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-primary-foreground/70 mb-1">
+                {greeting.emoji} {greeting.text}
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{firstName}</h1>
+              <p className="text-sm text-primary-foreground/70 mt-1">
+                Choose a module to get started
+              </p>
             </div>
 
-            {/* App cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-10">
-              {visibleApps.map((app, i) => {
-                const stat = appStatLabel(app, s);
-                const last = getLastPage(app.id);
+            {/* Stats row */}
+            <div className="flex gap-6 sm:gap-8">
+              <div className="text-center">
+                <p className="text-2xl font-bold">{s.docsCount.toLocaleString()}</p>
+                <p className="text-xs text-primary-foreground/70">Documents</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold">{s.customersCount.toLocaleString()}</p>
+                <p className="text-xs text-primary-foreground/70">Customers</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold">{s.incidentsCount}</p>
+                <p className="text-xs text-primary-foreground/70">Open Incidents</p>
+              </div>
+              {s.streak > 0 && (
+                <div className="text-center">
+                  <p className="text-2xl font-bold">{s.streak} 🔥</p>
+                  <p className="text-xs text-primary-foreground/70">Day Streak</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* ── App cards grid ── */}
+          <div className="lg:col-span-2">
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Applications</h2>
+            <motion.div
+              variants={container}
+              initial="hidden"
+              animate="show"
+              className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+            >
+              {apps.map((app) => {
+                const last = (() => {
+                  try { return localStorage.getItem(`umshub_last_${app.id}_page`); } catch { return null; }
+                })();
                 return (
-                  <motion.div
-                    key={app.id}
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.35, delay: i * 0.1, type: 'spring', stiffness: 120, damping: 14 }}
-                    whileHover={{ scale: 1.02, y: -4 }}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <Card
-                      data-tour={app.dataTour}
-                      className="cursor-pointer h-48 flex flex-col transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 border-2 hover:border-primary/40 tour-target"
+                  <motion.div key={app.id} variants={item} data-tour={`${app.id}-card`}>
+                    <button
                       onClick={() => launchApp(app.id, app.href)}
+                      className="group w-full text-left rounded-xl border bg-card hover:bg-card/80 shadow-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 overflow-hidden"
                     >
-                      <CardHeader className="pb-3">
-                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${app.color} flex items-center justify-center mb-3`}>
-                          <app.icon className="h-6 w-6 text-white" />
+                      {/* Coloured top strip */}
+                      <div className={`h-1.5 w-full bg-gradient-to-r ${app.gradient}`} />
+
+                      <div className="p-5">
+                        {/* Icon + title row */}
+                        <div className="flex items-start justify-between mb-3">
+                          <div className={`p-2.5 rounded-xl ${app.accent}`}>
+                            <app.icon className="h-5 w-5" />
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all mt-1" />
                         </div>
-                        <CardTitle className="text-xl">{app.title}</CardTitle>
-                        <CardDescription>{app.description}</CardDescription>
-                      </CardHeader>
-                      <CardContent className="mt-auto">
-                        {stat && <p className="text-xs text-muted-foreground mb-3">{stat}</p>}
-                        <Button className="w-full" variant="outline">Open {app.title} →</Button>
-                        {last && (
-                          <button
-                            type="button"
-                            className="mt-2 text-xs text-primary hover:underline w-full text-left"
-                            onClick={(e) => { e.stopPropagation(); continueApp(app.id, app.href); }}
-                          >
-                            Continue: {getPageLabel(last)} →
-                          </button>
-                        )}
-                      </CardContent>
-                    </Card>
+
+                        <h3 className="font-semibold text-foreground text-base mb-1">{app.title}</h3>
+                        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{app.description}</p>
+
+                        <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
+                          <span className="text-xs text-muted-foreground">{app.stat}</span>
+                          {last && (
+                            <span className="text-xs text-primary font-medium">Resume →</span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
                   </motion.div>
                 );
               })}
-            </div>
-
-            <RecentActivity items={recentNotifs} limit={5} />
-          </>
-        )}
-
-        {/* B4 — Modern view */}
-        {viewMode === 'modern' && featured && (
-          <div className="grid grid-cols-1 lg:grid-cols-[65%_35%] gap-6 mb-10">
-            {/* Featured app */}
-            <motion.div
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Card
-                data-tour={featured.dataTour}
-                className={`relative overflow-hidden border-0 bg-gradient-to-br ${featured.color} text-white cursor-pointer tour-target`}
-                onClick={() => continueApp(featured.id, featured.href)}
-              >
-                <CardContent className="p-8 flex flex-col h-full min-h-[320px]">
-                  <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mb-4">
-                    <featured.icon className="h-8 w-8 text-white" />
-                  </div>
-                  <h2 className="text-3xl font-bold">{featured.title}</h2>
-                  <p className="text-white/80 mt-2 max-w-md">{featured.description}</p>
-                  {appStatLabel(featured, s) && (
-                    <p className="text-sm text-white/70 mt-3">{appStatLabel(featured, s)}</p>
-                  )}
-                  <div className="mt-auto pt-6">
-                    <Button
-                      variant="secondary"
-                      size="lg"
-                      onClick={(e) => { e.stopPropagation(); continueApp(featured.id, featured.href); }}
-                    >
-                      {getLastPage(featured.id)
-                        ? `Continue ${getPageLabel(getLastPage(featured.id) as string)} →`
-                        : `Open ${featured.title} →`}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            {/* Right column: other apps + recent activity */}
-            <motion.div
-              initial={{ x: 20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-3"
-            >
-              {otherApps.map((app) => (
-                <Card
-                  key={app.id}
-                  data-tour={app.dataTour}
-                  className="cursor-pointer tour-target hover:shadow-md transition-shadow"
-                  onClick={() => launchApp(app.id, app.href)}
-                >
-                  <CardContent className="p-4 flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${app.color} flex items-center justify-center shrink-0`}>
-                      <app.icon className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{app.title}</p>
-                      <p className="text-xs text-muted-foreground truncate">{app.description}</p>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); launchApp(app.id, app.href); }}>Open →</Button>
-                  </CardContent>
-                </Card>
-              ))}
-              <div className="pt-2">
-                <RecentActivity items={recentNotifs} limit={5} />
-              </div>
             </motion.div>
           </div>
-        )}
 
-        {/* B5 — Compact view */}
-        {viewMode === 'compact' && (
-          <>
-            <div className="mb-10">
-              {visibleApps.map((app, i) => (
-                <div
-                  key={app.id}
-                  data-tour={app.dataTour}
-                  className={`flex items-center gap-4 py-4 tour-target ${i > 0 ? 'border-t border-border' : ''}`}
-                >
-                  <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${app.color} flex items-center justify-center shrink-0`}>
-                    <app.icon className="h-4 w-4 text-white" />
+          {/* ── Right panel: activity + quick links ── */}
+          <div className="space-y-4">
+            {/* Recent activity */}
+            <div>
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Recent Activity</h2>
+              <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+                {recentNotifs.length === 0 ? (
+                  <div className="p-6 text-center text-sm text-muted-foreground">No recent activity</div>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {recentNotifs.map((n: any) => (
+                      <div key={n.id} className={`flex items-start gap-3 px-4 py-3 ${!n.is_read ? 'bg-primary/5' : ''}`}>
+                        {!n.is_read && <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />}
+                        {n.is_read && <div className="mt-1.5 h-1.5 w-1.5 flex-shrink-0" />}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{n.title}</p>
+                          {n.message && <p className="text-xs text-muted-foreground truncate">{n.message}</p>}
+                        </div>
+                        <span className="text-[10px] text-muted-foreground whitespace-nowrap flex-shrink-0">
+                          {new Date(n.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium">{app.title}</p>
-                    <p className="text-sm text-muted-foreground truncate">{app.description}</p>
-                  </div>
-                  {appStatLabel(app, s) && (
-                    <span className="text-xs text-muted-foreground hidden sm:block whitespace-nowrap">{appStatLabel(app, s)}</span>
-                  )}
-                  <Button variant="outline" size="sm" onClick={() => launchApp(app.id, app.href)}>Open →</Button>
-                </div>
-              ))}
+                )}
+              </div>
             </div>
-            <RecentActivity items={recentNotifs} limit={10} />
-          </>
-        )}
+
+            {/* Quick access */}
+            <div>
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Quick Access</h2>
+              <div className="rounded-xl border bg-card shadow-sm overflow-hidden divide-y divide-border">
+                {[
+                  { label: 'IT Helpdesk', sub: 'Log a support ticket', href: '/it/support', color: 'text-sky-500' },
+                  { label: 'HR Portal', sub: 'Leave, payslips, attendance', href: '/hr/profile', color: 'text-orange-500' },
+                  { label: 'Document Upload', sub: 'Add new documents', href: '/docs/upload', color: 'text-blue-500' },
+                  { label: 'Open Incidents', sub: 'View active incidents', href: '/ops/incidents', color: 'text-emerald-500' },
+                ].filter(() => !isCustomer).map(link => (
+                  <button
+                    key={link.href}
+                    onClick={() => navigate(link.href)}
+                    className="group w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left"
+                  >
+                    <div className={`h-2 w-2 rounded-full ${link.color.replace('text-', 'bg-')}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{link.label}</p>
+                      <p className="text-xs text-muted-foreground">{link.sub}</p>
+                    </div>
+                    <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-muted-foreground group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Account info */}
+            <div className="rounded-xl border bg-card shadow-sm p-4">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10">
+                  {profile?.avatar_url && <AvatarImage src={profile.avatar_url} />}
+                  <AvatarFallback className="text-sm font-bold">{initials}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate">{profile?.full_name ?? user?.email}</p>
+                  <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1 mt-3">
+                {allRoles.map(r => (
+                  <Badge key={r} variant="outline" className="text-[10px] capitalize">{r.replace('_', ' ')}</Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
     </div>
   );
 }
 
-/** Shared recent-activity list, fed by the same query across all views. */
-function RecentActivity({ items, limit }: { items: any[]; limit: number }) {
-  const list = items.slice(0, limit);
-  if (list.length === 0) return null;
-  return (
-    <div>
-      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Recent Activity</h3>
-      <div className="space-y-2">
-        {list.map((n: any) => (
-          <div key={n.id} className={`flex items-start gap-3 p-3 rounded-lg border ${!n.is_read ? 'bg-primary/5 border-primary/20' : 'bg-card'}`}>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{n.title}</p>
-              {n.message && <p className="text-xs text-muted-foreground truncate">{n.message}</p>}
-            </div>
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
-              {new Date(n.created_at).toLocaleDateString()}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function getGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return 'morning';
-  if (h < 17) return 'afternoon';
-  return 'evening';
-}
-
-function getGreetingEmoji(): string {
-  const h = new Date().getHours();
-  if (h < 12) return '☀️';
-  if (h < 17) return '🌤️';
-  return '🌙';
-}
-
-// B6 — helper for last page labels.
 function getPageLabel(path: string): string {
   const labels: Record<string, string> = {
     '/docs': 'Dashboard', '/docs/documents': 'Documents', '/docs/customers': 'Customers',
     '/docs/tasks': 'Tasks', '/docs/upload': 'Upload', '/docs/chat': 'Team Chat',
-    '/docs/folders': 'Folders', '/docs/reminders': 'Reminders', '/docs/gamification': 'My Progress',
     '/ops': 'Ops Dashboard', '/ops/vendor-issues': 'Vendor Issues', '/ops/incidents': 'Incidents',
-    '/ops/vendor-uptime': 'Vendor Uptime', '/ops/escalations': 'Escalations', '/ops/analytics': 'Analytics',
+    '/hr': 'HR Dashboard', '/hr/employees': 'Employees', '/hr/leave': 'Leave',
+    '/it': 'IT Overview', '/it/support': 'Helpdesk', '/it/devices': 'Devices',
   };
   return labels[path] || path.split('/').pop()?.replace(/-/g, ' ') || 'Dashboard';
-}
-
-/** Last visited page for an app, written by the sidebar. */
-function getLastPage(appId: string): string | null {
-  if (appId === 'docs') return localStorage.getItem('umshub_last_docs_page');
-  if (appId === 'ops') return localStorage.getItem('umshub_last_ops_page');
-  if (appId === 'hr') return localStorage.getItem('umshub_last_hr_page');
-  if (appId === 'it') return localStorage.getItem('umshub_last_it_page');
-  return null;
-}
-
-/** Most recently launched app (Docs by default). Recency uses companion
- * timestamp keys written when launching an app from this launcher. */
-function getFeaturedAppId(): string {
-  const docsTs = Number(localStorage.getItem('umshub_last_docs_page_ts') ?? 0);
-  const opsTs  = Number(localStorage.getItem('umshub_last_ops_page_ts')  ?? 0);
-  const hrTs   = Number(localStorage.getItem('umshub_last_hr_page_ts')   ?? 0);
-  const itTs   = Number(localStorage.getItem('umshub_last_it_page_ts')   ?? 0);
-  const max = Math.max(docsTs, opsTs, hrTs, itTs);
-  if (max === itTs && itTs > 0) return 'it';
-  if (max === hrTs && hrTs > 0) return 'hr';
-  return opsTs > docsTs ? 'ops' : 'docs';
-}
-
-function appStatLabel(app: { id: string }, s: LauncherStats): string | null {
-  if (app.id === 'docs') return `${s.docsCount.toLocaleString()} documents`;
-  if (app.id === 'ops') return `${s.incidentsCount} open incidents`;
-  if (app.id === 'hr') return null;
-  if (app.id === 'it') return 'Endpoint · Identity · Security';
-  return null;
 }

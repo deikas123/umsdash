@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useItDevices, useItEmployees, useItTickets, useItSecurityIncidents, useItUpdates, useItVpsMonitors, useItBackupMonitors, useSaveItReportSnapshot, useItReportSnapshots } from '@/it/hooks/useItData';
+import { useItDevices, useItTickets, useItSecurityIncidents, useItUpdates, useItVpsMonitors, useItBackupMonitors, useSaveItReportSnapshot, useItReportSnapshots } from '@/it/hooks/useItData';
+import { useEmployees } from '@/hr/hooks/useSupabaseData';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileBarChart, Download } from 'lucide-react';
@@ -10,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function MonthlyReport() {
   const { user } = useAuth();
   const { data: devices = [] } = useItDevices();
-  const { data: employees = [] } = useItEmployees();
+  const { data: employees = [] } = useEmployees();
   const { data: tickets = [] } = useItTickets();
   const { data: secInc = [] } = useItSecurityIncidents();
   const { data: updates = [] } = useItUpdates();

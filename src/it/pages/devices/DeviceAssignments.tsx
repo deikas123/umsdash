@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useItDeviceAssignments, useCreateItDeviceAssignment, useReturnItDeviceAssignment, useItDevices, useItEmployees } from '@/it/hooks/useItData';
+import { useItDeviceAssignments, useCreateItDeviceAssignment, useReturnItDeviceAssignment, useItDevices } from '@/it/hooks/useItData';
+import { useEmployees } from '@/hr/hooks/useSupabaseData';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,7 +13,7 @@ import { format } from 'date-fns';
 export default function DeviceAssignments() {
   const { data: assignments = [], isLoading } = useItDeviceAssignments();
   const { data: devices = [] } = useItDevices();
-  const { data: employees = [] } = useItEmployees();
+  const { data: employees = [] } = useEmployees();
   const create = useCreateItDeviceAssignment();
   const returnDev = useReturnItDeviceAssignment();
 
@@ -21,7 +22,11 @@ export default function DeviceAssignments() {
   const [saving, setSaving] = useState(false);
 
   const devName = (id: string) => devices.find(d => d.id === id)?.asset_id ?? id;
-  const empName = (id: string | null) => id ? employees.find(e => e.id === id)?.full_name ?? '—' : '—';
+  const empName = (id: string | null) => {
+    if (!id) return '—';
+    const e = employees.find(x => x.id === id);
+    return e ? `${e.first_name} ${e.last_name}` : '—';
+  };
 
   const handleSave = async () => {
     if (!form.device_id) { toast({ title: 'Select a device', variant: 'destructive' }); return; }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useItRemoteSessions, useCreateItRemoteSession, useUpdateItRemoteSession, useItDevices, useItEmployees } from '@/it/hooks/useItData';
+import { useItRemoteSessions, useCreateItRemoteSession, useUpdateItRemoteSession, useItDevices } from '@/it/hooks/useItData';
+import { useEmployees } from '@/hr/hooks/useSupabaseData';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,7 +16,7 @@ const statusClass = (s:string) => ({ requested:'bg-yellow-100 text-yellow-800',a
 export default function RemoteSupport() {
   const { data: sessions = [], isLoading } = useItRemoteSessions();
   const { data: devices = [] } = useItDevices();
-  const { data: employees = [] } = useItEmployees();
+  const { data: employees = [] } = useEmployees();
   const create = useCreateItRemoteSession();
   const updateSession = useUpdateItRemoteSession();
 
@@ -24,7 +25,11 @@ export default function RemoteSupport() {
   const [saving, setSaving] = useState(false);
 
   const devName = (id: string | null) => id ? devices.find(d => d.id === id)?.asset_id ?? '—' : '—';
-  const empName = (id: string | null) => id ? employees.find(e => e.id === id)?.full_name ?? '—' : '—';
+  const empName = (id: string | null) => {
+    if (!id) return '—';
+    const e = employees.find(x => x.id === id);
+    return e ? `${e.first_name} ${e.last_name}` : '—';
+  };
 
   const handleSave = async () => {
     if (!form.device_id) { toast({ title: 'Select a device', variant: 'destructive' }); return; }

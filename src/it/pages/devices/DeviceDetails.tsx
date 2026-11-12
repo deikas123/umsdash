@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useItDevices, useItEmployees, useItDeviceCompliance, useUpsertItCompliance, useItSoftwareInventory, useItUpdates } from '@/it/hooks/useItData';
+import { useItDevices, useItDeviceCompliance, useUpsertItCompliance, useItSoftwareInventory, useItUpdates } from '@/it/hooks/useItData';
+import { useEmployees } from '@/hr/hooks/useSupabaseData';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +10,7 @@ import { toast } from '@/hooks/use-toast';
 
 export default function DeviceDetails() {
   const { data: devices = [] } = useItDevices();
-  const { data: employees = [] } = useItEmployees();
+  const { data: employees = [] } = useEmployees();
   const [selectedId, setSelectedId] = useState<string>('');
   const device = devices.find(d => d.id === selectedId);
   const employee = device?.assigned_employee_id ? employees.find(e => e.id === device.assigned_employee_id) : null;

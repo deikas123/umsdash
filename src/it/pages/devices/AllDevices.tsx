@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useItDevices, useCreateItDevice, useUpdateItDevice, useDeleteItDevice, useItEmployees, DbItDevice } from '@/it/hooks/useItData';
+import { useItDevices, useCreateItDevice, useUpdateItDevice, useDeleteItDevice, DbItDevice } from '@/it/hooks/useItData';
+import { useEmployees } from '@/hr/hooks/useSupabaseData';
 import { Plus, Edit2, Trash2, Eye, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +29,7 @@ const secClass = (s: string) => ({ secure: 'bg-green-100 text-green-800', review
 
 export default function AllDevices() {
   const { data: devices = [], isLoading } = useItDevices();
-  const { data: employees = [] } = useItEmployees();
+  const { data: employees = [] } = useEmployees();
   const create = useCreateItDevice();
   const update = useUpdateItDevice();
   const del = useDeleteItDevice();
@@ -48,7 +49,11 @@ export default function AllDevices() {
       (filterStatus === 'all' || d.status === filterStatus);
   });
 
-  const empName = (id: string | null) => id ? employees.find(e => e.id === id)?.full_name ?? '—' : '—';
+  const empName = (id: string | null) => {
+    if (!id) return '—';
+    const e = employees.find(x => x.id === id);
+    return e ? `${e.first_name} ${e.last_name}` : '—';
+  };
 
   const openCreate = () => { setEditTarget(null); setForm(blank); setShowForm(true); };
   const openEdit = (d: DbItDevice) => {

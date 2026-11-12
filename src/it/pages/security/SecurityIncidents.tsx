@@ -23,7 +23,7 @@ const blank:FormState = { title:'',description:'',severity:'medium',status:'open
 export default function SecurityIncidents() {
   const { data: incidents = [], isLoading } = useItSecurityIncidents();
   const { data: devices = [] } = useItDevices();
-  const { data: employees = [] } = useItEmployees();
+  const { data: employees = [] } = useEmployees();
   const create = useCreateItSecurityIncident();
   const update = useUpdateItSecurityIncident();
   const del = useDeleteItSecurityIncident();
@@ -120,7 +120,7 @@ export default function SecurityIncidents() {
             <div><Label className="text-xs">Severity</Label><Select value={form.severity} onValueChange={v=>setForm(f=>({...f,severity:v as Sev}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="low">Low</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="high">High</SelectItem><SelectItem value="critical">Critical</SelectItem></SelectContent></Select></div>
             <div><Label className="text-xs">Status</Label><Select value={form.status} onValueChange={v=>setForm(f=>({...f,status:v as St}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="open">Open</SelectItem><SelectItem value="investigating">Investigating</SelectItem><SelectItem value="contained">Contained</SelectItem><SelectItem value="resolved">Resolved</SelectItem><SelectItem value="closed">Closed</SelectItem></SelectContent></Select></div>
             <div><Label className="text-xs">Affected Device</Label><Select value={form.affected_device_id} onValueChange={v=>setForm(f=>({...f,affected_device_id:v}))}><SelectTrigger><SelectValue placeholder="None"/></SelectTrigger><SelectContent>{devices.map(d=><SelectItem key={d.id} value={d.id}>{d.asset_id}</SelectItem>)}</SelectContent></Select></div>
-            <div><Label className="text-xs">Affected Employee</Label><Select value={form.affected_employee_id} onValueChange={v=>setForm(f=>({...f,affected_employee_id:v}))}><SelectTrigger><SelectValue placeholder="None"/></SelectTrigger><SelectContent>{employees.map(e=><SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>)}</SelectContent></Select></div>
+            <div><Label className="text-xs">Affected Employee</Label><Select value={form.affected_employee_id} onValueChange={v=>setForm(f=>({...f,affected_employee_id:v}))}><SelectTrigger><SelectValue placeholder="None"/></SelectTrigger><SelectContent>{employees.map(e=><SelectItem key={e.id} value={e.id}>{e.first_name} {e.last_name}</SelectItem>)}</SelectContent></Select></div>
             <div className="col-span-2"><Label className="text-xs">Resolution Notes</Label><Textarea value={form.resolution_notes} onChange={e=>setForm(f=>({...f,resolution_notes:e.target.value}))} rows={2}/></div>
           </div>
           <DialogFooter className="mt-4"><Button variant="outline" onClick={()=>setShowForm(false)}>Cancel</Button><Button onClick={handleSave} disabled={saving}>{saving?'Saving…':'Save'}</Button></DialogFooter>
