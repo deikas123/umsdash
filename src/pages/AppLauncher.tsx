@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
+import { WeatherHero } from '@/components/WeatherHero';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrgSettings } from '@/hooks/useOrgSettings';
@@ -214,51 +215,11 @@ export default function AppLauncher() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
 
         {/* ── Hero banner ── */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-accent mb-8 p-6 sm:p-8 text-primary-foreground"
-        >
-          {/* Decorative circles */}
-          <div className="absolute -top-10 -right-10 h-48 w-48 rounded-full bg-white/5" />
-          <div className="absolute -bottom-6 -right-6 h-32 w-32 rounded-full bg-white/5" />
-          <div className="absolute top-4 right-32 h-20 w-20 rounded-full bg-white/5" />
-
-          <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium text-primary-foreground/70 mb-1">
-                {greeting.emoji} {greeting.text}
-              </p>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{firstName}</h1>
-              <p className="text-sm text-primary-foreground/70 mt-1">
-                Choose a module to get started
-              </p>
-            </div>
-
-            {/* Stats row */}
-            <div className="flex gap-6 sm:gap-8">
-              <div className="text-center">
-                <p className="text-2xl font-bold">{s.docsCount.toLocaleString()}</p>
-                <p className="text-xs text-primary-foreground/70">Documents</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold">{s.customersCount.toLocaleString()}</p>
-                <p className="text-xs text-primary-foreground/70">Customers</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold">{s.incidentsCount}</p>
-                <p className="text-xs text-primary-foreground/70">Open Incidents</p>
-              </div>
-              {s.streak > 0 && (
-                <div className="text-center">
-                  <p className="text-2xl font-bold">{s.streak} 🔥</p>
-                  <p className="text-xs text-primary-foreground/70">Day Streak</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </motion.div>
+        <WeatherHero
+          greeting={greeting}
+          firstName={firstName}
+          stats={s}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* ── App cards grid ── */}
