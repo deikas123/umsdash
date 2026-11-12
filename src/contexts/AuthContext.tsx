@@ -46,9 +46,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-/** Role priority — used to pick the "primary" role for backwards compat. */
+/** Role priority — used to pick the "primary" role for backwards compat.
+ * staff is kept high so it_admin users still pass existing ['admin','staff'] route guards
+ * via the primary role field (ProtectedRoute now checks all roles anyway, but keep this sane).
+ */
 const ROLE_PRIORITY: AppRole[] = [
-  'admin', 'gm', 'hr_manager', 'it_admin', 'hod', 'it_staff', 'staff', 'customer', 'manager', 'user',
+  'admin', 'gm', 'hr_manager', 'hod', 'staff', 'it_admin', 'it_staff', 'customer', 'manager', 'user',
 ];
 
 function pickPrimaryRole(rawRoles: string[]): AppRole | null {
@@ -164,7 +167,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isSuperAdmin = (user?.email ?? '').toLowerCase() === SUPER_ADMIN_EMAIL;
 
-  const hasRole = (r: AppRole) => isSuperAdmin || roles.includes(r);
+  // hasRole grants access — super admin has access to everything EXCEPT customer-only views
+  const hasRole = (r: AppRole) => roles.includes(r);
+  const hasPrivilege = (r: AppRole) => isSuperAdmin || roles.includes(r);
 
   const value: AuthContextType = {
     user,
@@ -177,15 +182,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signOut,
     hasRole,
-    isAdmin:     hasRole('admin')      || isSuperAdmin,
-    isStaff:     hasRole('staff'),
-    isCustomer:  hasRole('customer'),
-    isGM:        hasRole('gm')         || isSuperAdmin,
-    isHrManager: hasRole('hr_manager') || isSuperAdmin,
-    isHOD:       hasRole('hod')        || isSuperAdmin,
+    isAdmin:     hasPrivilege('admin'),
+    isStaff:     hasPrivilege('staff'),
+    isCustomer:  !isSuperAdmin && roles.includes('customer'), // super admin is NEVER a customer
+    isGM:        hasPrivilege('gm'),
+    isHrManager: hasPrivilege('hr_manager'),
+    isHOD:       hasPrivilege('hod'),
     isHrUser:    isSuperAdmin || roles.some(r => ['gm','hr_manager','hod','staff'].includes(r)),
-    isItAdmin:   hasRole('it_admin')   || isSuperAdmin,
-    isItStaff:   hasRole('it_staff')   || hasRole('it_admin') || isSuperAdmin,
+    isItAdmin:   hasPrivilege('it_admin'),
+    isItStaff:   isSuperAdmin || roles.some(r => ['it_admin','it_staff'].includes(r)),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

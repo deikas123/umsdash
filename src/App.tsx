@@ -235,7 +235,7 @@ const AppRoutes = () => (
       <Route
         path="/it/*"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'staff']}>
+          <ProtectedRoute allowedRoles={['admin', 'staff', 'it_admin', 'it_staff']}>
             <Suspense fallback={
               <div className="min-h-screen flex items-center justify-center">
                 <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
