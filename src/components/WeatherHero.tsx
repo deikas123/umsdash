@@ -254,13 +254,20 @@ function WeatherBadge({ temp, wind, city, scene }: { temp:number; wind:number; c
 }
 
 // ── Main component ────────────────────────────────────────────────────
+export interface PersonalStatsChips {
+  myDocsThisMonth: number;
+  leaveBalance: number | null;
+  myOpenTickets: number;
+}
+
 interface WeatherHeroProps {
   greeting: { text: string; emoji: string };
   firstName: string;
   stats: { docsCount: number; customersCount: number; incidentsCount: number; streak: number };
+  personalStats?: PersonalStatsChips;
 }
 
-export function WeatherHero({ greeting, firstName, stats }: WeatherHeroProps) {
+export function WeatherHero({ greeting, firstName, stats, personalStats }: WeatherHeroProps) {
   const { weather, loading, hasLocation } = useWeather();
 
   // Fallback: derive scene from time-of-day when no location yet
@@ -319,23 +326,49 @@ export function WeatherHero({ greeting, firstName, stats }: WeatherHeroProps) {
         </div>
 
         {/* Stats */}
-        <div className="flex gap-6 sm:gap-8 flex-shrink-0">
-          <div className="text-center">
-            <p className="text-2xl font-bold drop-shadow-sm">{stats.docsCount.toLocaleString()}</p>
-            <p className="text-xs text-white/70">Documents</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold drop-shadow-sm">{stats.customersCount.toLocaleString()}</p>
-            <p className="text-xs text-white/70">Customers</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold drop-shadow-sm">{stats.incidentsCount}</p>
-            <p className="text-xs text-white/70">Open Incidents</p>
-          </div>
-          {stats.streak > 0 && (
+        <div className="flex flex-col items-end gap-3 flex-shrink-0">
+          <div className="flex gap-6 sm:gap-8">
             <div className="text-center">
-              <p className="text-2xl font-bold drop-shadow-sm">{stats.streak} 🔥</p>
-              <p className="text-xs text-white/70">Day Streak</p>
+              <p className="text-2xl font-bold drop-shadow-sm">{stats.docsCount.toLocaleString()}</p>
+              <p className="text-xs text-white/70">Documents</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold drop-shadow-sm">{stats.customersCount.toLocaleString()}</p>
+              <p className="text-xs text-white/70">Customers</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold drop-shadow-sm">{stats.incidentsCount}</p>
+              <p className="text-xs text-white/70">Open Incidents</p>
+            </div>
+            {stats.streak > 0 && (
+              <div className="text-center">
+                <p className="text-2xl font-bold drop-shadow-sm">{stats.streak} 🔥</p>
+                <p className="text-xs text-white/70">Day Streak</p>
+              </div>
+            )}
+          </div>
+
+          {/* Personal stat chips */}
+          {personalStats && (personalStats.myDocsThisMonth > 0 || (personalStats.leaveBalance !== null && personalStats.leaveBalance > 0) || personalStats.myOpenTickets > 0) && (
+            <div className="flex gap-2 flex-wrap justify-end">
+              {personalStats.myDocsThisMonth > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 text-xs text-white font-medium backdrop-blur-sm">
+                  <span className="font-bold">{personalStats.myDocsThisMonth}</span>
+                  <span className="opacity-80">my docs</span>
+                </span>
+              )}
+              {personalStats.leaveBalance !== null && personalStats.leaveBalance > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 text-xs text-white font-medium backdrop-blur-sm">
+                  <span className="font-bold">{personalStats.leaveBalance}</span>
+                  <span className="opacity-80">leave days</span>
+                </span>
+              )}
+              {personalStats.myOpenTickets > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 text-xs text-white font-medium backdrop-blur-sm">
+                  <span className="font-bold">{personalStats.myOpenTickets}</span>
+                  <span className="opacity-80">my tickets</span>
+                </span>
+              )}
             </div>
           )}
         </div>

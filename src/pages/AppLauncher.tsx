@@ -13,9 +13,12 @@ import {
 import { motion } from 'framer-motion';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
 import { WeatherHero } from '@/components/WeatherHero';
+import { ThisWeekDigest } from '@/components/ThisWeekDigest';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrgSettings } from '@/hooks/useOrgSettings';
+import { useStreakConfetti } from '@/hooks/useStreakConfetti';
+import { usePersonalStats } from '@/hooks/usePersonalStats';
 import umsLogo from '@/assets/ums-logo.png';
 
 type LauncherStats = {
@@ -70,6 +73,12 @@ export default function AppLauncher() {
     enabled: !!user,
   });
   const s: LauncherStats = stats ?? { docsCount: 0, customersCount: 0, incidentsCount: 0, streak: 0 };
+
+  // Feature 2: confetti on streak milestones
+  useStreakConfetti(s.streak, user?.id ?? '');
+
+  // Feature 4: personalised stat chips
+  const { data: personalStats } = usePersonalStats(user?.id ?? '');
 
   const { data: recentNotifs = [] } = useQuery({
     queryKey: ['launcher-notifications'],
@@ -214,11 +223,15 @@ export default function AppLauncher() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
 
+        {/* Feature 1: This Week at UMS Digest */}
+        <ThisWeekDigest />
+
         {/* ── Hero banner ── */}
         <WeatherHero
           greeting={greeting}
           firstName={firstName}
           stats={s}
+          personalStats={personalStats}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

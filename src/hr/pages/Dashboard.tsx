@@ -8,6 +8,7 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, R
 import AnnouncementsWidget from '@/hr/components/AnnouncementsWidget';
 import BirthdaysWidget from '@/hr/components/BirthdaysWidget';
 import ExpiringDocsWidget from '@/hr/components/ExpiringDocsWidget';
+import { BirthdayAnniversaryWidget } from '@/hr/components/BirthdayAnniversaryWidget';
 
 const statusColors: Record<string, string> = {
   pending_hod: 'bg-warning/10 text-warning border-warning/20',
@@ -106,7 +107,7 @@ function StaffDashboard() {
     <div>
       <div className="page-header">
         <h1 className="page-title">Welcome, {emp.first_name}!</h1>
-        <p className="page-subtitle">{emp.designation} — {(emp as any).departments?.name || 'Unassigned'}</p>
+        <p className="page-subtitle">{emp.designation} ï¿½ {(emp as any).departments?.name || 'Unassigned'}</p>
       </div>
 
       {/* Personal stat cards */}
@@ -116,7 +117,7 @@ function StaffDashboard() {
             <div>
               <p className="text-sm text-muted-foreground">Last Net Pay</p>
               <p className="text-2xl font-bold text-foreground mt-1">
-                {data.lastPayslip ? `KES ${Number(data.lastPayslip.net_pay).toLocaleString()}` : '—'}
+                {data.lastPayslip ? `KES ${Number(data.lastPayslip.net_pay).toLocaleString()}` : 'ï¿½'}
               </p>
             </div>
             <div className="h-12 w-12 rounded-lg bg-success/10 flex items-center justify-center">
@@ -164,7 +165,7 @@ function StaffDashboard() {
               <Briefcase className="h-6 w-6 text-accent-foreground" />
             </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-3">{attCounts.late} late · {attCounts.absent} absent</p>
+          <p className="text-xs text-muted-foreground mt-3">{attCounts.late} late ï¿½ {attCounts.absent} absent</p>
         </div>
       </div>
 
@@ -181,7 +182,7 @@ function StaffDashboard() {
               <div key={leave.id} className="flex items-center justify-between p-3 rounded-md bg-muted/50">
                 <div>
                   <p className="text-sm font-medium text-foreground">{leaveTypeLabels[leave.leave_type] || leave.leave_type}</p>
-                  <p className="text-xs text-muted-foreground">{leave.start_date} ? {leave.end_date} · {leave.days} days</p>
+                  <p className="text-xs text-muted-foreground">{leave.start_date} ? {leave.end_date} ï¿½ {leave.days} days</p>
                 </div>
                 <span className={`text-xs px-2 py-1 rounded-full border ${statusColors[leave.status]}`}>{statusLabels[leave.status]}</span>
               </div>
@@ -318,6 +319,9 @@ function AdminDashboard() {
         <p className="page-subtitle">Welcome to UMS Kenya HR Management System</p>
       </div>
 
+      {/* Birthday & Anniversary widget */}
+      <BirthdayAnniversaryWidget />
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="stat-card">
           <div className="flex items-center justify-between">
@@ -414,12 +418,12 @@ function AdminDashboard() {
           </div>
           <div className="p-4 space-y-3">
             {leaveRequests.slice(0, 5).map(leave => {
-              const empName = leave.employees ? `${leave.employees.first_name} ${leave.employees.last_name}` : '—';
+              const empName = leave.employees ? `${leave.employees.first_name} ${leave.employees.last_name}` : 'ï¿½';
               return (
                 <div key={leave.id} className="flex items-center justify-between p-3 rounded-md bg-muted/50">
                   <div>
                     <p className="text-sm font-medium text-foreground">{empName}</p>
-                    <p className="text-xs text-muted-foreground">{leaveTypeLabels[leave.leave_type] || leave.leave_type} · {leave.days} days</p>
+                    <p className="text-xs text-muted-foreground">{leaveTypeLabels[leave.leave_type] || leave.leave_type} ï¿½ {leave.days} days</p>
                   </div>
                   <span className={`text-xs px-2 py-1 rounded-full border ${statusColors[leave.status]}`}>{statusLabels[leave.status]}</span>
                 </div>

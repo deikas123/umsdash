@@ -13,6 +13,7 @@ import { useInactivityTimeout } from "@/hooks/useInactivityTimeout";
 import { useNotifications } from "@/hooks/useNotifications";
 import { OnboardingTourProvider } from "@/hooks/useOnboardingTour";
 import ChunkErrorBoundary from "@/components/operations/ChunkErrorBoundary";
+import { CommandPalette } from "@/components/CommandPalette";
 
 const HrApp = lazy(() => import('./hr/HrRoot'));
 const ItApp = lazy(() => import('./it/ItRoot'));
@@ -280,6 +281,7 @@ const AppRoutes = () => (
       {/* Catch-all */}
       <Route path="*" element={<NotFound />} />
     </Routes>
+    <CommandPalette />
     </MaintenanceGate>
   </InactivityWrapper>
 );
