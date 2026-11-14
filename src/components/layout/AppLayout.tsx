@@ -47,7 +47,11 @@ export function AppLayout({ children, title, description }: AppLayoutProps) {
       <TourController />
       <div
         className="h-screen flex w-full overflow-hidden"
-        style={{ '--sidebar-primary': 'hsl(160 84% 39%)', '--sidebar-primary-foreground': 'hsl(0 0% 100%)' } as React.CSSProperties}
+        style={{
+          '--sidebar-primary':            '160 84% 39%',  /* emerald */
+          '--sidebar-primary-foreground': '0 0% 100%',
+          '--sidebar-ring':               '160 84% 39%',
+        } as React.CSSProperties}
       >
         <AppSidebar />
         <SidebarInset className="flex-1 flex flex-col min-w-0 overflow-hidden">
