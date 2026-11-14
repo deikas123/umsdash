@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
+import { SlaCountdown } from '@/it/components/SlaCountdown';
 
 type Cat = 'hardware'|'software'|'network'|'access'|'email'|'printer'|'phone'|'other';
 type Pri = 'low'|'medium'|'high'|'urgent';
@@ -96,7 +97,7 @@ export default function Helpdesk() {
 
       <div className="bg-card rounded-lg border shadow-sm overflow-hidden">
         <table className="w-full">
-          <thead><tr className="border-b bg-muted/50">{['Ticket ID','Title','Category','Priority','Status','Reporter','Assigned To','Created',''].map(h=><th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">{h}</th>)}</tr></thead>
+          <thead><tr className="border-b bg-muted/50">{['Ticket ID','Title','Category','Priority','Status','Reporter','Assigned To','SLA','Created',''].map(h=><th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">{h}</th>)}</tr></thead>
           <tbody>
             {filtered.map(t=>(
               <tr key={t.id} className="border-b last:border-0 hover:bg-muted/30">
@@ -107,6 +108,7 @@ export default function Helpdesk() {
                 <td className="px-4 py-3"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${stClass(t.status)}`}>{t.status}</span></td>
                 <td className="px-4 py-3 text-sm">{empName(t.reporting_employee_id)}</td>
                 <td className="px-4 py-3 text-sm">{empName(t.assigned_technician_id)}</td>
+                <td className="px-4 py-3"><SlaCountdown createdAt={t.created_at} priority={t.priority} status={t.status} /></td>
                 <td className="px-4 py-3 text-xs text-muted-foreground">{formatDistanceToNow(new Date(t.created_at),{addSuffix:true})}</td>
                 <td className="px-4 py-3">
                   <div className="flex gap-1">

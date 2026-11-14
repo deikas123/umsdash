@@ -13,8 +13,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import LeaveFormPDF from '@/hr/components/LeaveFormPDF';
+import { LeaveHeatmap } from '@/hr/components/LeaveHeatmap';
 
 type LeaveType = 'annual' | 'sick' | 'maternity' | 'paternity' | 'compassionate' | 'study';
 
@@ -229,6 +231,13 @@ export default function LeaveManagement() {
         </Button>
       </div>
 
+      <Tabs defaultValue="requests">
+        <TabsList className="mb-6">
+          <TabsTrigger value="requests">Leave Requests</TabsTrigger>
+          <TabsTrigger value="heatmap">Leave Heatmap</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="requests">
       {myEmployee && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
           <div className="stat-card">
@@ -363,6 +372,13 @@ export default function LeaveManagement() {
         </table>
         {filteredLeaves.length === 0 && <div className="text-center py-12 text-muted-foreground">No leave requests found</div>}
       </div>
+
+        </TabsContent>
+
+        <TabsContent value="heatmap">
+          <LeaveHeatmap />
+        </TabsContent>
+      </Tabs>
 
       {/* Apply Dialog */}
       <Dialog open={showApply} onOpenChange={setShowApply}>

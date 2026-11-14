@@ -6,12 +6,15 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { QrCode } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { DeviceQrDialog } from '@/it/components/DeviceQrDialog';
 
 export default function DeviceDetails() {
   const { data: devices = [] } = useItDevices();
   const { data: employees = [] } = useEmployees();
   const [selectedId, setSelectedId] = useState<string>('');
+  const [showQr, setShowQr] = useState(false);
   const device = devices.find(d => d.id === selectedId);
   const employee = device?.assigned_employee_id ? employees.find(e => e.id === device.assigned_employee_id) : null;
   const { data: compliance = [] } = useItDeviceCompliance(selectedId || undefined);
@@ -44,12 +47,16 @@ export default function DeviceDetails() {
             {devices.map(d => <SelectItem key={d.id} value={d.id}>{d.asset_id} — {d.device_name}</SelectItem>)}
           </SelectContent>
         </Select>
+        {device && (
+          <Button variant="outline" size="sm" className="gap-2 ml-auto" onClick={() => setShowQr(true)}>
+            <QrCode className="h-4 w-4" /> QR Code
+          </Button>
+        )}
       </div>
 
       {!device && <p className="text-muted-foreground">Select a device above to view its full profile.</p>}
 
-      {device && (
-        <div className="space-y-6">
+      {device && (        <div className="space-y-6">
           {/* Hardware info */}
           <div className="bg-card rounded-lg border p-6 shadow-sm">
             <h2 className="font-semibold mb-4">Hardware Profile</h2>
@@ -136,6 +143,14 @@ export default function DeviceDetails() {
             )}
           </div>
         </div>
+      )}
+
+      {device && (
+        <DeviceQrDialog
+          assetId={device.asset_id}
+          open={showQr}
+          onClose={() => setShowQr(false)}
+        />
       )}
     </div>
   );

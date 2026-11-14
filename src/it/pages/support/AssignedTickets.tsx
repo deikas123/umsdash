@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
+import { SlaCountdown } from '@/it/components/SlaCountdown';
 
 const priClass = (p:string) => ({ low:'bg-muted text-muted-foreground',medium:'bg-blue-100 text-blue-800',high:'bg-orange-100 text-orange-800',urgent:'bg-red-100 text-red-800' }[p]??'');
 const stClass  = (s:string) => ({ open:'bg-yellow-100 text-yellow-800',assigned:'bg-blue-100 text-blue-800',investigating:'bg-purple-100 text-purple-800',resolved:'bg-green-100 text-green-800',escalated:'bg-red-100 text-red-800',closed:'bg-muted text-muted-foreground' }[s]??'');
@@ -36,7 +37,7 @@ export default function AssignedTickets() {
 
       <div className="bg-card rounded-lg border shadow-sm overflow-hidden">
         <table className="w-full">
-          <thead><tr className="border-b bg-muted/50">{['Ticket','Title','Priority','Status','Reporter','Technician','Age','Actions'].map(h=><th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">{h}</th>)}</tr></thead>
+          <thead><tr className="border-b bg-muted/50">{['Ticket','Title','Priority','Status','Reporter','Technician','SLA','Age','Actions'].map(h=><th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase">{h}</th>)}</tr></thead>
           <tbody>
             {assigned.map(t=>(
               <tr key={t.id} className="border-b last:border-0 hover:bg-muted/30">
@@ -46,6 +47,7 @@ export default function AssignedTickets() {
                 <td className="px-4 py-3"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${stClass(t.status)}`}>{t.status}</span></td>
                 <td className="px-4 py-3 text-sm">{empName(t.reporting_employee_id)}</td>
                 <td className="px-4 py-3 text-sm">{empName(t.assigned_technician_id)}</td>
+                <td className="px-4 py-3"><SlaCountdown createdAt={t.created_at} priority={t.priority} status={t.status} /></td>
                 <td className="px-4 py-3 text-xs text-muted-foreground">{formatDistanceToNow(new Date(t.created_at),{addSuffix:true})}</td>
                 <td className="px-4 py-3">
                   <div className="flex gap-1 flex-wrap">

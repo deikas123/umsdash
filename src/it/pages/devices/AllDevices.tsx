@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useItDevices, useCreateItDevice, useUpdateItDevice, useDeleteItDevice, DbItDevice } from '@/it/hooks/useItData';
 import { useEmployees } from '@/hr/hooks/useSupabaseData';
-import { Plus, Edit2, Trash2, Eye, Search } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, Search, QrCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DeviceQrDialog } from '@/it/components/DeviceQrDialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -42,6 +43,7 @@ export default function AllDevices() {
   const [viewTarget, setViewTarget] = useState<DbItDevice | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DbItDevice | null>(null);
   const [saving, setSaving] = useState(false);
+  const [qrDevice, setQrDevice] = useState<string | null>(null);
 
   const filtered = devices.filter(d => {
     const q = search.toLowerCase();
@@ -130,6 +132,7 @@ export default function AllDevices() {
                   <div className="flex gap-1 justify-end">
                     <button onClick={() => setViewTarget(d)} className="text-muted-foreground hover:text-primary p-1"><Eye className="h-4 w-4" /></button>
                     <button onClick={() => openEdit(d)} className="text-muted-foreground hover:text-primary p-1"><Edit2 className="h-4 w-4" /></button>
+                    <button onClick={() => setQrDevice(d.asset_id)} className="text-muted-foreground hover:text-primary p-1" title="QR Code"><QrCode className="h-4 w-4" /></button>
                     <button onClick={() => setDeleteTarget(d)} className="text-muted-foreground hover:text-destructive p-1"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 </td>
@@ -217,6 +220,14 @@ export default function AllDevices() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {qrDevice && (
+        <DeviceQrDialog
+          assetId={qrDevice}
+          open={!!qrDevice}
+          onClose={() => setQrDevice(null)}
+        />
+      )}
     </div>
   );
 }

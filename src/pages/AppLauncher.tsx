@@ -7,6 +7,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Badge } from '@/components/ui/badge';
 import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger,
+  DropdownMenuTrigger, DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import {
   FileText, Activity, LogOut, ShoppingBag, Users2, Terminal,
   ArrowRight, Bell, ChevronRight,
 } from 'lucide-react';
@@ -14,6 +19,9 @@ import { motion } from 'framer-motion';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
 import { WeatherHero } from '@/components/WeatherHero';
 import { ThisWeekDigest } from '@/components/ThisWeekDigest';
+import { NotificationDigest } from '@/components/NotificationDigest';
+import { StatusDot } from '@/components/StatusDot';
+import { useMyStatus, useSetStatus, STATUS_CONFIG, UserStatusValue } from '@/hooks/useUserStatus';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrgSettings } from '@/hooks/useOrgSettings';
@@ -79,6 +87,11 @@ export default function AppLauncher() {
 
   // Feature 4: personalised stat chips
   const { data: personalStats } = usePersonalStats(user?.id ?? '');
+
+  // Feature 7: user away status
+  const { data: myStatusRow } = useMyStatus(user?.id);
+  const setStatus = useSetStatus();
+  const currentStatus = (myStatusRow?.status as UserStatusValue) ?? 'in_office';
 
   const { data: recentNotifs = [] } = useQuery({
     queryKey: ['launcher-notifications'],
@@ -208,16 +221,48 @@ export default function AppLauncher() {
             {profile && (
               <div data-tour="user-avatar" className="flex items-center gap-2 pl-1 border-l">
                 <span className="text-sm text-muted-foreground hidden sm:block truncate max-w-[140px]">{profile.full_name}</span>
-                <Avatar className="h-7 w-7">
-                  {profile.avatar_url && <AvatarImage src={profile.avatar_url} />}
-                  <AvatarFallback className="text-[10px] font-bold">{initials}</AvatarFallback>
-                </Avatar>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="relative focus:outline-none">
+                      <Avatar className="h-7 w-7">
+                        {profile.avatar_url && <AvatarImage src={profile.avatar_url} />}
+                        <AvatarFallback className="text-[10px] font-bold">{initials}</AvatarFallback>
+                      </Avatar>
+                      <span className="absolute -bottom-0.5 -right-0.5">
+                        <StatusDot status={currentStatus} />
+                      </span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        <StatusDot status={currentStatus} className="mr-2" />
+                        Set Status
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        {(Object.entries(STATUS_CONFIG) as [UserStatusValue, typeof STATUS_CONFIG[UserStatusValue]][]).map(([key, cfg]) => (
+                          <DropdownMenuItem
+                            key={key}
+                            onClick={() => setStatus.mutate({ status: key })}
+                            className={currentStatus === key ? 'font-semibold' : ''}
+                          >
+                            <StatusDot status={key} className="mr-2" />
+                            {cfg.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={signOut}>
+                      <LogOut className="h-3.5 w-3.5 mr-2" /> Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             )}
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={signOut} title="Sign out">
               <LogOut className="h-3.5 w-3.5" />
-            </Button>
-          </div>
+            </Button>          </div>
         </div>
       </header>
 
@@ -292,21 +337,7 @@ export default function AppLauncher() {
                 {recentNotifs.length === 0 ? (
                   <div className="p-6 text-center text-sm text-muted-foreground">No recent activity</div>
                 ) : (
-                  <div className="divide-y divide-border">
-                    {recentNotifs.map((n: any) => (
-                      <div key={n.id} className={`flex items-start gap-3 px-4 py-3 ${!n.is_read ? 'bg-primary/5' : ''}`}>
-                        {!n.is_read && <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />}
-                        {n.is_read && <div className="mt-1.5 h-1.5 w-1.5 flex-shrink-0" />}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{n.title}</p>
-                          {n.message && <p className="text-xs text-muted-foreground truncate">{n.message}</p>}
-                        </div>
-                        <span className="text-[10px] text-muted-foreground whitespace-nowrap flex-shrink-0">
-                          {new Date(n.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  <NotificationDigest notifications={recentNotifs} />
                 )}
               </div>
             </div>
