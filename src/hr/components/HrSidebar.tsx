@@ -1,12 +1,13 @@
 ﻿import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, DollarSign, CalendarDays, Building2,
-  FileText, Settings, ChevronLeft, ChevronRight, LogOut, Wallet, Shield, ClipboardList, UserCircle, Contact, Clock, Megaphone, ListChecks, MessageSquare, ClipboardCheck, Lightbulb, ArrowLeft,
+  FileText, Settings, ChevronLeft, ChevronRight, LogOut, Wallet, Shield, ClipboardList, UserCircle, Contact, Clock, Megaphone, ListChecks, MessageSquare, ClipboardCheck, Lightbulb, ArrowLeft, Gift,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUnreadMessageCount } from '@/hr/hooks/useMessaging';
 import { useActiveSurveys, useMyParticipation } from '@/hr/hooks/useSurveys';
+import { isSnowPeriod } from '@/lib/festiveCalendar';
 import umsLogo from '@/assets/ums-logo.png';
 
 type HrRole = 'gm' | 'hr' | 'hod' | 'staff';
@@ -133,6 +134,27 @@ export default function HrSidebar() {
             );
           })}
         </ul>
+
+        {/* 🎄 Festive section — Dec 1 – Jan 6 only */}
+        {isSnowPeriod() && (
+          <div className="px-2 mt-3">
+            {!collapsed && (
+              <p className="px-2 pb-1 text-[10px] font-semibold tracking-widest text-sidebar-muted uppercase">🎄 Festive</p>
+            )}
+            <NavLink
+              to="/hr/secret-santa"
+              title={collapsed ? 'Secret Santa' : undefined}
+              className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-red-600 text-white'
+                  : 'text-sidebar-foreground hover:bg-red-600/20 hover:text-red-400'
+              }`}
+            >
+              <Gift className="h-5 w-5 flex-shrink-0" />
+              {!collapsed && <span>Secret Santa</span>}
+            </NavLink>
+          </div>
+        )}
       </nav>
 
       {/* Current User & Logout */}

@@ -21,6 +21,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useMemo, useState, useEffect } from 'react';
 import { useWeather, WeatherScene } from '@/hooks/useWeather';
 import { MapPin, Wind, Thermometer } from 'lucide-react';
+import { getFestiveScene, getGreetingOverride, getStreakEmoji } from '@/lib/festiveCalendar';
 
 // ── Gradient per scene ────────────────────────────────────────────────
 const gradients: Record<WeatherScene, string> = {
@@ -228,6 +229,46 @@ function Fog({ scene }: { scene: WeatherScene }) {
   );
 }
 
+// ── Christmas Lights ──────────────────────────────────────────────────
+function ChristmasLights() {
+  const colors = ['#EF4444','#22C55E','#EAB308','#3B82F6','#EF4444','#22C55E','#EAB308'];
+  return (
+    <div className="absolute top-0 left-0 right-0 h-6 pointer-events-none flex items-end px-4 gap-0">
+      {/* Wire */}
+      <div className="absolute top-2 left-0 right-0 h-px bg-white/20" />
+      {Array.from({ length: 18 }).map((_, i) => (
+        <div key={i} className="relative flex-1 flex justify-center">
+          <div className="absolute top-0 w-px h-2 bg-white/20" />
+          <motion.div
+            className="absolute top-2 w-3 h-4 rounded-b-full"
+            style={{ background: colors[i % colors.length] }}
+            animate={{ opacity: [1, 0.3, 1], scale: [1, 0.85, 1] }}
+            transition={{ duration: 1.2 + (i % 4) * 0.3, repeat: Infinity, delay: i * 0.1, ease: 'easeInOut' }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── New Year Sparkles ─────────────────────────────────────────────────
+function NewYearSparkles() {
+  const sparks = useMemo(() => Array.from({ length: 12 }).map((_, i) => ({
+    id: i, x: 5 + i * 8, y: 10 + (i % 3) * 20,
+    delay: i * 0.4, duration: 1.5 + (i % 3) * 0.5,
+  })), []);
+  return <>
+    {sparks.map(s => (
+      <motion.div key={s.id} className="absolute pointer-events-none text-yellow-300 font-bold"
+        style={{ left: `${s.x}%`, top: `${s.y}%`, fontSize: 12 + (s.id % 3) * 4 }}
+        animate={{ opacity: [0, 1, 0], scale: [0.5, 1.5, 0.5], y: [-10, -30, -10] }}
+        transition={{ duration: s.duration, repeat: Infinity, delay: s.delay, ease: 'easeOut' }}>
+        ✦
+      </motion.div>
+    ))}
+  </>;
+}
+
 // ── Weather badge (shows real data) ──────────────────────────────────
 function WeatherBadge({ temp, wind, city, scene }: { temp:number; wind:number; city:string; scene:WeatherScene }) {
   const sceneLabel: Record<WeatherScene, string> = {
@@ -270,11 +311,23 @@ interface WeatherHeroProps {
 export function WeatherHero({ greeting, firstName, stats, personalStats }: WeatherHeroProps) {
   const { weather, loading, hasLocation } = useWeather();
 
+  // Check for festive scene override (Christmas / New Year)
+  const festiveScene = getFestiveScene();
+  const greetingOverride = getGreetingOverride();
+  const activeGreeting = greetingOverride ?? greeting;
+
   // Fallback: derive scene from time-of-day when no location yet
   const hour = new Date().getHours();
   const fallbackScene: WeatherScene = hour >= 5 && hour < 20 ? 'clear-day' : 'clear-night';
   const scene: WeatherScene = weather?.scene ?? fallbackScene;
-  const gradient = gradients[scene];
+
+  // Festive gradient overrides
+  const festiveGradient = festiveScene === 'christmas'
+    ? 'from-green-800 via-red-900 to-green-900'
+    : festiveScene === 'newyear'
+    ? 'from-indigo-950 via-purple-900 to-black'
+    : null;
+  const gradient = festiveGradient ?? gradients[scene];
 
   return (
     <motion.div
@@ -285,16 +338,22 @@ export function WeatherHero({ greeting, firstName, stats, personalStats }: Weath
       style={{ minHeight:140 }}
     >
       {/* Weather layers — rendered in z order */}
-      <Stars scene={scene} />
-      <ShootingStars scene={scene} />
+      {/* On festive scenes, force snow/clear-night but keep the festive gradient */}
+      <Stars scene={festiveScene === 'newyear' ? 'clear-night' : scene} />
+      <ShootingStars scene={festiveScene === 'newyear' ? 'clear-night' : scene} />
       <Moon scene={scene} />
       <Sun scene={scene} />
       <Clouds scene={scene} />
       <Rain scene={scene} />
-      <Snow scene={scene} />
+      <Snow scene={festiveScene === 'christmas' ? 'snow' : scene} />
       <Hail scene={scene} />
       <Fog scene={scene} />
       <Lightning scene={scene} />
+
+      {/* Christmas lights string across top */}
+      {festiveScene === 'christmas' && <ChristmasLights />}
+      {/* New Year firework particles */}
+      {festiveScene === 'newyear' && <NewYearSparkles />}
 
       {/* Loading shimmer while fetching location */}
       {!weather && hasLocation && loading && (
@@ -309,7 +368,7 @@ export function WeatherHero({ greeting, firstName, stats, personalStats }: Weath
       <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <p className="text-sm font-medium text-white/70 mb-0.5">
-            {greeting.emoji} {greeting.text}
+            {activeGreeting.emoji} {activeGreeting.text}
           </p>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight drop-shadow-sm">
             {firstName}
@@ -342,7 +401,7 @@ export function WeatherHero({ greeting, firstName, stats, personalStats }: Weath
             </div>
             {stats.streak > 0 && (
               <div className="text-center">
-                <p className="text-2xl font-bold drop-shadow-sm">{stats.streak} 🔥</p>
+                <p className="text-2xl font-bold drop-shadow-sm">{stats.streak} {getStreakEmoji()}</p>
                 <p className="text-xs text-white/70">Day Streak</p>
               </div>
             )}

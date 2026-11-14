@@ -53,6 +53,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useCategories, useCustomers } from '@/hooks/useDocuments';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { awardBadgeIfEarned } from '@/hooks/useAchievements';
 import { CameraCapture } from '@/components/upload/CameraCapture';
 import { CreateCustomerDialog } from '@/components/upload/CreateCustomerDialog';
 import { BulkCustomerUpload } from '@/components/upload/BulkCustomerUpload';
@@ -364,6 +365,21 @@ export default function Upload() {
       entity_type: 'document',
       details: { total, success: successCount, customer_id: customerId },
     });
+
+    // Feature 12: Award achievement badges
+    if (successCount > 0) {
+      await awardBadgeIfEarned(user.id, 'first_upload');
+      // Check total doc count for docs_100
+      try {
+        const { count } = await supabase
+          .from('documents')
+          .select('*', { count: 'exact', head: true })
+          .eq('uploaded_by', user.id);
+        if ((count ?? 0) >= 100) {
+          await awardBadgeIfEarned(user.id, 'docs_100');
+        }
+      } catch (_) { /* best-effort */ }
+    }
 
     toast({
       title: successCount === total ? '✅ Upload complete' : '⚠️ Partially completed',

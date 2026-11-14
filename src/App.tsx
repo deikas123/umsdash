@@ -14,6 +14,8 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { OnboardingTourProvider } from "@/hooks/useOnboardingTour";
 import ChunkErrorBoundary from "@/components/operations/ChunkErrorBoundary";
 import { CommandPalette } from "@/components/CommandPalette";
+import { SnowOverlay } from "@/components/festive/SnowOverlay";
+import { MidnightCountdown } from "@/components/festive/MidnightCountdown";
 
 const HrApp = lazy(() => import('./hr/HrRoot'));
 const ItApp = lazy(() => import('./it/ItRoot'));
@@ -282,6 +284,8 @@ const AppRoutes = () => (
       <Route path="*" element={<NotFound />} />
     </Routes>
     <CommandPalette />
+    <SnowOverlay />
+    <MidnightCountdown />
     </MaintenanceGate>
   </InactivityWrapper>
 );

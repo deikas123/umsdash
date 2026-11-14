@@ -6,7 +6,7 @@ import {
   Lock, Activity, ShieldAlert, ShieldCheck,
   Ticket, ClipboardList, BarChart3,
   Server, Cloud, Database, HardDriveDownload,
-  FileBarChart, ChevronLeft, ChevronRight, LogOut, ArrowLeft,
+  FileBarChart, ChevronLeft, ChevronRight, LogOut, ArrowLeft, QrCode,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -62,6 +62,7 @@ const sections = [
       { path: '/it/support',           icon: Ticket,       label: 'IT Helpdesk' },
       { path: '/it/support/assigned',  icon: ClipboardList,label: 'Assigned Tickets' },
       { path: '/it/support/reports',   icon: BarChart3,    label: 'Service Reports' },
+      { path: '/it/scan',              icon: QrCode,       label: 'QR Scanner' },
     ],
   },
   {

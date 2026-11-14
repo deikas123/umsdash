@@ -18,8 +18,13 @@ import {
 import { motion } from 'framer-motion';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
 import { WeatherHero } from '@/components/WeatherHero';
+import { ActivityTimeline } from '@/components/ActivityTimeline';
 import { ThisWeekDigest } from '@/components/ThisWeekDigest';
 import { NotificationDigest } from '@/components/NotificationDigest';
+import { HolidayCountdown } from '@/components/festive/HolidayCountdown';
+import { YearInReview } from '@/components/festive/YearInReview';
+import { AdventCalendar } from '@/components/festive/AdventCalendar';
+import { getStreakEmoji } from '@/lib/festiveCalendar';
 import { StatusDot } from '@/components/StatusDot';
 import { useMyStatus, useSetStatus, STATUS_CONFIG, UserStatusValue } from '@/hooks/useUserStatus';
 import { useQuery } from '@tanstack/react-query';
@@ -282,6 +287,8 @@ export default function AppLauncher() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* ── App cards grid ── */}
           <div className="lg:col-span-2">
+            {/* Year in review — Dec 26 – Jan 7 */}
+            <YearInReview />
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Applications</h2>
             <motion.div
               variants={container}
@@ -330,15 +337,15 @@ export default function AppLauncher() {
 
           {/* ── Right panel: activity + quick links ── */}
           <div className="space-y-4">
+            {/* Festive cards */}
+            <HolidayCountdown />
+            <AdventCalendar />
+
             {/* Recent activity */}
             <div>
               <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Recent Activity</h2>
               <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-                {recentNotifs.length === 0 ? (
-                  <div className="p-6 text-center text-sm text-muted-foreground">No recent activity</div>
-                ) : (
-                  <NotificationDigest notifications={recentNotifs} />
-                )}
+                <ActivityTimeline />
               </div>
             </div>
 

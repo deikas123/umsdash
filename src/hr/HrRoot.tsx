@@ -19,6 +19,7 @@ import Checklists from '@/hr/pages/Checklists';
 import Suggestions from '@/hr/pages/Suggestions';
 import Surveys from '@/hr/pages/Surveys';
 import Messages from '@/hr/pages/Messages';
+import SecretSanta from '@/hr/pages/SecretSanta';
 import NotFound from '@/hr/pages/NotFound';
 
 const SUPER_ADMIN_EMAIL = 'amsterntechhub@gmail.com';
@@ -66,6 +67,7 @@ function HrProtectedContent() {
         <Route path="messages" element={<Messages />} />
         <Route path="directory" element={<StaffDirectory />} />
         <Route path="profile" element={<MyProfile />} />
+        <Route path="secret-santa" element={<HrRoleGuard roles={['gm','hr','hod','staff']}><SecretSanta /></HrRoleGuard>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </HrAppLayout>

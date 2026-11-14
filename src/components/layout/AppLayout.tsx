@@ -45,7 +45,10 @@ export function AppLayout({ children, title, description }: AppLayoutProps) {
   return (
     <SidebarProvider>
       <TourController />
-      <div className="h-screen flex w-full overflow-hidden">
+      <div
+        className="h-screen flex w-full overflow-hidden"
+        style={{ '--sidebar-primary': 'hsl(160 84% 39%)', '--sidebar-primary-foreground': 'hsl(0 0% 100%)' } as React.CSSProperties}
+      >
         <AppSidebar />
         <SidebarInset className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Announcement Banner */}

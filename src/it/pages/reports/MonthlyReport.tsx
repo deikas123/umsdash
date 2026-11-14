@@ -65,7 +65,17 @@ export default function MonthlyReport() {
   return (
     <div>
       <div className="page-header flex items-center justify-between">
-        <div><h1 className="page-title">Monthly IT Report</h1><p className="page-subtitle">Auto-generated from live data · {period}</p></div>
+        <div>
+          <h1 className="page-title">Monthly IT Report</h1>
+          <p className="page-subtitle">Auto-generated from live data · {period}</p>
+          {snapshots.length > 0 ? (
+            <p className="text-xs text-muted-foreground mt-1">
+              Last auto-generated: {format(new Date(snapshots[0].generated_at ?? snapshots[0].created_at), 'dd MMM yyyy HH:mm')}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-1">Last auto-generated: Never</p>
+          )}
+        </div>
         <div className="flex gap-2">
           <Button variant="outline" className="gap-2" onClick={handleSave} disabled={saving}><FileBarChart className="h-4 w-4"/>{saving?'Saving…':'Save Snapshot'}</Button>
         </div>

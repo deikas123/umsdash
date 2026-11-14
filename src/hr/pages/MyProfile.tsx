@@ -1,5 +1,7 @@
 ﻿import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { BadgeWall } from '@/hr/components/BadgeWall';
+import { NewYearGoal } from '@/hr/components/NewYearGoal';
 import { useMyProfile, useEmployees, usePayrollRecords, useLoans, useLoanPayments, useLeaveRequests } from '@/hr/hooks/useSupabaseData';
 import { useAttendance } from '@/hr/hooks/useAttendanceData';
 import { supabase } from '@/integrations/supabase/client';
@@ -132,13 +134,14 @@ ${Number(p.loan_deduction) > 0 ? `<div class="row deduction"><span>Loan</span><s
       )}
 
       <Tabs defaultValue="profile" className="space-y-4">
-        <TabsList className="grid grid-cols-6 w-full max-w-3xl">
+        <TabsList className="grid grid-cols-7 w-full max-w-3xl">
           <TabsTrigger value="profile" className="gap-1 text-xs"><User className="h-3 w-3" /> Profile</TabsTrigger>
           <TabsTrigger value="payslips" className="gap-1 text-xs"><FileText className="h-3 w-3" /> Payslips</TabsTrigger>
           <TabsTrigger value="attendance" className="gap-1 text-xs"><Clock className="h-3 w-3" /> Attendance</TabsTrigger>
           <TabsTrigger value="loans" className="gap-1 text-xs"><Wallet className="h-3 w-3" /> Loans</TabsTrigger>
           <TabsTrigger value="leave" className="gap-1 text-xs"><CalendarDays className="h-3 w-3" /> Leave</TabsTrigger>
           <TabsTrigger value="docs" className="gap-1 text-xs"><FileText className="h-3 w-3" /> Documents</TabsTrigger>
+          <TabsTrigger value="badges" className="gap-1 text-xs">🏅 Badges</TabsTrigger>
         </TabsList>
 
         {/* PROFILE TAB */}
@@ -403,6 +406,16 @@ ${Number(p.loan_deduction) > 0 ? `<div class="row deduction"><span>Loan</span><s
           ) : (
             <DocumentVault employeeId={myProfile.employee_id} />
           )}
+        </TabsContent>
+
+        {/* BADGES TAB */}
+        <TabsContent value="badges">
+          <div className="bg-card rounded-lg border shadow-sm p-5">
+            <h2 className="text-base font-semibold text-foreground mb-4">🏅 Achievement Badges</h2>
+            <p className="text-sm text-muted-foreground mb-4">Earn badges by completing milestones across the UMS Hub.</p>
+            <NewYearGoal />
+            <BadgeWall userId={myProfile?.user_id ?? ''} />
+          </div>
         </TabsContent>
       </Tabs>
 

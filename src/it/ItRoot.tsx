@@ -45,6 +45,7 @@ import BackupMonitoring  from '@/it/pages/infra/BackupMonitoring';
 import MonthlyReport     from '@/it/pages/reports/MonthlyReport';
 import AssetReport       from '@/it/pages/reports/AssetReport';
 import ComplianceReport  from '@/it/pages/reports/ComplianceReport';
+import QrScanner         from '@/it/pages/QrScanner';
 
 function ItNotFound() {
   return (
@@ -114,6 +115,9 @@ function ItContent() {
         <Route path="reports/monthly"    element={<MonthlyReport />} />
         <Route path="reports/assets"     element={<AssetReport />} />
         <Route path="reports/compliance" element={<ComplianceReport />} />
+
+        {/* QR Scanner */}
+        <Route path="scan" element={<QrScanner />} />
 
         <Route path="*" element={<ItNotFound />} />
       </Routes>
