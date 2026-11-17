@@ -360,6 +360,7 @@ export default function Documents() {
       category_name: doc.category?.name || '-',
       status: doc.status,
       file_type: doc.file_type,
+      uploaded_by: doc.uploader_name || '-',
       created_at: format(new Date(doc.created_at), 'MMM d, yyyy HH:mm'),
     }));
 
@@ -708,6 +709,11 @@ export default function Documents() {
                 <span className="text-xs text-muted-foreground hidden lg:block w-24">
                   {doc.created_at ? format(new Date(doc.created_at), 'dd MMM yyyy') : '—'}
                 </span>
+                {(isAdmin || isStaff) && (
+                  <span className="text-xs text-muted-foreground hidden xl:block w-28 truncate" title={doc.uploader_name || 'Unknown'}>
+                    {doc.uploader_name || '—'}
+                  </span>
+                )}
                 <span className="text-xs capitalize w-16 text-right">{doc.status}</span>
                 <div className="flex items-center gap-1 ml-1">
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleView(doc)} aria-label="View">

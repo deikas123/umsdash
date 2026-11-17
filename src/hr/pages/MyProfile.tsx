@@ -47,11 +47,15 @@ export default function MyProfile() {
   const [showP9, setShowP9] = useState(false);
   const [p9Year, setP9Year] = useState(new Date().getFullYear());
 
-  const myEmployee = employees.find(e => e.id === myProfile?.employee_id);
-  const myPayroll = allPayroll.filter(p => p.employee_id === myProfile?.employee_id);
-  const myLoans = allLoans.filter(l => l.employee_id === myProfile?.employee_id);
-  const myLeaves = allLeaves.filter(l => l.employee_id === myProfile?.employee_id);
-  const myAttendance = allAttendance.filter(a => a.employee_id === myProfile?.employee_id);
+  // HR employee is linked via profiles.hr_employee_id (not employee_id which is the docs module field)
+  const myEmployee = employees.find(e =>
+    e.id === (myProfile?.hr_employee_id ?? myProfile?.employee_id)
+  ) ?? employees.find(e => e.email?.toLowerCase() === user?.email?.toLowerCase());
+  const hrEmpId = myEmployee?.id ?? null;
+  const myPayroll = allPayroll.filter(p => p.employee_id === hrEmpId);
+  const myLoans = allLoans.filter(l => l.employee_id === hrEmpId);
+  const myLeaves = allLeaves.filter(l => l.employee_id === hrEmpId);
+  const myAttendance = allAttendance.filter(a => a.employee_id === hrEmpId);
 
   const handlePasswordReset = async () => {
     if (newPassword.length < 6) { toast({ title: 'Error', description: 'Password must be at least 6 characters.', variant: 'destructive' }); return; }
@@ -124,7 +128,7 @@ ${Number(p.loan_deduction) > 0 ? `<div class="row deduction"><span>Loan</span><s
         </Button>
       </div>
 
-      {!myProfile?.employee_id && (
+      {!myEmployee && (
         <div className="mb-6 p-4 bg-warning/10 border border-warning/20 rounded-lg flex items-center gap-3">
           <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0" />
           <div>
@@ -211,7 +215,7 @@ ${Number(p.loan_deduction) > 0 ? `<div class="row deduction"><span>Loan</span><s
         {/* PAYSLIPS TAB */}
         <TabsContent value="payslips">
           {myPayroll.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">{myProfile?.employee_id ? 'No payslips found yet.' : 'Link your profile to view payslips.'}</div>
+            <div className="text-center py-12 text-muted-foreground">{myEmployee ? 'No payslips found yet.' : 'Link your profile to view payslips.'}</div>
           ) : (
             <>
               <div className="mb-4 p-3 bg-primary/5 border border-primary/20 rounded-lg flex items-center justify-between flex-wrap gap-3">
@@ -261,7 +265,7 @@ ${Number(p.loan_deduction) > 0 ? `<div class="row deduction"><span>Loan</span><s
         {/* ATTENDANCE TAB */}
         <TabsContent value="attendance">
           {myAttendance.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">{myProfile?.employee_id ? 'No attendance records found.' : 'Link your profile to view attendance.'}</div>
+            <div className="text-center py-12 text-muted-foreground">{myEmployee ? 'No attendance records found.' : 'Link your profile to view attendance.'}</div>
           ) : (
             <>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
@@ -312,7 +316,7 @@ ${Number(p.loan_deduction) > 0 ? `<div class="row deduction"><span>Loan</span><s
         {/* LOANS TAB */}
         <TabsContent value="loans">
           {myLoans.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">{myProfile?.employee_id ? 'No loans found.' : 'Link your profile to view loans.'}</div>
+            <div className="text-center py-12 text-muted-foreground">{myEmployee ? 'No loans found.' : 'Link your profile to view loans.'}</div>
           ) : (
             <>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
@@ -362,7 +366,7 @@ ${Number(p.loan_deduction) > 0 ? `<div class="row deduction"><span>Loan</span><s
             </div>
           )}
           {myLeaves.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">{myProfile?.employee_id ? 'No leave requests found.' : 'Link your profile to view leave history.'}</div>
+            <div className="text-center py-12 text-muted-foreground">{myEmployee ? 'No leave requests found.' : 'Link your profile to view leave history.'}</div>
           ) : (
             <div className="bg-card rounded-lg border shadow-sm overflow-hidden">
               <table className="w-full text-sm">
@@ -402,10 +406,10 @@ ${Number(p.loan_deduction) > 0 ? `<div class="row deduction"><span>Loan</span><s
 
         {/* DOCUMENTS TAB */}
         <TabsContent value="docs">
-          {!myProfile?.employee_id ? (
+          {!myEmployee ? (
             <div className="text-center py-12 text-muted-foreground">Link your profile to view documents.</div>
           ) : (
-            <DocumentVault employeeId={myProfile.employee_id} />
+            <DocumentVault employeeId={myEmployee!.id} />
           )}
         </TabsContent>
 
