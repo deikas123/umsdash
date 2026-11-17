@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -82,6 +82,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/PageHeader';
+import { PasswordInput } from '@/components/ui/password-input';
 
 const APPS: AppId[] = ['docs', 'ops'];
 const APP_LABELS: Record<AppId, string> = { docs: 'Docs', ops: 'Ops' };
@@ -1184,9 +1185,9 @@ export default function UserHub() {
           </DialogHeader>
           <div className="space-y-2">
             <Label htmlFor="new-password">New password</Label>
-            <Input
+            <PasswordInput
               id="new-password"
-              type="password"
+              
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="Minimum 6 characters"

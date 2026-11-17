@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import DocumentVault from '@/hr/components/DocumentVault';
 import P9FormPDF from '@/hr/components/P9FormPDF';
+import { PasswordInput } from '@/components/ui/password-input';
 
 const roleLabels: Record<string, string> = {
   gm: 'General Manager', hr: 'HR Manager', hod: 'Head of Department', staff: 'Staff Member',
@@ -438,8 +439,8 @@ ${Number(p.loan_deduction) > 0 ? `<div class="row deduction"><span>Loan</span><s
         <DialogContent>
           <DialogHeader><DialogTitle>Change Password</DialogTitle></DialogHeader>
           <div className="space-y-4 mt-2">
-            <div><Label>New Password</Label><Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="••••••••" className="mt-1" minLength={6} /></div>
-            <div><Label>Confirm Password</Label><Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="••••••••" className="mt-1" /></div>
+            <div><Label>New Password</Label><PasswordInput  value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="••••••••" className="mt-1" minLength={6} /></div>
+            <div><Label>Confirm Password</Label><PasswordInput  value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="••••••••" className="mt-1" /></div>
             <Button onClick={handlePasswordReset} className="w-full" disabled={loading}>{loading ? 'Updating...' : 'Update Password'}</Button>
           </div>
         </DialogContent>

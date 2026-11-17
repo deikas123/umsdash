@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/PageHeader';
 import { Plus, Pencil, Trash2, Zap, TestTube } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { PasswordInput } from '@/components/ui/password-input';
 
 const AVAILABLE_EVENTS = ['document.uploaded', 'document.approved', 'task.created', 'task.completed', 'incident.created', 'user.created'];
 
@@ -141,7 +142,7 @@ export default function Webhooks() {
           <div className="space-y-3">
             <div><Label className="text-xs">Name</Label><Input className="mt-1" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="My Integration" /></div>
             <div><Label className="text-xs">URL</Label><Input className="mt-1" value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} placeholder="https://example.com/hook" /></div>
-            <div><Label className="text-xs">Secret (optional)</Label><Input className="mt-1" type="password" value={form.secret} onChange={e => setForm(f => ({ ...f, secret: e.target.value }))} placeholder="HMAC signing secret" /></div>
+            <div><Label className="text-xs">Secret (optional)</Label><PasswordInput className="mt-1"  value={form.secret} onChange={e => setForm(f => ({ ...f, secret: e.target.value }))} placeholder="HMAC signing secret" /></div>
             <div>
               <Label className="text-xs mb-2 block">Events</Label>
               <div className="flex flex-wrap gap-2">

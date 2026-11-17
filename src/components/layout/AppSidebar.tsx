@@ -219,10 +219,29 @@ export function AppSidebar() {
         <div className="flex items-center gap-3">
           <img src={logoSrc} alt="UMS Hub" className="h-10 w-auto object-contain" />
           {!collapsed && (
-            <div className="flex flex-col">
+            <div className="flex flex-col flex-1 min-w-0">
               <span className="font-semibold text-sidebar-foreground text-sm">UMS Hub</span>
               <span className="text-xs text-sidebar-foreground/70">Unified Platform</span>
             </div>
+          )}
+          {!collapsed && (
+            <button
+              onClick={() => navigate('/')}
+              title="Back to Hub"
+              className="flex-shrink-0 flex items-center gap-1 text-[10px] font-medium text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent px-2 py-1 rounded-md transition-colors"
+            >
+              <Home className="h-3 w-3" />
+              Hub
+            </button>
+          )}
+          {collapsed && (
+            <button
+              onClick={() => navigate('/')}
+              title="Back to Hub"
+              className="flex items-center justify-center text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent p-1.5 rounded-md transition-colors"
+            >
+              <Home className="h-3.5 w-3.5" />
+            </button>
           )}
         </div>
       </SidebarHeader>

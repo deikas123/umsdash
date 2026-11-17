@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,7 @@ import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useMFA } from '@/hooks/useMFA';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { PasswordInput } from '@/components/ui/password-input';
 
 const ANNOUNCEMENT_COLORS = ['blue', 'green', 'yellow', 'red', 'purple'];
 
@@ -368,9 +369,9 @@ export default function Settings() {
                   <div className="space-y-1.5">
                     <Label htmlFor="newPassword">New password</Label>
                     <p className="text-xs text-muted-foreground">Must be at least 8 characters.</p>
-                    <Input
+                    <PasswordInput
                       id="newPassword"
-                      type="password"
+                      
                       value={passwordData.newPassword}
                       onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                       placeholder="New password"
@@ -378,9 +379,9 @@ export default function Settings() {
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="confirmPassword">Confirm new password</Label>
-                    <Input
+                    <PasswordInput
                       id="confirmPassword"
-                      type="password"
+                      
                       value={passwordData.confirmPassword}
                       onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
                       placeholder="Re-enter new password"
