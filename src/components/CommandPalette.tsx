@@ -169,6 +169,12 @@ export function CommandPalette() {  const [open, setOpen] = useState(false);
             <span><kbd className="rounded border bg-muted px-1 py-0.5">↑↓</kbd> navigate</span>
             <span><kbd className="rounded border bg-muted px-1 py-0.5">↵</kbd> open</span>
             <span><kbd className="rounded border bg-muted px-1 py-0.5">Ctrl+K</kbd> toggle</span>
+            <button
+              onClick={() => handleSelect('/search?q=' + encodeURIComponent(search))}
+              className="ml-auto flex items-center gap-1 text-primary hover:underline font-medium"
+            >
+              Full search →
+            </button>
           </div>
         </Command>
       </div>

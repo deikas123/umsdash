@@ -1,10 +1,11 @@
 import { ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { DensityToggle } from '@/components/DensityToggle';
@@ -18,6 +19,7 @@ import { MobileNav } from './MobileNav';
 import { QuickActions } from '@/components/QuickActions';
 import { WhatsNew } from '@/components/WhatsNew';
 import { TourController } from '@/components/onboarding/TourController';
+import { Search } from 'lucide-react';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -28,6 +30,7 @@ interface AppLayoutProps {
 export function AppLayout({ children, title, description }: AppLayoutProps) {
   const { role, profile } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const getRoleBadgeVariant = () => {
     switch (role) {
@@ -71,6 +74,9 @@ export function AppLayout({ children, title, description }: AppLayoutProps) {
               </div>
               <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                 <WhatsNew />
+                <Button variant="ghost" size="icon" onClick={() => navigate('/search')} title="Global search" aria-label="Global search">
+                  <Search className="h-4 w-4" />
+                </Button>
                 <CommandPaletteTrigger />
                 <NotificationBell />
                 <KeyboardShortcutsDialog />

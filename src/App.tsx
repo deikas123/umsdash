@@ -65,6 +65,8 @@ import AppStore from "./pages/AppStore";
 import TourManager from "./pages/TourManager";
 import ReportsHub from "./pages/ReportsHub";
 import RoleManager from "./pages/RoleManager";
+import GlobalSearch from "./pages/GlobalSearch";
+import NotificationCentre from "./pages/NotificationCentre";
 
 // Operations Hub pages
 import OpDashboard from "./pages/operations/OpDashboard";
@@ -140,6 +142,26 @@ const AppRoutes = () => (
         element={
           <ProtectedRoute>
             <AppStore />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ── Global Search (/search) — any authenticated role ── */}
+      <Route
+        path="/search"
+        element={
+          <ProtectedRoute>
+            <GlobalSearch />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ── Notification Centre (/notifications/centre) — any authenticated role ── */}
+      <Route
+        path="/notifications/centre"
+        element={
+          <ProtectedRoute>
+            <NotificationCentre />
           </ProtectedRoute>
         }
       />

@@ -36,6 +36,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -58,6 +68,8 @@ import {
   Tag,
   ScanText,
   Filter,
+  ClipboardCheck,
+  ExternalLink,
 } from 'lucide-react';
 import { downloadWithWatermark } from '@/lib/watermark-utils';
 import { format } from 'date-fns';
@@ -108,6 +120,14 @@ export default function Documents() {
   const [previewFileType, setPreviewFileType] = useState('');
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const [editingDoc, setEditingDoc] = useState<Document | null>(null);
+
+  // ── review / approval (Feature 3) ───────────────────────────────────────────
+  const [reviewDoc, setReviewDoc] = useState<Document | null>(null);
+  const [reviewUrl, setReviewUrl] = useState<string | null>(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewComment, setReviewComment] = useState('');
+  const [rejectReason, setRejectReason] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
   // ── data ────────────────────────────────────────────────────────────────────
   const { categories } = useCategories();
@@ -272,6 +292,101 @@ export default function Documents() {
   const canExtractText = (doc: Document) => {
     const ft = (doc.file_type || '').toLowerCase();
     return ft.includes('image') || ft.includes('pdf');
+  };
+
+  // ── review / approval handlers (Feature 3) ──────────────────────────────────
+  const handleOpenReview = async (doc: Document) => {
+    setReviewDoc(doc);
+    setReviewComment('');
+    setRejectReason('');
+    setReviewUrl(null);
+    setReviewLoading(true);
+    try {
+      const { data } = await supabase.storage.from('documents').createSignedUrl(doc.file_path, 3600);
+      if (data?.signedUrl) setReviewUrl(data.signedUrl);
+    } catch {
+      /* signed URL is best-effort; review can still proceed */
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
+  const closeReview = () => {
+    setReviewDoc(null);
+    setReviewUrl(null);
+    setReviewComment('');
+    setRejectReason('');
+  };
+
+  const handleApproveReview = async () => {
+    const doc = reviewDoc;
+    if (!doc || !user) return;
+    setReviewSubmitting(true);
+    try {
+      const { error } = await supabase.from('documents').update({ status: 'approved' }).eq('id', doc.id);
+      if (error) throw error;
+      await supabase.from('document_review_comments').insert({
+        document_id: doc.id,
+        reviewer_id: user.id,
+        action: 'approved',
+        comment: reviewComment.trim(),
+      });
+      if (doc.uploaded_by) {
+        await supabase.from('in_app_notifications').insert({
+          user_id: doc.uploaded_by,
+          title: 'Document approved',
+          message: `Your document '${doc.title}' was approved`,
+          link: '/docs/documents',
+        });
+      }
+      toast({ title: 'Document approved', description: `'${doc.title}' is now approved.` });
+      closeReview();
+      refetch();
+    } catch (e: unknown) {
+      toast({
+        title: 'Failed to approve document',
+        description: e instanceof Error ? e.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
+  const handleRejectReview = async () => {
+    const doc = reviewDoc;
+    if (!doc || !user || !rejectReason.trim()) return;
+    setReviewSubmitting(true);
+    try {
+      const reason = rejectReason.trim();
+      const { error } = await supabase.from('documents').update({ status: 'rejected' }).eq('id', doc.id);
+      if (error) throw error;
+      await supabase.from('document_review_comments').insert({
+        document_id: doc.id,
+        reviewer_id: user.id,
+        action: 'rejected',
+        comment: reason,
+      });
+      if (doc.uploaded_by) {
+        await supabase.from('in_app_notifications').insert({
+          user_id: doc.uploaded_by,
+          title: 'Document returned',
+          message: `Your document '${doc.title}' was returned: ${reason}`,
+          link: '/docs/documents',
+        });
+      }
+      toast({ title: 'Document returned', description: `'${doc.title}' has been returned for revision.` });
+      closeReview();
+      refetch();
+    } catch (e: unknown) {
+      toast({
+        title: 'Failed to return document',
+        description: e instanceof Error ? e.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setReviewSubmitting(false);
+    }
   };
 
   // ── bulk actions ─────────────────────────────────────────────────────────────
@@ -716,6 +831,11 @@ export default function Documents() {
                 )}
                 <span className="text-xs capitalize w-16 text-right">{doc.status}</span>
                 <div className="flex items-center gap-1 ml-1">
+                  {(isAdmin || isStaff) && doc.status === 'pending' && (
+                    <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => handleOpenReview(doc)} title="Review document">
+                      <ClipboardCheck className="h-3.5 w-3.5 mr-1" />Review
+                    </Button>
+                  )}
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleView(doc)} aria-label="View">
                     <FileText className="h-3.5 w-3.5" />
                   </Button>
@@ -852,6 +972,79 @@ export default function Documents() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ── Document review / approval dialog (Feature 3) ─────────────────────── */}
+      <Dialog open={!!reviewDoc} onOpenChange={(open) => { if (!open) closeReview(); }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardCheck className="h-4 w-4 text-primary" /> Review Document
+            </DialogTitle>
+            <DialogDescription>
+              {reviewDoc?.title} — currently <span className="capitalize font-medium text-foreground">{reviewDoc?.status}</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Inline preview — mirrors DocumentPreviewDialog PreviewBody */}
+          <div className="flex-1 overflow-auto min-h-[180px] max-h-[340px] rounded-lg border bg-muted/30 p-2">
+            {reviewLoading ? (
+              <div className="flex items-center justify-center h-full text-sm text-muted-foreground">Loading preview…</div>
+            ) : reviewUrl ? (
+              reviewDoc?.file_type?.includes('image') ? (
+                <img src={reviewUrl} alt={reviewDoc.title} className="max-w-full max-h-[320px] object-contain mx-auto" />
+              ) : reviewDoc?.file_type?.includes('pdf') ? (
+                <iframe src={`${reviewUrl}#toolbar=1&navpanes=0`} className="w-full h-[320px] rounded border-0" title={reviewDoc?.title} />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-center p-6">
+                  <FileText className="h-10 w-10 text-muted-foreground/50 mb-2" />
+                  <p className="text-sm text-muted-foreground mb-2">This file type cannot be previewed inline.</p>
+                  <Button variant="outline" size="sm" onClick={() => window.open(reviewUrl, '_blank')}>
+                    <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open in new tab
+                  </Button>
+                </div>
+              )
+            ) : (
+              <div className="flex items-center justify-center h-full text-sm text-muted-foreground">No preview available.</div>
+            )}
+          </div>
+
+          <div className="space-y-3 mt-2 flex-shrink-0">
+            <div>
+              <Label>Comment (optional)</Label>
+              <Input
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                placeholder="Optional note for the uploader"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>Reason for returning <span className="text-destructive">*</span></Label>
+              <Textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Required only if returning the document"
+                className="mt-1"
+                rows={2}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex-shrink-0">
+            <Button variant="outline" onClick={closeReview} disabled={reviewSubmitting}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={handleRejectReview}
+              disabled={reviewSubmitting || !rejectReason.trim()}
+            >
+              {reviewSubmitting ? 'Working…' : 'Return (Reject)'}
+            </Button>
+            <Button onClick={handleApproveReview} disabled={reviewSubmitting}>
+              {reviewSubmitting ? 'Working…' : 'Approve'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

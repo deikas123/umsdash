@@ -2,14 +2,17 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { BadgeWall } from '@/hr/components/BadgeWall';
 import { NewYearGoal } from '@/hr/components/NewYearGoal';
-import { useMyProfile, useEmployees, usePayrollRecords, useLoans, useLoanPayments, useLeaveRequests } from '@/hr/hooks/useSupabaseData';
+import { useMyProfile, useEmployees, usePayrollRecords, useLoans, useLoanPayments, useLeaveRequests, useCreateLeaveRequest } from '@/hr/hooks/useSupabaseData';
 import { useAttendance } from '@/hr/hooks/useAttendanceData';
+import { countWorkingDays } from '@/hr/lib/dateHelpers';
 import { supabase } from '@/integrations/supabase/client';
-import { User, Mail, Phone, Building2, Briefcase, CreditCard, Lock, FileText, CalendarDays, Clock, Wallet, AlertTriangle, Download } from 'lucide-react';
+import { User, Mail, Phone, Building2, Briefcase, CreditCard, Lock, FileText, CalendarDays, Clock, Wallet, AlertTriangle, Download, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import DocumentVault from '@/hr/components/DocumentVault';
@@ -28,6 +31,13 @@ const statusColors: Record<string, string> = {
   pending_hod: 'bg-warning/10 text-warning', pending_hr: 'bg-info/10 text-info',
   pending_gm: 'bg-accent text-accent-foreground', approved: 'bg-success/10 text-success',
   rejected: 'bg-destructive/10 text-destructive',
+};
+
+type LeaveType = 'annual' | 'sick' | 'maternity' | 'paternity' | 'compassionate' | 'study';
+
+const leaveTypeLabels: Record<LeaveType, string> = {
+  annual: 'Annual Leave', sick: 'Sick Leave', maternity: 'Maternity Leave',
+  paternity: 'Paternity Leave', compassionate: 'Compassionate Leave', study: 'Study Leave',
 };
 
 export default function MyProfile() {
@@ -71,6 +81,52 @@ export default function MyProfile() {
   };
 
   const leaveBalance = myEmployee ? myEmployee.annual_leave_days - myEmployee.used_leave_days : 0;
+
+  // ── Self-service leave request (Feature 4) ─────────────────────────────────
+  const createLeave = useCreateLeaveRequest();
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+  const [leaveType, setLeaveType] = useState<LeaveType>('annual');
+  const [leaveStart, setLeaveStart] = useState('');
+  const [leaveEnd, setLeaveEnd] = useState('');
+  const [leaveReason, setLeaveReason] = useState('');
+  const [leavePhone, setLeavePhone] = useState('');
+  const [leaveReliever, setLeaveReliever] = useState('');
+  const [submittingLeave, setSubmittingLeave] = useState(false);
+  const leaveWorkingDays = leaveStart && leaveEnd ? countWorkingDays(leaveStart, leaveEnd) : 0;
+
+  const handleSubmitLeave = async () => {
+    if (!myEmployee) return;
+    if (!leaveStart || !leaveEnd || !leaveReason) {
+      toast({ title: 'Missing fields', description: 'Please fill all required fields.', variant: 'destructive' });
+      return;
+    }
+    const days = countWorkingDays(leaveStart, leaveEnd);
+    if (days <= 0) {
+      toast({ title: 'Invalid dates', description: 'End date must be on or after the start date.', variant: 'destructive' });
+      return;
+    }
+    setSubmittingLeave(true);
+    try {
+      await createLeave.mutateAsync({
+        employee_id: myEmployee.id,
+        leave_type: leaveType,
+        start_date: leaveStart,
+        end_date: leaveEnd,
+        days,
+        reason: leaveReason,
+        status: 'pending_hod',
+        contact_phone: leavePhone,
+        reliever_name: leaveReliever,
+      });
+      toast({ title: 'Leave request submitted', description: 'Your request has been sent to your HOD for approval.' });
+      setShowLeaveDialog(false);
+      setLeaveType('annual'); setLeaveStart(''); setLeaveEnd(''); setLeaveReason(''); setLeavePhone(''); setLeaveReliever('');
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setSubmittingLeave(false);
+    }
+  };
 
   const handleDownloadPayslip = (p: any) => {
     const w = window.open('', '_blank');
@@ -358,6 +414,13 @@ ${Number(p.loan_deduction) > 0 ? `<div class="row deduction"><span>Loan</span><s
         {/* LEAVE TAB */}
         <TabsContent value="leave">
           {myEmployee && (
+            <div className="flex justify-end mb-4">
+              <Button className="gap-2" onClick={() => setShowLeaveDialog(true)}>
+                <Plus className="h-4 w-4" /> Request Leave
+              </Button>
+            </div>
+          )}
+          {myEmployee && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
               <div className="stat-card"><p className="text-xs text-muted-foreground">Annual Entitlement</p><p className="text-2xl font-bold text-foreground">{myEmployee.annual_leave_days} days</p></div>
               <div className="stat-card"><p className="text-xs text-muted-foreground">Days Used</p><p className="text-2xl font-bold text-warning">{myEmployee.used_leave_days} days</p></div>
@@ -446,6 +509,62 @@ ${Number(p.loan_deduction) > 0 ? `<div class="row deduction"><span>Loan</span><s
             <div><Label>New Password</Label><PasswordInput  value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="••••••••" className="mt-1" minLength={6} /></div>
             <div><Label>Confirm Password</Label><PasswordInput  value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="••••••••" className="mt-1" /></div>
             <Button onClick={handlePasswordReset} className="w-full" disabled={loading}>{loading ? 'Updating...' : 'Update Password'}</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Self-service leave request dialog (Feature 4) ─────────────────────── */}
+      <Dialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-primary" /> Request Leave
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div>
+              <Label>Leave Type *</Label>
+              <Select value={leaveType} onValueChange={(v) => setLeaveType(v as LeaveType)}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(leaveTypeLabels).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Start Date *</Label>
+                <Input type="date" value={leaveStart} onChange={e => setLeaveStart(e.target.value)} className="mt-1" />
+              </div>
+              <div>
+                <Label>End Date *</Label>
+                <Input type="date" value={leaveEnd} onChange={e => setLeaveEnd(e.target.value)} className="mt-1" />
+              </div>
+            </div>
+            {leaveStart && leaveEnd && (
+              <p className="text-sm text-primary font-medium">
+                Working days: {leaveWorkingDays} | Balance after: {leaveBalance - leaveWorkingDays} days
+              </p>
+            )}
+            <div>
+              <Label>Reason *</Label>
+              <Textarea value={leaveReason} onChange={e => setLeaveReason(e.target.value)} rows={2} className="mt-1" placeholder="Reason for leave" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Contact Phone</Label>
+                <Input value={leavePhone} onChange={e => setLeavePhone(e.target.value)} className="mt-1" placeholder="e.g. 0712345678" />
+              </div>
+              <div>
+                <Label>Reliever Name</Label>
+                <Input value={leaveReliever} onChange={e => setLeaveReliever(e.target.value)} className="mt-1" placeholder="Person covering your duties" />
+              </div>
+            </div>
+            <Button onClick={handleSubmitLeave} className="w-full" disabled={submittingLeave || createLeave.isPending}>
+              {submittingLeave || createLeave.isPending ? 'Submitting...' : 'Submit Leave Request'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

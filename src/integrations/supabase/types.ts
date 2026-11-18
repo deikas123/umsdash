@@ -358,6 +358,41 @@ export type Database = {
           },
         ]
       }
+      document_review_comments: {
+        Row: {
+          id: string
+          document_id: string
+          reviewer_id: string | null
+          action: string
+          comment: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          document_id: string
+          reviewer_id?: string | null
+          action: string
+          comment?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          document_id?: string
+          reviewer_id?: string | null
+          action?: string
+          comment?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_review_comments_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       folder_documents: {
         Row: {
           created_at: string
@@ -2005,7 +2040,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "staff" | "customer" | "manager" | "user"
-      document_status: "pending" | "approved" | "archived"
+      document_status: "pending" | "approved" | "archived" | "rejected"
       staff_position: "super_admin" | "hr" | "hod" | "staff"
       task_priority: "low" | "normal" | "high"
       task_status: "pending" | "in_progress" | "completed"
@@ -2137,7 +2172,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "staff", "customer", "manager", "user"],
-      document_status: ["pending", "approved", "archived"],
+      document_status: ["pending", "approved", "archived", "rejected"],
       staff_position: ["super_admin", "hr", "hod", "staff"],
       task_priority: ["low", "normal", "high"],
       task_status: ["pending", "in_progress", "completed"],

@@ -6,7 +6,7 @@ import {
   Activity, BarChart3, CalendarClock, HardDrive, Flame, DatabaseBackup,
   AlertTriangle, FileWarning, KeyRound, Siren, Home, Trophy, ChevronDown,
   Monitor, Zap, Calendar, UserCheck, TrendingUp, ShoppingBag, GraduationCap, ShieldCheck,
-  DollarSign, CreditCard, Lightbulb, Building2, UserCircle, Clock, List,
+  DollarSign, CreditCard, Lightbulb, Building2, UserCircle, Clock, List, ClipboardCheck,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import {
@@ -19,6 +19,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import umsLogo from '@/assets/ums-logo.png';
 import { useNotificationCounts } from '@/hooks/useNotificationCounts';
 import { useOrgSettings } from '@/hooks/useOrgSettings';
@@ -120,6 +122,20 @@ export function AppSidebar() {
   const { pendingTasksCount, pendingRemindersCount, pendingDeletionsCount } = useNotificationCounts();
   const { settings } = useOrgSettings();
   const isSuperAdmin = (user?.email ?? profile?.email ?? '').toLowerCase() === SUPER_ADMIN_EMAIL;
+
+  // Pending document count for the Review Queue badge (admin/staff only)
+  const { data: pendingDocsCount = 0 } = useQuery<number>({
+    queryKey: ['pending-docs-count'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('documents')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending');
+      return count ?? 0;
+    },
+    enabled: isAdmin || isStaff,
+    refetchInterval: 30000,
+  });
   const visibleAdminItems = adminDocItems.filter(i => !i.superAdminOnly || isSuperAdmin);
   const collapsed = state === 'collapsed';
   const logoSrc = settings.org_logo_url || umsLogo;
@@ -304,6 +320,13 @@ export function AppSidebar() {
                     {(isAdmin || isStaff) && docNavItems.map(item => (
                       <NavItem key={item.url} item={item} badgeCount={getBadgeCount((item as any).badge)} isActive={isActive(item.url)} />
                     ))}
+                    {(isAdmin || isStaff) && (
+                      <NavItem
+                        item={{ title: 'Review Queue', url: '/docs/documents', icon: ClipboardCheck }}
+                        badgeCount={pendingDocsCount}
+                        isActive={isActive('/docs/documents')}
+                      />
+                    )}
                     {isCustomer && docCustomerItems.map(item => (
                       <NavItem key={item.url} item={item} badgeCount={getBadgeCount((item as any).badge)} isActive={isActive(item.url)} />
                     ))}

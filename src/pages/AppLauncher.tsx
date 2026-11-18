@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   FileText, Activity, LogOut, ShoppingBag, Users2, Terminal,
-  ArrowRight, Bell, ChevronRight,
+  ArrowRight, Bell, ChevronRight, Search,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
@@ -215,6 +215,10 @@ export default function AppLauncher() {
                 <Badge key={r} variant="secondary" className="text-[10px] capitalize px-1.5 py-0.5">{r.replace('_', ' ')}</Badge>
               ))}
             </div>
+            {/* Global search */}
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigate('/search')} title="Global search" aria-label="Global search">
+              <Search className="h-4 w-4" />
+            </Button>
             {/* Notifications dot */}
             {recentNotifs.some((n: any) => !n.is_read) && (
               <div className="relative">
