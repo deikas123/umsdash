@@ -38,6 +38,7 @@ export default function Overview() {
     { label: 'VPS Servers',         value: vps.length,        sub: `${vpsDown} down / degraded`,                            icon: Server,      color: 'text-purple-500',  path: '/it/infra/vps' },
     { label: 'Backup Jobs',         value: backups.length,    sub: `${failedBackups} failed`,                                icon: CheckSquare, color: 'text-teal-500',    path: '/it/infra/backup' },
     { label: 'Login Events (last)', value: '—',               sub: 'View login activity',                                   icon: Activity,    color: 'text-sky-500',     path: '/it/security/logins' },
+    { label: 'Uptime Summary',      value: `${vps.length}`,   sub: 'View SLA availability report',                          icon: Activity,    color: 'text-cyan-500',    path: '/it/infra/uptime-summary' },
   ];
 
   const recentTickets = tickets.slice(0, 5);

@@ -145,6 +145,7 @@ export type Database = {
           assigned_to: string; location: string
           status: Database['public']['Enums']['it_asset_status']
           warranty_expiry: string | null; notes: string | null; created_at: string; updated_at: string
+          useful_life_years: number; residual_value: number
         }
         Insert: {
           id?: string; asset_id: string; name: string
@@ -153,6 +154,7 @@ export type Database = {
           assigned_to?: string; location?: string
           status?: Database['public']['Enums']['it_asset_status']
           warranty_expiry?: string | null; notes?: string | null; created_at?: string; updated_at?: string
+          useful_life_years?: number; residual_value?: number
         }
         Update: {
           id?: string; asset_id?: string; name?: string
@@ -161,6 +163,7 @@ export type Database = {
           assigned_to?: string; location?: string
           status?: Database['public']['Enums']['it_asset_status']
           warranty_expiry?: string | null; notes?: string | null; created_at?: string; updated_at?: string
+          useful_life_years?: number; residual_value?: number
         }
         Relationships: []
       }

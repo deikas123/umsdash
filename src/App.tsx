@@ -67,6 +67,7 @@ import ReportsHub from "./pages/ReportsHub";
 import RoleManager from "./pages/RoleManager";
 import GlobalSearch from "./pages/GlobalSearch";
 import NotificationCentre from "./pages/NotificationCentre";
+import AuditTrailManager from "./pages/AuditTrailManager";
 
 // Operations Hub pages
 import OpDashboard from "./pages/operations/OpDashboard";
@@ -298,6 +299,16 @@ const AppRoutes = () => (
         element={
           <ProtectedRoute requireSuperAdmin>
             <RoleManager />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ── Audit Trail (/admin/audit-trail) — admin, gm, hod ── */}
+      <Route
+        path="/admin/audit-trail"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'gm', 'hod']}>
+            <AuditTrailManager />
           </ProtectedRoute>
         }
       />

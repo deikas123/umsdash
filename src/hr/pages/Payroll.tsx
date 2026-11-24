@@ -1,7 +1,10 @@
 ﻿import { useState, useMemo, useEffect } from 'react';
 import { useEmployees, usePayrollRecords, useSavedPayrollMonths, useSavePayroll, useLoans, DbEmployee } from '@/hr/hooks/useSupabaseData';
 import { computeKenyanPayroll, PayrollRecord, Employee } from '@/hr/lib/types';
-import { DollarSign, Download, Eye, Save, History, TrendingUp, TrendingDown, Edit2, CalendarClock } from 'lucide-react';
+import { DollarSign, Download, Eye, Save, History, TrendingUp, TrendingDown, Edit2, CalendarClock, BarChart2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { exportToCSV } from '@/lib/export-utils';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { smsPayrollProcessed } from '@/hr/lib/smsTemplates';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,6 +54,9 @@ export default function Payroll() {
   const [extrasMap, setExtrasMap] = useState<Record<string, Extras>>({});
   const [autoOT, setAutoOT] = useState(true);
 
+  const { isHrManager, isGM } = useAuth();
+  const canViewVariance = isHrManager || isGM;
+
   const { data: dbEmployees = [], isLoading } = useEmployees();
   const { data: savedMonths = [] } = useSavedPayrollMonths();
   const { data: loans = [] } = useLoans();
@@ -60,6 +66,7 @@ export default function Payroll() {
 
   const { data: historyRecords = [] } = usePayrollRecords(historyMonth || undefined);
   const { data: compareRecords = [] } = usePayrollRecords(compareMonth || undefined);
+  const { data: allPayrollRecords = [] } = usePayrollRecords(undefined);
 
   const activeEmployees = dbEmployees.filter(e => e.status === 'active');
 
@@ -182,6 +189,68 @@ export default function Payroll() {
     );
   };
 
+  // Variance report data
+  const varianceData = useMemo(() => {
+    if (!canViewVariance) return { columns: [], rows: [], chartData: [] };
+    const sortedMonths = [...new Set(allPayrollRecords.map(r => r.month as string))]
+      .sort()
+      .reverse()
+      .slice(0, 6)
+      .reverse();
+
+    // group by employee_id
+    const byEmployee: Record<string, Record<string, number>> = {};
+    const empNames: Record<string, string> = {};
+    for (const r of allPayrollRecords) {
+      const empId = r.employee_id as string;
+      const mon = r.month as string;
+      if (!sortedMonths.includes(mon)) continue;
+      if (!byEmployee[empId]) byEmployee[empId] = {};
+      byEmployee[empId][mon] = Number(r.net_pay);
+      if (r.employees) {
+        empNames[empId] = `${(r.employees as any).first_name} ${(r.employees as any).last_name}`;
+      }
+    }
+
+    const rows = Object.entries(byEmployee).map(([empId, monthly]) => ({
+      empId,
+      name: empNames[empId] || empId,
+      monthly,
+    }));
+
+    const chartData = sortedMonths.map(mon => ({
+      month: mon,
+      total: Object.values(byEmployee).reduce((s, m) => s + (m[mon] || 0), 0),
+    }));
+
+    return { columns: sortedMonths, rows, chartData };
+  }, [allPayrollRecords, canViewVariance]);
+
+  const handleVarianceExport = () => {
+    const { columns, rows } = varianceData;
+    const cols = [
+      { key: 'name', header: 'Employee' },
+      ...columns.map(c => ({ key: c, header: c })),
+    ];
+    const data = rows.map(r => ({
+      name: r.name,
+      ...Object.fromEntries(columns.map(c => [c, r.monthly[c] ?? ''])),
+    }));
+    exportToCSV(data as Record<string, unknown>[], `payroll-variance-${new Date().toISOString().slice(0, 10)}`, cols);
+  };
+
+  const pctChange = (curr: number, prev: number) => {
+    if (!prev) return null;
+    return ((curr - prev) / prev) * 100;
+  };
+
+  const varianceCellClass = (pct: number | null): string => {
+    if (pct === null) return 'text-muted-foreground';
+    if (Math.abs(pct) <= 2) return 'text-green-600';
+    if (Math.abs(pct) <= 10) return 'text-amber-600';
+    return 'text-red-600';
+  };
+
   const currentExtras = showExtras ? (extrasMap[showExtras] || { ...emptyExtras }) : null;
   const updateExtra = (field: keyof Extras, value: number) => {
     if (!showExtras) return;
@@ -214,6 +283,9 @@ export default function Payroll() {
         <TabsList>
           <TabsTrigger value="current">Current Payroll</TabsTrigger>
           <TabsTrigger value="history" className="gap-1"><History className="h-3.5 w-3.5" /> History ({savedMonths.length})</TabsTrigger>
+          {canViewVariance && (
+            <TabsTrigger value="variance" className="gap-1"><BarChart2 className="h-3.5 w-3.5" /> Variance Report</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="current">
@@ -373,6 +445,91 @@ export default function Payroll() {
             )}
           </div>
         </TabsContent>
+
+        {canViewVariance && (
+          <TabsContent value="variance">
+            <div className="mt-4 space-y-4">
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-muted-foreground">Net pay per employee over the last 6 saved months. % change: <span className="text-green-600">green ≤2%</span>, <span className="text-amber-600">amber 2–10%</span>, <span className="text-red-600">red &gt;10%</span></p>
+                <Button variant="outline" size="sm" onClick={handleVarianceExport} className="gap-2">
+                  <Download className="h-4 w-4" /> Export CSV
+                </Button>
+              </div>
+
+              {varianceData.columns.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground bg-card rounded-lg border">No saved payroll data yet.</div>
+              ) : (
+                <>
+                  <div className="bg-card rounded-lg border shadow-sm overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b bg-muted/50">
+                          <th className="text-left px-4 py-2 text-xs font-semibold text-muted-foreground uppercase">Employee</th>
+                          {varianceData.columns.map(c => (
+                            <th key={c} className="text-right px-4 py-2 text-xs font-semibold text-muted-foreground uppercase whitespace-nowrap">{c}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {varianceData.rows.map(row => (
+                          <tr key={row.empId} className="border-b last:border-0 hover:bg-muted/20">
+                            <td className="px-4 py-2 font-medium">{row.name}</td>
+                            {varianceData.columns.map((col, idx) => {
+                              const val = row.monthly[col];
+                              const prevCol = varianceData.columns[idx - 1];
+                              const prev = prevCol ? row.monthly[prevCol] : undefined;
+                              const pct = val !== undefined && prev !== undefined ? pctChange(val, prev) : null;
+                              return (
+                                <td key={col} className="px-4 py-2 text-right tabular-nums">
+                                  {val !== undefined ? (
+                                    <div className="flex flex-col items-end">
+                                      <span>{Number(val).toLocaleString()}</span>
+                                      {pct !== null && (
+                                        <span className={`text-xs ${varianceCellClass(pct)}`}>
+                                          {pct > 0 ? '+' : ''}{pct.toFixed(1)}%
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : <span className="text-muted-foreground">—</span>}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                        {/* Summary row */}
+                        <tr className="bg-muted/50 font-bold">
+                          <td className="px-4 py-2">Total</td>
+                          {varianceData.columns.map(col => {
+                            const total = varianceData.rows.reduce((s, r) => s + (r.monthly[col] || 0), 0);
+                            return (
+                              <td key={col} className="px-4 py-2 text-right tabular-nums text-success">
+                                {total > 0 ? total.toLocaleString() : '—'}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {varianceData.chartData.length > 0 && (
+                    <div className="bg-card rounded-lg border shadow-sm p-4">
+                      <h3 className="text-sm font-semibold mb-4">Total Payroll per Month</h3>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <BarChart data={varianceData.chartData}>
+                          <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                          <YAxis tickFormatter={v => `${(v / 1000).toFixed(0)}K`} tick={{ fontSize: 11 }} />
+                          <Tooltip formatter={(v: number) => `KES ${v.toLocaleString()}`} />
+                          <Bar dataKey="total" fill="#22c55e" radius={[4, 4, 0, 0]} name="Net Pay" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Extras Dialog */}

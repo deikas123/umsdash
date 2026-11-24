@@ -68,10 +68,11 @@ const sections = [
   {
     label: 'INFRASTRUCTURE',
     items: [
-      { path: '/it/infra/vps',      icon: Server,            label: 'VPS Monitoring' },
-      { path: '/it/infra/cloud',    icon: Cloud,             label: 'Cloud Services' },
-      { path: '/it/infra/database', icon: Database,          label: 'Database Monitoring' },
-      { path: '/it/infra/backup',   icon: HardDriveDownload, label: 'Backup Monitoring' },
+      { path: '/it/infra/vps',            icon: Server,            label: 'VPS Monitoring' },
+      { path: '/it/infra/cloud',          icon: Cloud,             label: 'Cloud Services' },
+      { path: '/it/infra/database',       icon: Database,          label: 'Database Monitoring' },
+      { path: '/it/infra/backup',         icon: HardDriveDownload, label: 'Backup Monitoring' },
+      { path: '/it/infra/uptime-summary', icon: Activity,          label: 'Uptime Summary' },
     ],
   },
   {

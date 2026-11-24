@@ -40,6 +40,7 @@ import VpsMonitoring     from '@/it/pages/infra/VpsMonitoring';
 import CloudServices     from '@/it/pages/infra/CloudServices';
 import DatabaseMonitoring from '@/it/pages/infra/DatabaseMonitoring';
 import BackupMonitoring  from '@/it/pages/infra/BackupMonitoring';
+import UptimeSummary     from '@/it/pages/infra/UptimeSummary';
 
 // Reports
 import MonthlyReport     from '@/it/pages/reports/MonthlyReport';
@@ -110,6 +111,7 @@ function ItContent() {
         <Route path="infra/cloud"    element={<CloudServices />} />
         <Route path="infra/database" element={<DatabaseMonitoring />} />
         <Route path="infra/backup"   element={<BackupMonitoring />} />
+        <Route path="infra/uptime-summary" element={<UptimeSummary />} />
 
         {/* Reports */}
         <Route path="reports/monthly"    element={<MonthlyReport />} />

@@ -118,7 +118,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAdmin, isStaff, isCustomer, isHrUser, profile, user, signOut } = useAuth();
+  const { isAdmin, isStaff, isCustomer, isHrUser, isGM, isHOD, profile, user, signOut } = useAuth();
   const { pendingTasksCount, pendingRemindersCount, pendingDeletionsCount } = useNotificationCounts();
   const { settings } = useOrgSettings();
   const isSuperAdmin = (user?.email ?? profile?.email ?? '').toLowerCase() === SUPER_ADMIN_EMAIL;
@@ -386,7 +386,7 @@ export function AppSidebar() {
         )}
 
         {/* Administration — docs / home app, admin only */}
-        {isAdmin && (currentApp === 'docs' || currentApp === 'home') && (
+        {(isAdmin || isGM || isHOD) && (currentApp === 'docs' || currentApp === 'home') && (
           <Collapsible open={adminOpen} onOpenChange={handleAdminToggle}>
             <SidebarGroup>
               <SidebarGroupLabel asChild>
@@ -398,9 +398,15 @@ export function AppSidebar() {
               <CollapsibleContent>
                 <SidebarGroupContent>
                   <SidebarMenu>
-                    {visibleAdminItems.map(item => (
+                    {isAdmin && visibleAdminItems.map(item => (
                       <NavItem key={item.url} item={item} badgeCount={getBadgeCount((item as any).badge)} isActive={isActive(item.url)} />
                     ))}
+                    {(isAdmin || isGM || isHOD) && (
+                      <NavItem
+                        item={{ title: 'Audit Trail', url: '/admin/audit-trail', icon: ClipboardList }}
+                        isActive={isActive('/admin/audit-trail')}
+                      />
+                    )}
                   </SidebarMenu>
                 </SidebarGroupContent>
               </CollapsibleContent>
