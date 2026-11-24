@@ -16,14 +16,16 @@ interface SummaryRow {
   name: string;
   kind: 'vps' | 'cloud';
   status: string;
-  availabilityPct: number;
+  availabilityPct: number | null;
   slaTarget: number;
 }
 
-function cloudStatusToPct(status: CloudStatus): number {
+/** Returns null for maintenance so it is shown as "Maintenance" rather than a 0% figure. */
+function cloudStatusToPct(status: CloudStatus): number | null {
   if (status === 'operational') return 100;
   if (status === 'degraded') return 99;
-  return 0;
+  if (status === 'maintenance') return null;
+  return 0; // outage
 }
 
 function statusColor(status: string): string {
@@ -78,9 +80,9 @@ export default function UptimeSummary() {
         r.name,
         r.kind.toUpperCase(),
         r.status,
-        r.availabilityPct.toFixed(2) + '%',
+        r.availabilityPct === null ? 'Maintenance' : r.availabilityPct.toFixed(2) + '%',
         r.slaTarget.toFixed(2) + '%',
-        r.availabilityPct >= r.slaTarget ? 'Yes' : 'No',
+        r.availabilityPct === null ? 'N/A' : r.availabilityPct >= r.slaTarget ? 'Yes' : 'No',
       ]),
       startY: 34,
       styles: { fontSize: 8 },
@@ -128,7 +130,11 @@ export default function UptimeSummary() {
                     {r.status}
                   </span>
                 </td>
-                <td className="px-4 py-3 tabular-nums">{r.availabilityPct.toFixed(2)}%</td>
+                <td className="px-4 py-3 tabular-nums">
+                  {r.availabilityPct === null ? (
+                    <span className="text-muted-foreground italic text-xs">Maintenance</span>
+                  ) : `${r.availabilityPct.toFixed(2)}%`}
+                </td>
                 <td className="px-4 py-3">
                   <Input
                     type="number"
@@ -141,7 +147,9 @@ export default function UptimeSummary() {
                   />
                 </td>
                 <td className="px-4 py-3">
-                  {r.availabilityPct >= r.slaTarget
+                  {r.availabilityPct === null
+                    ? <Badge className="bg-blue-100 text-blue-700 border-blue-300 text-xs">Maintenance</Badge>
+                    : r.availabilityPct >= r.slaTarget
                     ? <Badge className="bg-green-100 text-green-700 border-green-300 text-xs">Met</Badge>
                     : <Badge className="bg-red-100 text-red-700 border-red-300 text-xs">Below SLA</Badge>
                   }

@@ -66,7 +66,13 @@ export default function Payroll() {
 
   const { data: historyRecords = [] } = usePayrollRecords(historyMonth || undefined);
   const { data: compareRecords = [] } = usePayrollRecords(compareMonth || undefined);
-  const { data: allPayrollRecords = [] } = usePayrollRecords(undefined);
+  // Variance: fetch only last 6 calendar months to avoid an unbounded query as history grows.
+  const varianceSinceMonth = useMemo(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 5);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }, []);
+  const { data: allPayrollRecords = [] } = usePayrollRecords(undefined, canViewVariance ? varianceSinceMonth : undefined);
 
   const activeEmployees = dbEmployees.filter(e => e.status === 'active');
 

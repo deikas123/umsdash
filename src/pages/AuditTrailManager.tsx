@@ -37,12 +37,18 @@ function labelAction(action: string) {
   return ACTION_LABELS[action] ?? action.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
-type DateRange = '7d' | '30d' | '90d' | 'all';
+type DateRange = '7d' | '30d' | '90d' | 'custom';
+
+const PAGE_SIZE = 2000;
+const TRUNCATION_WARN = 1900;
 
 export default function AuditTrailManager() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange>('30d');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+  const [truncated, setTruncated] = useState(false);
   const [actionFilter, setActionFilter] = useState('all');
   const [userFilter, setUserFilter] = useState('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -50,22 +56,33 @@ export default function AuditTrailManager() {
   useEffect(() => {
     const fetchEntries = async () => {
       setLoading(true);
+      setTruncated(false);
       let query = supabase
         .from('audit_logs')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(1000);
+        .limit(PAGE_SIZE);
 
-      if (dateRange !== 'all') {
+      if (dateRange === '7d' || dateRange === '30d' || dateRange === '90d') {
         const days = dateRange === '7d' ? 7 : dateRange === '30d' ? 30 : 90;
         const since = new Date(Date.now() - days * 86400000).toISOString();
         query = query.gte('created_at', since);
+      } else if (dateRange === 'custom') {
+        if (customFrom) query = query.gte('created_at', new Date(customFrom).toISOString());
+        if (customTo) {
+          // include the full customTo day
+          const toDate = new Date(customTo);
+          toDate.setDate(toDate.getDate() + 1);
+          query = query.lt('created_at', toDate.toISOString());
+        }
       }
 
       const { data, error } = await query;
       if (error) { setLoading(false); return; }
 
       const rows = data || [];
+      if (rows.length >= TRUNCATION_WARN) setTruncated(true);
+
       const userIds = [...new Set(rows.map(r => r.user_id).filter(Boolean))] as string[];
       let nameMap: Record<string, string> = {};
       if (userIds.length) {
@@ -83,7 +100,7 @@ export default function AuditTrailManager() {
       setLoading(false);
     };
     fetchEntries();
-  }, [dateRange]);
+  }, [dateRange, customFrom, customTo]);
 
   const distinctActions = useMemo(() => [...new Set(entries.map(e => e.action))].sort(), [entries]);
   const distinctUsers = useMemo(() => [...new Set(entries.map(e => e.user_name))].sort(), [entries]);
@@ -141,9 +158,27 @@ export default function AuditTrailManager() {
             <SelectItem value="7d">Last 7 days</SelectItem>
             <SelectItem value="30d">Last 30 days</SelectItem>
             <SelectItem value="90d">Last 90 days</SelectItem>
-            <SelectItem value="all">All time</SelectItem>
+            <SelectItem value="custom">Custom range</SelectItem>
           </SelectContent>
         </Select>
+        {dateRange === 'custom' && (
+          <>
+            <Input
+              type="date"
+              value={customFrom}
+              onChange={e => setCustomFrom(e.target.value)}
+              className="w-40 h-9 text-sm"
+              placeholder="From"
+            />
+            <Input
+              type="date"
+              value={customTo}
+              onChange={e => setCustomTo(e.target.value)}
+              className="w-40 h-9 text-sm"
+              placeholder="To"
+            />
+          </>
+        )}
         <Select value={actionFilter} onValueChange={setActionFilter}>
           <SelectTrigger className="w-48"><SelectValue placeholder="All Actions" /></SelectTrigger>
           <SelectContent>
@@ -164,6 +199,11 @@ export default function AuditTrailManager() {
         </Select>
         <span className="text-sm text-muted-foreground self-center">{filtered.length} entries</span>
       </div>
+      {truncated && (
+        <div className="mb-4 px-4 py-2 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+          Results are limited to {PAGE_SIZE} rows. Narrow the date range or use a custom range to see more.
+        </div>
+      )}
 
       <div className="bg-card rounded-lg border shadow-sm overflow-hidden">
         <table className="w-full text-sm">

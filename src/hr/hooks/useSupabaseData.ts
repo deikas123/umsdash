@@ -140,15 +140,16 @@ export type DbPayrollRecord = Tables<'payroll_records'> & {
   employees?: { first_name: string; last_name: string; staff_number: string } | null;
 };
 
-export function usePayrollRecords(month?: string) {
+export function usePayrollRecords(month?: string, sinceMonth?: string) {
   return useQuery({
-    queryKey: ['payroll_records', month],
+    queryKey: ['payroll_records', month, sinceMonth],
     queryFn: async () => {
       let query = supabase
         .from('hr_payroll_records')
         .select('*, hr_employees(first_name, last_name, staff_number)')
         .order('created_at', { ascending: false });
       if (month) query = query.eq('month', month);
+      if (sinceMonth) query = query.gte('month', sinceMonth);
       const { data, error } = await query;
       if (error) throw error;
       return data as DbPayrollRecord[];
