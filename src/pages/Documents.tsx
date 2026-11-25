@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { DocumentCard } from '@/components/documents/DocumentCard';
@@ -10,6 +10,7 @@ import { useDocuments, useCategories, Document } from '@/hooks/useDocuments';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermission } from '@/hooks/useRBAC';
+import { addRecent } from '@/hooks/useRecentActivity';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -121,6 +122,10 @@ export default function Documents() {
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const [editingDoc, setEditingDoc] = useState<Document | null>(null);
 
+  // ── inline list-row preview (Feature 10) ────────────────────────────────────
+  const [expandedDocId, setExpandedDocId] = useState<string | null>(null);
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
+
   // ── review / approval (Feature 3) ───────────────────────────────────────────
   const [reviewDoc, setReviewDoc] = useState<Document | null>(null);
   const [reviewUrl, setReviewUrl] = useState<string | null>(null);
@@ -196,9 +201,29 @@ export default function Documents() {
         setPreviewFileType(doc.file_type);
         setPreviewDoc(doc);
         addRecentDoc(doc.id);
+        addRecent({ type: 'document', id: doc.id, label: doc.title, subLabel: doc.customer?.full_name ?? '', href: '/docs/documents', module: 'docs', timestamp: Date.now() });
       }
     } catch {
       toast({ title: 'Error', description: 'Failed to open document', variant: 'destructive' });
+    }
+  };
+
+  // ── inline row expand (Feature 10) ──────────────────────────────────────────
+  const handleRowExpand = async (doc: Document) => {
+    if (expandedDocId === doc.id) {
+      setExpandedDocId(null);
+      return;
+    }
+    setExpandedDocId(doc.id);
+    if (!previewUrls[doc.id]) {
+      try {
+        const { data } = await supabase.storage.from('documents').createSignedUrl(doc.file_path, 3600);
+        if (data?.signedUrl) {
+          setPreviewUrls(prev => ({ ...prev, [doc.id]: data.signedUrl }));
+        }
+      } catch {
+        // preview URL is best-effort
+      }
     }
   };
 
@@ -788,71 +813,114 @@ export default function Documents() {
         <div className="flex flex-col divide-y rounded-md border">
           {sortedDocuments.map((doc) => {
             const selected = selectedIds.has(doc.id);
+            const isExpanded = expandedDocId === doc.id;
+            const pUrl = previewUrls[doc.id];
             return (
-              <div
-                key={doc.id}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors",
-                  selected && "bg-primary/5",
-                )}
-              >
-                {canBulkManage && (
-                  <Checkbox
-                    checked={selected}
-                    onCheckedChange={(checked) => {
-                      const next = new Set(selectedIds);
-                      if (checked) next.add(doc.id); else next.delete(doc.id);
-                      setSelectedIds(next);
-                    }}
-                  />
-                )}
-                <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <span
-                  className="flex-1 text-sm font-medium truncate cursor-pointer hover:underline"
-                  onClick={() => handleView(doc)}
+              <div key={doc.id}>
+                <div
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors",
+                    selected && "bg-primary/5",
+                  )}
                 >
-                  {doc.title}
-                </span>
-                {(isAdmin || isStaff) && (
-                  <span className="text-xs text-muted-foreground hidden sm:block w-32 truncate">
-                    {doc.customer?.full_name || '—'}
-                  </span>
-                )}
-                <span className="text-xs text-muted-foreground hidden md:block w-28 truncate">
-                  {doc.category?.name || '—'}
-                </span>
-                <span className="text-xs text-muted-foreground hidden lg:block w-24">
-                  {doc.created_at ? format(new Date(doc.created_at), 'dd MMM yyyy') : '—'}
-                </span>
-                {(isAdmin || isStaff) && (
-                  <span className="text-xs text-muted-foreground hidden xl:block w-28 truncate" title={doc.uploader_name || 'Unknown'}>
-                    {doc.uploader_name || '—'}
-                  </span>
-                )}
-                <span className="text-xs capitalize w-16 text-right">{doc.status}</span>
-                <div className="flex items-center gap-1 ml-1">
-                  {(isAdmin || isStaff) && doc.status === 'pending' && (
-                    <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => handleOpenReview(doc)} title="Review document">
-                      <ClipboardCheck className="h-3.5 w-3.5 mr-1" />Review
-                    </Button>
+                  {canBulkManage && (
+                    <Checkbox
+                      checked={selected}
+                      onCheckedChange={(checked) => {
+                        const next = new Set(selectedIds);
+                        if (checked) next.add(doc.id); else next.delete(doc.id);
+                        setSelectedIds(next);
+                      }}
+                    />
                   )}
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleView(doc)} aria-label="View">
-                    <FileText className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDownload(doc)} aria-label="Download">
-                    <Download className="h-3.5 w-3.5" />
-                  </Button>
-                  {(isAdmin || isStaff) && canExtractText(doc) && (
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleExtractText(doc)} aria-label="Extract Text" title="Extract Text (OCR)">
-                      <ScanText className="h-3.5 w-3.5" />
+                  <div
+                    className="flex flex-1 items-center gap-3 cursor-pointer min-w-0"
+                    onClick={() => handleRowExpand(doc)}
+                  >
+                    <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="flex-1 text-sm font-medium truncate">{doc.title}</span>
+                    {(isAdmin || isStaff) && (
+                      <span className="text-xs text-muted-foreground hidden sm:block w-32 truncate">
+                        {doc.customer?.full_name || '—'}
+                      </span>
+                    )}
+                    <span className="text-xs text-muted-foreground hidden md:block w-28 truncate">
+                      {doc.category?.name || '—'}
+                    </span>
+                    <span className="text-xs text-muted-foreground hidden lg:block w-24">
+                      {doc.created_at ? format(new Date(doc.created_at), 'dd MMM yyyy') : '—'}
+                    </span>
+                    {(isAdmin || isStaff) && (
+                      <span className="text-xs text-muted-foreground hidden xl:block w-28 truncate" title={doc.uploader_name || 'Unknown'}>
+                        {doc.uploader_name || '—'}
+                      </span>
+                    )}
+                    <span className="text-xs capitalize w-16 text-right">{doc.status}</span>
+                  </div>
+                  <div className="flex items-center gap-1 ml-1">
+                    {(isAdmin || isStaff) && doc.status === 'pending' && (
+                      <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => handleOpenReview(doc)} title="Review document">
+                        <ClipboardCheck className="h-3.5 w-3.5 mr-1" />Review
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleView(doc)} aria-label="View">
+                      <FileText className="h-3.5 w-3.5" />
                     </Button>
-                  )}
-                  {(isAdmin || isStaff) && canDelete && (
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(doc)} aria-label="Delete">
-                      <Trash2 className="h-3.5 w-3.5" />
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDownload(doc)} aria-label="Download">
+                      <Download className="h-3.5 w-3.5" />
                     </Button>
-                  )}
+                    {(isAdmin || isStaff) && canExtractText(doc) && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleExtractText(doc)} aria-label="Extract Text" title="Extract Text (OCR)">
+                        <ScanText className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                    {(isAdmin || isStaff) && canDelete && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(doc)} aria-label="Delete">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
+
+                {/* Inline preview panel (Feature 10) */}
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.div
+                      key="inline-preview"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden border-t bg-muted/30"
+                    >
+                      <div className="relative p-4">
+                        <button
+                          className="absolute top-2 right-2 p-1 rounded-full hover:bg-muted text-muted-foreground"
+                          onClick={() => setExpandedDocId(null)}
+                          aria-label="Close preview"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                        {doc.file_type?.startsWith('image/') ? (
+                          <img src={pUrl} alt={doc.title} style={{ maxHeight: 200 }} className="object-contain mx-auto rounded" />
+                        ) : doc.file_type === 'application/pdf' ? (
+                          <iframe src={pUrl} style={{ width: '100%', height: 300 }} title={doc.title} className="rounded border-0" />
+                        ) : (
+                          <div className="flex items-center gap-4">
+                            <FileText className="h-10 w-10 text-muted-foreground/50 flex-shrink-0" />
+                            <div className="text-sm space-y-0.5">
+                              <p className="font-medium">{doc.title}</p>
+                              {doc.file_type && <p className="text-muted-foreground text-xs">Type: {doc.file_type}</p>}
+                              {doc.file_size > 0 && <p className="text-muted-foreground text-xs">Size: {(doc.file_size / 1024).toFixed(1)} KB</p>}
+                              {doc.uploader_name && <p className="text-muted-foreground text-xs">Uploaded by: {doc.uploader_name}</p>}
+                              {doc.created_at && <p className="text-muted-foreground text-xs">Date: {format(new Date(doc.created_at), 'dd MMM yyyy')}</p>}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             );
           })}

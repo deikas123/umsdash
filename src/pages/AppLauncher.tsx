@@ -32,6 +32,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useOrgSettings } from '@/hooks/useOrgSettings';
 import { useStreakConfetti } from '@/hooks/useStreakConfetti';
 import { usePersonalStats } from '@/hooks/usePersonalStats';
+import { useRecentActivity } from '@/hooks/useRecentActivity';
+import { formatDistanceToNow } from 'date-fns';
 import umsLogo from '@/assets/ums-logo.png';
 
 type LauncherStats = {
@@ -97,6 +99,9 @@ export default function AppLauncher() {
   const { data: myStatusRow } = useMyStatus(user?.id);
   const setStatus = useSetStatus();
   const currentStatus = (myStatusRow?.status as UserStatusValue) ?? 'in_office';
+
+  // Feature 11: recently worked on
+  const recent = useRecentActivity();
 
   const { data: recentNotifs = [] } = useQuery({
     queryKey: ['launcher-notifications'],
@@ -288,6 +293,24 @@ export default function AppLauncher() {
           personalStats={personalStats}
         />
 
+        {/* Feature 11: Recently worked on strip */}
+        {recent.length > 0 && (
+          <div className="w-full px-4 py-2">
+            <p className="text-sm font-medium text-muted-foreground mb-2">Recently worked on</p>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {recent.slice(0, 5).map(item => (
+                <button key={item.id} onClick={() => navigate(item.href)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-background text-sm whitespace-nowrap hover:bg-muted">
+                  <span className={`w-2 h-2 rounded-full ${moduleColour(item.module)}`} />
+                  <span className="font-medium">{item.label}</span>
+                  {item.subLabel && <span className="text-muted-foreground">{item.subLabel}</span>}
+                  <span className="text-xs text-muted-foreground">{formatDistanceToNow(item.timestamp, { addSuffix: true })}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* ── App cards grid ── */}
           <div className="lg:col-span-2">
@@ -402,6 +425,10 @@ export default function AppLauncher() {
       </main>
     </div>
   );
+}
+
+function moduleColour(module: string): string {
+  return ({ docs: 'bg-blue-500', ops: 'bg-emerald-500', hr: 'bg-orange-500', it: 'bg-cyan-500' } as Record<string, string>)[module] ?? 'bg-muted';
 }
 
 function getPageLabel(path: string): string {

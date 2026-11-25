@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useItTickets, useCreateItTicket, useUpdateItTicket, useItDevices, useItTicketComments, useCreateItTicketComment, DbItTicket } from '@/it/hooks/useItData';
 import { useEmployees } from '@/hr/hooks/useSupabaseData';
+import { supabase } from '@/integrations/supabase/client';
+import { addRecent } from '@/hooks/useRecentActivity';
 import { Plus, Eye, Edit2, Search, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,8 +70,35 @@ export default function Helpdesk() {
 
   const handleUpdate = async () => {
     if (!editTicket) return;
+    const oldStatus = editTicket.status;
     setSaving(true);
-    try { await update.mutateAsync({ id:editTicket.id, ...editForm }); toast({ title:'Ticket updated' }); setEditTicket(null); }
+    try {
+      await update.mutateAsync({ id:editTicket.id, ...editForm });
+      toast({ title:'Ticket updated' });
+      setEditTicket(null);
+
+      // Feature 9 — SMS notification on status change
+      const newStatus = editForm.status as string | undefined;
+      const smsStatuses = ['assigned','investigating','resolved','escalated'];
+      if (newStatus && newStatus !== oldStatus && smsStatuses.includes(newStatus)) {
+        try {
+          const reporter = employees.find(e => e.id === editTicket.reporting_employee_id);
+          if (reporter?.phone) {
+            const smsMessages: Record<string, string> = {
+              assigned: `IT Ticket ${editTicket.ticket_id}: Your issue '${editTicket.title}' has been assigned to a technician.`,
+              investigating: `IT Ticket ${editTicket.ticket_id}: Your issue '${editTicket.title}' is being investigated.`,
+              resolved: `IT Ticket ${editTicket.ticket_id}: Your issue '${editTicket.title}' has been resolved. Please confirm resolution at dash.umskenya.com`,
+              escalated: `IT Ticket ${editTicket.ticket_id}: Your issue '${editTicket.title}' has been escalated for urgent attention.`,
+            };
+            supabase.functions.invoke('send-sms', {
+              body: { mobile: reporter.phone, message: smsMessages[newStatus], type: 'it_ticket_status' }
+            }).catch(err => console.error('[SMS] ticket status notification failed:', err));
+          }
+        } catch (smsErr) {
+          console.error('[SMS] ticket status notification error:', smsErr);
+        }
+      }
+    }
     catch (e:any) { toast({ title:'Error', description:e.message, variant:'destructive' }); }
     finally { setSaving(false); }
   };
@@ -112,7 +141,7 @@ export default function Helpdesk() {
                 <td className="px-4 py-3 text-xs text-muted-foreground">{formatDistanceToNow(new Date(t.created_at),{addSuffix:true})}</td>
                 <td className="px-4 py-3">
                   <div className="flex gap-1">
-                    <button onClick={()=>setViewTicket(t)} className="text-muted-foreground hover:text-primary p-1"><Eye className="h-4 w-4"/></button>
+                    <button onClick={()=>{ setViewTicket(t); addRecent({ type:'ticket', id:t.id, label:`${t.ticket_id} \u2013 ${t.title}`, subLabel:t.status, href:'/it/support', module:'it', timestamp:Date.now() }); }} className="text-muted-foreground hover:text-primary p-1"><Eye className="h-4 w-4"/></button>
                     <button onClick={()=>{ setEditTicket(t); setEditForm({ status:t.status,priority:t.priority,assigned_technician_id:t.assigned_technician_id,resolution_notes:t.resolution_notes??'',employee_confirmed:t.employee_confirmed }); }} className="text-muted-foreground hover:text-primary p-1"><Edit2 className="h-4 w-4"/></button>
                   </div>
                 </td>

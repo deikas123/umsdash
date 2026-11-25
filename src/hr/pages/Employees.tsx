@@ -1,5 +1,6 @@
 ﻿import { useState } from 'react';
 import { useEmployees, useCreateEmployee, useUpdateEmployee, useDeleteEmployee, useDepartments, DbEmployee } from '@/hr/hooks/useSupabaseData';
+import { addRecent } from '@/hooks/useRecentActivity';
 import { Search, Plus, Eye, Edit2, Trash2, UserCheck, UserX } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -114,7 +115,7 @@ export default function Employees() {
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex gap-1 justify-end">
-                    <button onClick={() => { setSelectedEmployee(emp); setShowDetail(true); }} className="text-muted-foreground hover:text-primary transition-colors p-1" title="View">
+                    <button onClick={() => { setSelectedEmployee(emp); setShowDetail(true); addRecent({ type: 'employee', id: emp.id, label: `${emp.first_name} ${emp.last_name}`, subLabel: emp.designation || '', href: '/hr/employees', module: 'hr', timestamp: Date.now() }); }} className="text-muted-foreground hover:text-primary transition-colors p-1" title="View">
                       <Eye className="h-4 w-4" />
                     </button>
                     <button onClick={() => { setEditEmployee(emp); setShowForm(true); }} className="text-muted-foreground hover:text-primary transition-colors p-1" title="Edit">

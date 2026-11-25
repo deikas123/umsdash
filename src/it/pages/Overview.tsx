@@ -169,6 +169,22 @@ export default function Overview() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Quick access shortcuts */}
+      <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Log Support Ticket', sub: 'Report a device issue', href: '/it/support', color: 'bg-sky-500/10 text-sky-600 border-sky-500/20' },
+          { label: 'Check In Device', sub: 'Maintenance mode QR scan', href: '/it/scan?mode=maintenance', color: 'bg-orange-500/10 text-orange-600 border-orange-500/20' },
+          { label: 'Register Device', sub: 'Add a new device', href: '/it/devices', color: 'bg-blue-500/10 text-blue-600 border-blue-500/20' },
+          { label: 'Uptime Summary', sub: 'VPS & cloud SLA report', href: '/it/infra/uptime', color: 'bg-purple-500/10 text-purple-600 border-purple-500/20' },
+        ].map(link => (
+          <button key={link.href} onClick={() => navigate(link.href)}
+            className={`flex flex-col items-start gap-1 p-4 rounded-xl border text-left hover:shadow-md transition-all ${link.color}`}>
+            <p className="text-sm font-semibold">{link.label}</p>
+            <p className="text-xs opacity-70">{link.sub}</p>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

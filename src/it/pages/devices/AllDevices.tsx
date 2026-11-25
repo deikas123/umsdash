@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useItDevices, useCreateItDevice, useUpdateItDevice, useDeleteItDevice, DbItDevice } from '@/it/hooks/useItData';
 import { useEmployees } from '@/hr/hooks/useSupabaseData';
+import { addRecent } from '@/hooks/useRecentActivity';
 import { Plus, Edit2, Trash2, Eye, Search, QrCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DeviceQrDialog } from '@/it/components/DeviceQrDialog';
@@ -130,7 +131,7 @@ export default function AllDevices() {
                 <td className="px-4 py-3"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${secClass(d.security_status)}`}>{d.security_status}</span></td>
                 <td className="px-4 py-3">
                   <div className="flex gap-1 justify-end">
-                    <button onClick={() => setViewTarget(d)} className="text-muted-foreground hover:text-primary p-1"><Eye className="h-4 w-4" /></button>
+                    <button onClick={() => { setViewTarget(d); addRecent({ type: 'device', id: d.id, label: `${d.asset_id} — ${d.device_name}`, subLabel: d.status, href: '/it/devices', module: 'it', timestamp: Date.now() }); }} className="text-muted-foreground hover:text-primary p-1"><Eye className="h-4 w-4" /></button>
                     <button onClick={() => openEdit(d)} className="text-muted-foreground hover:text-primary p-1"><Edit2 className="h-4 w-4" /></button>
                     <button onClick={() => setQrDevice(d.asset_id)} className="text-muted-foreground hover:text-primary p-1" title="QR Code"><QrCode className="h-4 w-4" /></button>
                     <button onClick={() => setDeleteTarget(d)} className="text-muted-foreground hover:text-destructive p-1"><Trash2 className="h-4 w-4" /></button>
