@@ -5,9 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { exportToCSV } from '@/lib/export-utils';
 import { format } from 'date-fns';
-import { Download, ChevronDown, ChevronRight } from 'lucide-react';
+import { Download, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
 
 interface AuditEntry {
   id: string;
@@ -43,8 +45,12 @@ const PAGE_SIZE = 2000;
 const TRUNCATION_WARN = 1900;
 
 export default function AuditTrailManager() {
+  const { isAdmin, isGM, isHOD } = useAuth();
+  if (!isAdmin && !isGM && !isHOD) return <Navigate to="/" replace />;
+
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRange>('30d');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
@@ -78,7 +84,13 @@ export default function AuditTrailManager() {
       }
 
       const { data, error } = await query;
-      if (error) { setLoading(false); return; }
+      if (error) {
+        console.error('Audit trail fetch error:', error);
+        setFetchError(error.message);
+        setLoading(false);
+        return;
+      }
+      setFetchError(null);
 
       const rows = data || [];
       if (rows.length >= TRUNCATION_WARN) setTruncated(true);
@@ -149,6 +161,13 @@ export default function AuditTrailManager() {
           <Download className="h-4 w-4" /> Export to CSV
         </Button>
       </div>
+
+      {fetchError && (
+        <div className="mb-4 flex items-center gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          <span>Failed to load audit logs: {fetchError}</span>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">

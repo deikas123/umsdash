@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useItVpsMonitors, useItCloudServices } from '@/it/hooks/useItData';
+import { useAuth } from '@/contexts/AuthContext';
+import { Navigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +43,9 @@ function statusDot(status: string): string {
 }
 
 export default function UptimeSummary() {
+  const { isItAdmin, isItStaff, isAdmin } = useAuth();
+  if (!isItAdmin && !isItStaff && !isAdmin) return <Navigate to="/it" replace />;
+
   const { data: vps = [] } = useItVpsMonitors();
   const { data: cloud = [] } = useItCloudServices();
 

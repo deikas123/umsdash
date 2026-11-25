@@ -1,4 +1,5 @@
 ﻿import { useState, useMemo, useEffect } from 'react';
+import { format } from 'date-fns';
 import { useEmployees, usePayrollRecords, useSavedPayrollMonths, useSavePayroll, useLoans, DbEmployee } from '@/hr/hooks/useSupabaseData';
 import { computeKenyanPayroll, PayrollRecord, Employee } from '@/hr/lib/types';
 import { DollarSign, Download, Eye, Save, History, TrendingUp, TrendingDown, Edit2, CalendarClock, BarChart2 } from 'lucide-react';
@@ -472,7 +473,9 @@ export default function Payroll() {
                         <tr className="border-b bg-muted/50">
                           <th className="text-left px-4 py-2 text-xs font-semibold text-muted-foreground uppercase">Employee</th>
                           {varianceData.columns.map(c => (
-                            <th key={c} className="text-right px-4 py-2 text-xs font-semibold text-muted-foreground uppercase whitespace-nowrap">{c}</th>
+                            <th key={c} className="text-right px-4 py-2 text-xs font-semibold text-muted-foreground uppercase whitespace-nowrap">
+                              {(() => { try { return format(new Date(c + '-01'), 'MMM yyyy'); } catch { return c; } })()}
+                            </th>
                           ))}
                         </tr>
                       </thead>
